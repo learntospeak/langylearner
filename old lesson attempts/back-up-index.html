@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>KanaReader</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- Overlay 
+    <div id="slice-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div id="slice-game-section" class="bg-white rounded-lg p-6 text-center max-w-sm w-full">
+        <h3>Ninja Slice</h3>
+        <p>Spell this phrase:</p>
+        <div id="slice-kana" class="font-mono text-2xl my-2"></div>
+        <div id="slice-romaji" class="text-gray-600 mb-2"></div>
+        <div id="slice-english" class="italic mb-4"></div>
+        <canvas id="slice-canvas" width="400" height="200" class="bg-gray-100 rounded mb-4"></canvas>
+        <p id="slice-score" class="font-bold">Score: 0</p>
+        <p>Time left: <span id="slice-timer">60</span>s</p>
+        <button id="closeSliceBtn" class="mt-4 bg-red-500 text-white px-3 py-1 rounded">Close</button>
+      </div>
+    </div>-->
+
+
+    <!-- somewhere in index.html, e.g. inside your .container div -->
+    <nav class="mb-4">
+      <a href="reference.html" class="text-blue-600 hover:underline">
+        📖 Kana Reference
+      </a>
+      <!-- Spaced‑Repetition Review button -->
+      <button id="reviewDueBtn" class="hidden bg-purple-500 text-white px-3 py-1 rounded">
+        🔄 Review Due (0)
+      </button>
+
+    </nav>
+
+    <h1>KanaReader</h1>
+
+    <!--<button id="newStoryBtn">➕ New Story</button>-->
+    <button id="openConverterBtn">🌐 Open Language Converter</button>
+    <div id="storyEditor" class="hidden">
+      <h3>Create a New Story</h3>
+      <input type="text" id="newStoryTitle" placeholder="Story Title"><br>
+      <div id="linesContainer"></div>
+      <button id="addLineBtn">➕ Add Line</button>
+      <button id="saveStoryBtn">💾 Save</button>
+      <button id="cancelStoryBtn">✖ Cancel</button>
+
+      <label><input type="checkbox" id="wanakanaToggle" checked> Auto Kana</label>
+      <label><input type="checkbox" id="autoPronounceToggle" checked> 🔊 Auto Pronounce</label>
+      <button id="revertStoryBtn" class="hidden">↩️ Revert Changes</button>
+    </div>
+
+
+
+    <div id="converter-box" class="hidden">
+      <h3>🧠 Language Converter</h3>
+      <textarea id="converterInput" rows="3" placeholder="Type a sentence..."></textarea><br>
+      <button id="convertBtn">Convert</button>
+      <div id="gpt-loader" class="spinner hidden"></div>
+      <div id="converter-loader" class="spinner hidden"></div>
+      <button id="closeConverterBtn">❌ Close Converter</button>
+      <div id="converterOutput" class="hidden">
+        <p><strong>JP:</strong> <span id="out-translation"></span></p>
+        <p><strong>Romaji:</strong> <span id="out-romaji"></span></p>
+        <p><strong>Hiragana:</strong> <span id="out-hiragana"></span></p>
+        <p><strong>Katakana:</strong> <span id="out-katakana"></span></p>
+        <p><strong>Explanation:</strong> <span id="out-explanation"></span></p>
+        <p><strong>Translation (JP):</strong> <span id="out-translation"></span></p>
+        <!-- <button id="speakTranslationBtn">🔊 Pronounce</button> -->
+        <button id="converterPronounceBtn">🔊 Pronounce</button>
+      </div>
+    </div>
+
+    <select id="storySelector">
+      <option disabled selected>Select a Story</option>
+    </select>
+    <!--
+    <div id="story-box">
+      <div id="lesson-intro" class="mb-4 hidden p-4 bg-yellow-100 rounded shadow">
+        <h2 class="text-lg font-bold mb-2">Lesson Intro</h2>
+        <p id="lesson-intro-text" class="text-gray-700 mb-3"></p>
+        <button id="continueFromIntro" class="bg-blue-500 text-white px-3 py-1 rounded">Continue</button>
+      </div>-->
+
+
+    <div id="jp-text"></div>
+    <div id="en-text"></div>
+    <div id="full-romaji"></div>
+    <!--<div id="lesson-steps" class="lesson-steps-container"></div>-->
+    <!-- Play button, shown only when a lesson line is rendered -->
+    <!--<button id="playMemoryBtn" class="hidden mt-4 px-4 py-2 bg-green-500 text-white rounded">
+        🀄 Play Memory Match
+      </button>-->
+
+    <!-- fill‑in‑the‑blank quiz 
+      <div id="quiz-box" class="hidden">
+        <p id="quiz-question"></p>
+
+        <div id="quiz-input-container" class="my-4 flex justify-center items-center gap-2">
+          <input type="text" id="quiz-input" placeholder="Type your answer…" class="border rounded px-2 py-1 w-2/3" />
+          new hint button 
+          <button id="quiz-hint" class="bg-yellow-400 text-gray-800 px-3 py-1 rounded">Hint</button>
+          <button id="quiz-submit" class="bg-blue-500 text-white px-3 py-1 rounded">Submit</button>
+        </div>
+
+        <p id="quiz-feedback" class="text-center font-medium mt-2"></p>
+        <p id="score" class="text-center mt-1"></p>
+      </div>
+
+      <div id="end-buttons" class="hidden">
+        <button id="restartBtn" class="bg-green-500 text-white px-3 py-1 rounded">🔁 Restart</button>
+        <button id="menuBtn" class="bg-gray-500 text-white px-3 py-1 rounded">📚 Main Menu</button>
+      </div>-->
+
+
+    <button id="infoBtn" class="hidden">ℹ️</button>
+    <div id="info-box" class="hidden">
+      <p id="info-kanji-char"></p>
+      <p id="info-kanji-meaning"></p>
+      <p id="info-kanji-radicals"></p>
+      <a id="info-kanji-stroke" target="_blank">Stroke Order</a>
+      <p id="info-grammar"></p>
+    </div>
+  </div>
+
+  <!-- index.html (or wherever the game panel is) 
+    <div id="memory-game-section" class="hidden mt-4 p-4 bg-gray-100 rounded text-center">
+       header now centered 
+      <h3 class="text-lg mb-2 font-bold">Memory Match</h3>
+
+      hint row centered 
+      <div class="mb-2 flex justify-center items-center space-x-2">
+        <button id="hintBtn" class="px-3 py-1 bg-yellow-400 rounded">💡 Hint</button>
+        <span id="hintText" class="italic"></span>
+      </div>-->
+
+
+
+  <!-- card grid: keep cards centered in their cells 
+      <div id="memory-game-root" class="grid grid-cols-4 gap-4 justify-items-center"></div>
+
+     close button centered 
+      <button id="closeMemoryBtn" class="mt-4 px-3 py-1 bg-red-500 text-white rounded mx-auto block">
+        Close Game
+      </button>
+  </div>-->
+
+  <!--<div id="button-controls" class="hidden">
+      <button id="prevBtn">⬅ Prev</button>
+      <button id="nextBtn">Next ➡</button>
+      <button id="quizBtn">Take Quiz</button>
+      <button id="pronounceBtn">🔊</button>
+      <button id="deleteStoryBtn" class="hidden">🗑️ Delete Story</button>
+      <button id="editStoryBtn" class="hidden">✏️ Edit Story</button>
+      <button id="sliceBtn" class="mt-2 px-3 py-1 bg-green-500 text-white rounded">
+        🔪 Ninja Slice
+      </button>
+  </div>-->
+
+  <!-- Ninja‑Slice Game panel, hidden by default -->
+  <!-- Ninja-Slice Modal Overlay -->
+
+  <!--</div>--><!--
+  <div class="mb-2">
+
+
+
+    <br>
+
+
+    <div id="voice-controls">
+      <label for="voiceSelect">Voice:</label>
+      <select id="voiceSelect"></select>
+      <label for="voiceRate">Speed:</label>
+      <input type="range" id="voiceRate" min="0.5" max="2" step="0.1" value="1" />
+      <span id="voiceRateValue">1.0×</span>
+    </div>-->
+
+    <!-- ─── Chatbot Window ─── -->
+    <div id="chatbot-box" class="hidden">
+      <div id="chatbot-header">
+        <strong>🧑‍🏫 Ask Sensei</strong>
+        <button id="closeChatbotBtn">✖</button>
+      </div>
+      <div id="chatbot-messages"></div>
+      <textarea id="chatbotInput" placeholder="Ask a Japanese question..."></textarea>
+      <button id="sendChatbotBtn">Send</button>
+    </div>
+    <button id="openChatbotBtn">💬 Chat with Tutor</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
+
+    <!-- AFTER -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tell Babel to use the React preset when compiling this external file: -->
+    <script type="text/babel" src="MemoryCardGame.jsx?ver=3" data-presets="react"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <!-- Now your script.js can safely mount the freshly‑compiled MemoryCardGame -->
+    <script type="module" src="script.js"></script>
+    <script src="lesson-shim.js" defer></script>
+
+</body>
+
+</html>

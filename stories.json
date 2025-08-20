@@ -1,0 +1,175 @@
+{
+  "lessons": [
+    {
+      "id": "greetings-001",
+      "title": "First Greetings",
+      "est_minutes": 8,
+      "sentences": [
+        {
+          "sid": "S1",
+          "jp": "おはようございます。",
+          "romaji_full": "ohayou gozaimasu.",
+          "en": "Good morning."
+        },
+        {
+          "sid": "S2",
+          "jp": "こんにちは。",
+          "romaji_full": "konnichiwa.",
+          "en": "Hello."
+        },
+        {
+          "sid": "S3",
+          "jp": "こんばんは。",
+          "romaji_full": "konbanwa.",
+          "en": "Good evening."
+        },
+        {
+          "sid": "S4",
+          "jp": "はじめまして。",
+          "romaji_full": "hajimemashite.",
+          "en": "Nice to meet you."
+        },
+        {
+          "sid": "S5",
+          "jp": "よろしくお願いします。",
+          "romaji_full": "yoroshiku onegaishimasu.",
+          "en": "Please treat me well."
+        },
+        {
+          "sid": "S6",
+          "jp": "さようなら。",
+          "romaji_full": "sayounara.",
+          "en": "Goodbye."
+        }
+      ],
+      "steps": [
+        {
+          "type": "read_listen",
+          "item_refs": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6"
+          ]
+        },
+        {
+          "type": "cloze",
+          "items": [
+            {
+              "ref": "S2",
+              "blanks": [
+                "こんにちは"
+              ]
+            },
+            {
+              "ref": "S4",
+              "blanks": [
+                "はじめまして"
+              ]
+            },
+            {
+              "ref": "S5",
+              "blanks": [
+                "よろしく",
+                "お願いします"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "translate_to_jp",
+          "item_refs": [
+            "S1",
+            "S3",
+            "S6"
+          ]
+        },
+        {
+  "type": "variations",
+  "variations": [
+    { "jp":"こんにちは。",           "en":"Hello (daytime).",                     "tags":["general","daytime"] },
+    { "jp":"おはようございます。",   "en":"Good morning (polite).",               "tags":["polite","morning"] },
+    { "jp":"おはよう。",             "en":"Morning! (casual).",                   "tags":["casual","morning"] },
+    { "jp":"こんばんは。",           "en":"Good evening.",                         "tags":["evening"] },
+    { "jp":"はじめまして。",         "en":"Nice to meet you (first time).",        "tags":["first_meeting","polite"] },
+    { "jp":"よろしくお願いします。", "en":"Please treat me well. (set phrase)",    "tags":["first_meeting","polite","work"] },
+    { "jp":"もしもし。",             "en":"Hello? (on the phone).",               "tags":["phone"] },
+    { "jp":"お疲れ様です。",         "en":"Hello (workplace greeting).",           "tags":["work","polite"] },
+    { "jp":"どうも。",               "en":"Hey / thanks (very casual).",          "tags":["casual"] }
+  ]
+},
+{
+  "type": "phrase_drill",
+  "pairs": [
+    {
+      "en": "Hello (daytime).",
+      "jp": "こんにちは。",
+      "alts": [
+        { "jp": "どうも。", "en": "Hey. (very casual)" },
+        { "jp": "お疲れ様です。", "en": "Hello. (workplace)" }
+      ]
+    },
+    {
+      "en": "Nice to meet you.",
+      "jp": "はじめまして。",
+      "alts": [
+        { "jp": "どうぞよろしくお願いします。", "en": "Pleased to meet you." }
+      ]
+    },
+    {
+      "en": "Please treat me well. (set phrase)",
+      "jp": "よろしくお願いします。",
+      "alts": [
+        { "jp": "よろしく〜", "en": "Nice to meet you! (casual)" }
+      ]
+    },
+    {
+      "en": "Hello? (on the phone)",
+      "jp": "もしもし。"
+    }
+  ]
+},        
+        {
+          "type": "dialogue",
+          "segments": [
+            {
+              "ref": "S1",
+              "lang": "ja",
+              "speaker": "Ami"
+            }, 
+            {
+              "en": "Hi! I'm Alex. Nice to meet you.",
+              "lang": "en",
+              "speaker": "You"
+            },
+            {
+              "ref": "S2",
+              "lang": "ja",
+              "speaker": "Ami"
+            }, 
+            {
+              "en": "Likewise—よろしくお願いします。",
+              "lang": "en",
+              "speaker": "You"
+            }
+          ]
+        },
+        {
+          "type": "roleplay",
+          "item_refs": [
+            "S1",
+            "S2",
+            "S3"
+          ],
+          "threshold": 0.82
+        },
+        {
+          "type": "reflect"
+        }
+      ]
+    }
+  ]
+}
+
