@@ -1,0 +1,90 @@
+[
+  {
+    "title": "Greetings - 01",
+    "jp": "こんにちは。",
+    "romaji_full": "Konnichiwa.",
+    "en": "Hello / Good afternoon.",
+    "steps": [
+      { "jp": "こんにちは", "romaji": "konnichiwa", "en": "Hello / Good afternoon" }
+    ],
+    "kanji_notes": [],
+    "grammar_notes": [
+      "This is a standard daytime greeting used from late morning to early evening."
+    ]
+  },
+  {
+    "title": "Greetings - 02",
+    "jp": "おはようございます。",
+    "romaji_full": "Ohayou gozaimasu.",
+    "en": "Good morning.",
+    "steps": [
+      { "jp": "おはよう", "romaji": "ohayou", "en": "Morning (casual)" },
+      { "jp": "ございます", "romaji": "gozaimasu", "en": "Polite ending" }
+    ],
+    "kanji_notes": [],
+    "grammar_notes": [
+      "‘Ohayou’ is casual. Adding ‘gozaimasu’ makes it polite, suitable for workplaces or formal settings."
+    ]
+  },
+  {
+    "title": "Greetings - 03",
+    "jp": "こんばんは。",
+    "romaji_full": "Konbanwa.",
+    "en": "Good evening.",
+    "steps": [
+      { "jp": "こんばんは", "romaji": "konbanwa", "en": "Good evening" }
+    ],
+    "kanji_notes": [],
+    "grammar_notes": [
+      "Used in the evening, similar to ‘good evening’ in English."
+    ]
+  },
+  {
+    "title": "Greetings - 04",
+    "jp": "さようなら。",
+    "romaji_full": "Sayounara.",
+    "en": "Goodbye.",
+    "steps": [
+      { "jp": "さようなら", "romaji": "sayounara", "en": "Goodbye (formal)" }
+    ],
+    "kanji_notes": [],
+    "grammar_notes": [
+      "A formal or final parting. For everyday casual goodbyes, Japanese people often say ‘じゃあね’ or ‘バイバイ’."
+    ]
+  },
+  {
+    "title": "Greetings - 05",
+    "jp": "はじめまして。",
+    "romaji_full": "Hajimemashite.",
+    "en": "Nice to meet you.",
+    "steps": [
+      { "jp": "はじめまして", "romaji": "hajimemashite", "en": "Nice to meet you" }
+    ],
+    "kanji_notes": [],
+    "grammar_notes": [
+      "Used only the first time you meet someone. Literally means ‘(we are) beginning’."
+    ]
+  },
+  {
+    "title": "Greetings - 06",
+    "jp": "どうぞよろしくお願いします。",
+    "romaji_full": "Douzo yoroshiku onegaishimasu.",
+    "en": "I look forward to working with you.",
+    "steps": [
+      { "jp": "どうぞ", "romaji": "douzo", "en": "Please / go ahead" },
+      { "jp": "よろしく", "romaji": "yoroshiku", "en": "Kindly / favorably" },
+      { "jp": "お願いします", "romaji": "onegaishimasu", "en": "I humbly request" }
+    ],
+    "kanji_notes": [
+      { "kanji": "願", "meaning": "wish/request", "onyomi": "ガン", "kunyomi": "ねが(う)" }
+    ],
+    "grammar_notes": [
+      "A common phrase used after ‘hajimemashite’ when meeting someone new or starting cooperation. It shows respect and humility."
+    ]
+  },
+  {
+    "title": "Greetings - 07",
+    "jp": "おやすみなさい。",
+    "romaji_full": "Oyasuminasai.",
+    "en": "Good night.",
+  }
