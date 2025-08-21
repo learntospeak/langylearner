@@ -25,6 +25,19 @@
   .field.ok  { @apply border-green-400 ring-green-300; }
   .field.bad { @apply border-red-400   ring-red-300; }
 </style>
+
+    <style>
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+    </style>
+
     <style>
         .guide-row {
             display: flex;
@@ -175,8 +188,7 @@
 </head>
 
 <body class="bg-white">
-    <div class="container mx-auto p-6"
-     style="padding-bottom: calc(72px + env(safe-area-inset-bottom));">
+    <div id="page" class="container mx-auto p-6">
         <nav class="mb-4">
             <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">📖 Kana Reference</a>
         </nav>
@@ -248,6 +260,19 @@
                 <span id="lsSpeedVal">1.0×</span>
             </label>
         </div>
+
+        <style>
+            /* Let users start a vertical scroll on the bar itself */
+            #footer-controls {
+                touch-action: pan-y;
+            }
+
+            /* Fallback padding in case JS doesn’t run */
+            #page {
+                padding-bottom: 7rem;
+            }
+        </style>
+
 
         <style>
             /* Make wrapper the positioning context */
@@ -624,6 +649,31 @@
     <script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
     <script src="./lesson-shim.js"></script>
     <script type="module" src="./lesson-loader.js?v=3"></script>
+
+    <script>
+        (function () {
+            // Ensure body is scrollable in case a modal left it locked
+            window.addEventListener('pageshow', () => {
+                document.body.classList.remove('overflow-hidden');
+            });
+
+            // Pad the page bottom to the actual footer height + iOS safe area
+            function padForFooter() {
+                const footer = document.getElementById('footer-controls');
+                const page = document.getElementById('page');
+                if (!footer || !page) return;
+                const h = footer.offsetHeight;
+                page.style.paddingBottom = `calc(${h}px + env(safe-area-inset-bottom, 0px))`;
+            }
+
+            window.addEventListener('load', padForFooter);
+            window.addEventListener('resize', padForFooter);
+            // In case fonts / layout shift after first paint:
+            setTimeout(padForFooter, 100);
+            setTimeout(padForFooter, 400);
+        })();
+    </script>
+
 
 
 
