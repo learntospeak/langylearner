@@ -25,16 +25,42 @@
   .field.ok  { @apply border-green-400 ring-green-300; }
   .field.bad { @apply border-red-400   ring-red-300; }
 </style>
-<style>
-  .guide-row{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .guide-row .chip{
-    padding:2px 8px; border-radius:8px; border:1px solid #e5e7eb; font-size:0.95rem;
-  }
-  .guide-row .done{ background:#dcfce7; border-color:#86efac; }
-  .guide-row .next{ background:#fff7ed; border-color:#fdba74; }
-  .guide-row .todo{ background:#f3f4f6; color:#6b7280; }
-  .guide-foot{ font-size:0.85rem; color:#6b7280; margin-top:2px; }
-</style>
+    <style>
+        .guide-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .guide-row .chip {
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            font-size: 0.95rem;
+        }
+
+        .guide-row .done {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        .guide-row .next {
+            background: #fff7ed;
+            border-color: #fdba74;
+        }
+
+        .guide-row .todo {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .guide-foot {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+    </style>
 
     <style>
         /* If your three containers are wrapped in #lesson-wrap, use that. */
@@ -149,7 +175,7 @@
 </head>
 
 <body class="bg-white">
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto p-6 pb-[calc(88px+env(safe-area-inset-bottom))]">
         <nav class="mb-4">
             <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">📖 Kana Reference</a>
         </nav>
@@ -197,23 +223,31 @@
 
 
 
-        <div class="mt-6 flex gap-2">
-            <button id="lsCheck" class="btn btn-primary">Check</button>
-            <button id="lsReveal" class="btn btn-amber">Reveal</button>
-            <button id="lsPrev" class="btn btn-ghost">⬅ Prev</button>
-            <button id="lsNext" class="btn btn-dark">Next ➡</button>
-            <!-- inside the controls row -->
-            <button id="lsToggleRomaji" class="px-3 py-2 rounded bg-teal-600 text-white">Romaji</button>
-            <button id="lsSpeak" class="px-3 py-2 rounded bg-green-600 text-white">🔊 Speak</button>
-            <!-- inside the same controls row as Prev/Check/Reveal/Next -->
-            <label class="px-3 py-2 rounded bg-gray-100 flex items-center gap-2">
+        <!-- Bottom toolbar (fixed, wraps on small screens) -->
+        <div id="footer-controls" class="fixed bottom-0 inset-x-0 z-50
+            flex flex-wrap justify-center gap-2
+            px-3 py-2
+            bg-white/95 backdrop-blur border-t
+            pb-[max(0px,env(safe-area-inset-bottom))]">
+
+            <button id="lsPrev" class="btn btn-ghost   flex-1 basis-[120px] max-w-[240px] min-h-10">⬅ Prev</button>
+            <button id="lsCheck" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Check</button>
+            <button id="lsReveal" class="btn btn-amber   flex-1 basis-[120px] max-w-[240px] min-h-10">Reveal</button>
+            <button id="lsNext" class="btn btn-dark    flex-1 basis-[120px] max-w-[240px] min-h-10">Next ➡</button>
+
+            <button id="lsToggleRomaji"
+                class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
+            <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">🔊
+                Speak</button>
+
+            <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
+                w-full sm:w-auto justify-center">
                 Speed
-                <input id="lsSpeed" type="range" min="0.6" max="1.4" step="0.1" value="1" />
+                <input id="lsSpeed" type="range" min="0.6" max="1.4" step="0.1" value="1" class="w-32" />
                 <span id="lsSpeedVal">1.0×</span>
-
-
             </label>
         </div>
+
         <style>
             /* Make wrapper the positioning context */
             #lesson-wrap {
@@ -589,7 +623,7 @@
     <script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
     <script src="./lesson-shim.js"></script>
     <script type="module" src="./lesson-loader.js?v=3"></script>
-    
+
 
 
 </body>
