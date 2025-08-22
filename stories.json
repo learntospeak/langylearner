@@ -75,6 +75,24 @@
                 "よろしく",
                 "お願いします"
               ]
+            },
+            {
+              "ref": "S1",
+              "blanks": [
+                "おはようございます"
+              ]
+            },
+            {
+              "ref": "S3",
+              "blanks": [
+                "こんばんは"
+              ]
+            },
+            {
+              "ref": "S6",
+              "blanks": [
+                "さようなら"
+              ]
             }
           ]
         },
@@ -82,55 +100,131 @@
           "type": "translate_to_jp",
           "item_refs": [
             "S1",
+            "S2",
             "S3",
+            "S4",
+            "S5",
             "S6"
           ]
         },
         {
-  "type": "variations",
-  "variations": [
-    { "jp":"こんにちは。",           "en":"Hello (daytime).",                     "tags":["general","daytime"] },
-    { "jp":"おはようございます。",   "en":"Good morning (polite).",               "tags":["polite","morning"] },
-    { "jp":"おはよう。",             "en":"Morning! (casual).",                   "tags":["casual","morning"] },
-    { "jp":"こんばんは。",           "en":"Good evening.",                         "tags":["evening"] },
-    { "jp":"はじめまして。",         "en":"Nice to meet you (first time).",        "tags":["first_meeting","polite"] },
-    { "jp":"よろしくお願いします。", "en":"Please treat me well. (set phrase)",    "tags":["first_meeting","polite","work"] },
-    { "jp":"もしもし。",             "en":"Hello? (on the phone).",               "tags":["phone"] },
-    { "jp":"お疲れ様です。",         "en":"Hello (workplace greeting).",           "tags":["work","polite"] },
-    { "jp":"どうも。",               "en":"Hey / thanks (very casual).",          "tags":["casual"] }
-  ]
-},
-{
-  "type": "phrase_drill",
-  "pairs": [
-    {
-      "en": "Hello (daytime).",
-      "jp": "こんにちは。",
-      "alts": [
-        { "jp": "どうも。", "en": "Hey. (very casual)" },
-        { "jp": "お疲れ様です。", "en": "Hello. (workplace)" }
-      ]
-    },
-    {
-      "en": "Nice to meet you.",
-      "jp": "はじめまして。",
-      "alts": [
-        { "jp": "どうぞよろしくお願いします。", "en": "Pleased to meet you." }
-      ]
-    },
-    {
-      "en": "Please treat me well. (set phrase)",
-      "jp": "よろしくお願いします。",
-      "alts": [
-        { "jp": "よろしく〜", "en": "Nice to meet you! (casual)" }
-      ]
-    },
-    {
-      "en": "Hello? (on the phone)",
-      "jp": "もしもし。"
-    }
-  ]
-},        
+          "type": "variations",
+          "variations": [
+            {
+              "jp": "こんにちは。",
+              "en": "Hello (daytime).",
+              "tags": [
+                "general",
+                "daytime"
+              ]
+            },
+            {
+              "jp": "おはようございます。",
+              "en": "Good morning (polite).",
+              "tags": [
+                "polite",
+                "morning"
+              ]
+            },
+            {
+              "jp": "おはよう。",
+              "en": "Morning! (casual).",
+              "tags": [
+                "casual",
+                "morning"
+              ]
+            },
+            {
+              "jp": "こんばんは。",
+              "en": "Good evening.",
+              "tags": [
+                "evening"
+              ]
+            },
+            {
+              "jp": "はじめまして。",
+              "en": "Nice to meet you (first time).",
+              "tags": [
+                "first_meeting",
+                "polite"
+              ]
+            },
+            {
+              "jp": "よろしくお願いします。",
+              "en": "Please treat me well. (set phrase)",
+              "tags": [
+                "first_meeting",
+                "polite",
+                "work"
+              ]
+            },
+            {
+              "jp": "もしもし。",
+              "en": "Hello? (on the phone).",
+              "tags": [
+                "phone"
+              ]
+            },
+            {
+              "jp": "お疲れ様です。",
+              "en": "Hello (workplace greeting).",
+              "tags": [
+                "work",
+                "polite"
+              ]
+            },
+            {
+              "jp": "どうも。",
+              "en": "Hey / thanks (very casual).",
+              "tags": [
+                "casual"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "phrase_drill",
+          "pairs": [
+            {
+              "en": "Hello (daytime).",
+              "jp": "こんにちは。",
+              "alts": [
+                {
+                  "jp": "どうも。",
+                  "en": "Hey. (very casual)"
+                },
+                {
+                  "jp": "お疲れ様です。",
+                  "en": "Hello. (workplace)"
+                }
+              ]
+            },
+            {
+              "en": "Nice to meet you.",
+              "jp": "はじめまして。",
+              "alts": [
+                {
+                  "jp": "どうぞよろしくお願いします。",
+                  "en": "Pleased to meet you."
+                }
+              ]
+            },
+            {
+              "en": "Please treat me well. (set phrase)",
+              "jp": "よろしくお願いします。",
+              "alts": [
+                {
+                  "jp": "よろしく〜",
+                  "en": "Nice to meet you! (casual)"
+                }
+              ]
+            },
+            {
+              "en": "Hello? (on the phone)",
+              "jp": "もしもし。"
+            }
+          ]
+        },
         {
           "type": "dialogue",
           "segments": [
@@ -138,7 +232,7 @@
               "ref": "S1",
               "lang": "ja",
               "speaker": "Ami"
-            }, 
+            },
             {
               "en": "Hi! I'm Alex. Nice to meet you.",
               "lang": "en",
@@ -148,7 +242,7 @@
               "ref": "S2",
               "lang": "ja",
               "speaker": "Ami"
-            }, 
+            },
             {
               "en": "Likewise—よろしくお願いします。",
               "lang": "en",
@@ -172,4 +266,3 @@
     }
   ]
 }
-
