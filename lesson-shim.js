@@ -24,9 +24,9 @@ window.LessonShim = (() => {
   // Canonicalize for comparisons only (do NOT bind to input events)
   // Compare-friendly canonicalizer (keeps kana; ignores punctuation/spaces)
   function canonJP(s = "") {
-  const h = (window.wanakana ? wanakana.toHiragana(s) : s) || "";
-  return h.replace(PUNCT_RX, "").replace(/[ \u3000]/g, "").trim();
-}
+    const h = (window.wanakana ? wanakana.toHiragana(s) : s) || "";
+    return h.replace(PUNCT_RX, "").replace(/[ \u3000]/g, "").trim();
+  }
 
 
   // --- HINT HELPERS ---
@@ -827,22 +827,22 @@ window.LessonShim = (() => {
 
 
     function doCheck() {
-  const P = pairs[i];
-  const got  = elInput.value || "";
-  const want = P.jp || "";
+      const P = pairs[i];
+      const got = elInput.value || "";
+      const want = P.jp || "";
 
-  const gotC  = canonJP(got);
-  const wantC = canonJP(want);
-  const readC = canonJP(sentenceReadingHira({ jp: want, romaji_full: P.romaji }));
+      const gotC = canonJP(got);
+      const wantC = canonJP(want);
+      const readC = canonJP(sentenceReadingHira({ jp: want, romaji_full: P.romaji }));
 
-  const ok = (gotC === wantC) || (gotC === readC);
+      const ok = (gotC === wantC) || (gotC === readC);
 
-  elInput.classList.toggle(map?.classes?.ok  || "ok",  ok);
-  elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
-  elHint.textContent = ok ? "" : `Hint: starts with 「${wantC.slice(0, 2)}」`;
-  if (typeof feedback === "function") feedback(map, ok ? "Good!" : "Try again.", ok);
-  if (typeof mascotPulse === "function") mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
-}
+      elInput.classList.toggle(map?.classes?.ok || "ok", ok);
+      elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
+      elHint.textContent = ok ? "" : `Hint: starts with 「${wantC.slice(0, 2)}」`;
+      if (typeof feedback === "function") feedback(map, ok ? "Good!" : "Try again.", ok);
+      if (typeof mascotPulse === "function") mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
+    }
 
 
     function speakCurrent() {
@@ -957,17 +957,24 @@ window.LessonShim = (() => {
       const targetTag = (tagPool.length ? tagPool[Math.floor(Math.random() * tagPool.length)] : null);
       const correctPool = targetTag ? items.filter(v => v.tags?.includes(targetTag)) : items;
       const correct = correctPool[Math.floor(Math.random() * correctPool.length)];
-      const distract = pick(items.filter(v => v !== correct), 2);
-      const options = pick([correct, ...distract], 3);
+      // how many choices to show in the quiz
+      const OPTION_COUNT = Math.min(step.optionCount || 6, items.length);
+
+      const distract = pick(items.filter(v => v !== correct), OPTION_COUNT - 1);
+      const options = pick([correct, ...distract], OPTION_COUNT);
+
 
       quiz.innerHTML = `
       <div class="font-medium mb-2">Pick the best phrase for: <em>${targetTag || 'this situation'}</em></div>
-      <div class="grid gap-2">
-        ${options.map((o, i) => `
-          <button class="btn btn-ghost text-left" data-i="${i}">• ${o.jp}
-            <span class="block text-xs text-gray-500">${o.romaji || ''}</span>
-          </button>`).join('')}
-      </div>
+      <div class="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+  ${options.map((o, i) => `
+    <button class="btn btn-ghost text-left w-full min-h-12" data-i="${i}">
+      • ${o.jp}
+      <span class="block text-xs text-gray-500">${o.romaji || ''}</span>
+    </button>
+  `).join('')}
+</div>
+
       <div class="mt-2 text-sm text-gray-600">${correct.en || ''}</div>
     `;
 
