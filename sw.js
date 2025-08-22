@@ -1,16 +1,17 @@
 // service-worker.js
 const CACHE_VERSION = 'v1.0.0'; // bump when you change core files
 const CACHE_NAME = `jp-lesson-${CACHE_VERSION}`;
+const CACHE = 'kr-v6'; // bump this
 
 const CORE = [
-  './',                 // start_url
+ './',
   './index.html',
-  './manifest.webmanifest',
-  './lesson-shim.js',   // adjust if your main JS has a different name
-  './styles.css',       // adjust or remove if not used
-  './stories.json',     // we’ll treat this network-first below
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './lesson.html',
+  './reference.html',
+  './stories.json',
+  './lesson-loader.js',
+  './lesson-shim.js',
+  './images/favicon.ico'
 ];
 
 // install: pre-cache core shell so it loads offline
