@@ -6,7 +6,6 @@ const CORE = [
   './',
   './index.html',
   './lesson.html',
-  './reference.html',
   './stories.json',
   './lesson-loader.js',
   './lesson-shim.js',
