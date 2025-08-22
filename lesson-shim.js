@@ -4,6 +4,9 @@ window.LessonShim = (() => {
   const norm = (s) => (s || "").replace(/[。．、，！？!\?()\[\]{}'"「」『』・…：:；;\-＿_〜~ー\s]/g, "").toLowerCase();
   const q = (sel) => (sel ? document.querySelector(sel) : null);
   const qa = (sel) => (sel ? Array.from(document.querySelectorAll(sel)) : []);
+  // remove Japanese/ASCII full stops (and the fullwidth dot)
+  const stripStops = (s) => (s || "").replace(/[。．.]/g, "");
+
   // Treat punctuation as optional
   const PUNCT_RX = /[。、，,.!?！？]/g;
 
@@ -558,17 +561,15 @@ window.LessonShim = (() => {
         const inp = card.querySelector("input");
         const exp = s.jp || "";
         const reading = sentenceReadingHira(s);
-        const readingNoP = reading.replace(PUNCT_RX, "");
+        const readingNoP = reading.replace(PUNCT_RX, "");      // strip 。．, etc.
         try {
           const romaParts = splitMora(readingNoP).map(k => wanakana.toRomaji(k));
           inp.placeholder = `Type: ${romaParts.join(' ')}`;
         } catch { }
 
-
-
-        ensureKanaBindings(inp);          // once
-        inp.dataset.expectedKana = readingNoP;
-        attachKanaGuide(inp, exp, map, reading);
+        ensureKanaBindings(inp);                               // once
+        inp.dataset.expectedKana = readingNoP;                 // target = no punctuation
+        attachKanaGuide(inp, exp, map, readingNoP);            // guide = no punctuation
 
 
 
@@ -590,7 +591,7 @@ window.LessonShim = (() => {
       .filter(Boolean)
       .forEach(s => {
         // Use the sentence reading so kanji like 願 become おねがい…
-        const reading = sentenceReadingHira(s);
+        const reading = sentenceReadingHira(s).replace(PUNCT_RX, "");;
         const moras = splitMora(reading);
 
         const card = document.createElement("div");
@@ -812,14 +813,11 @@ window.LessonShim = (() => {
       elPrompt.textContent = P.en || "";
       elInput.value = "";
       elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
-
-      const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji });
-      elRoma.textContent = splitMora(reading).map(k => wanakana.toRomaji(k)).join(' ');
       const readingNoP = reading.replace(PUNCT_RX, "");
-
+      elRoma.textContent = splitMora(readingNoP).map(k => wanakana.toRomaji(k)).join(' ');
       // set dynamic targets for the existing handlers
-      elInput.dataset.expectedKana = reading;          // <-- for attachSmartNormalizer
-      attachKanaGuide(elInput, P.jp, map, reading);    // <-- bind-once version; safe to call again
+      elInput.dataset.expectedKana = readingNoP;       // no punctuation required
+      attachKanaGuide(elInput, P.jp, map, readingNoP); // guide without the dot
 
       elHint.textContent = "";
       elInput.focus();
@@ -929,8 +927,8 @@ window.LessonShim = (() => {
         line.className = "p-3 rounded border border-gray-200";
         line.innerHTML = `
         <div class="text-xs text-gray-500">${(v.tags || []).join(' • ') || 'general'}</div>
-        <div class="font-medium">${v.jp}</div>
-        <div class="text-gray-500">${v.romaji || ''}</div>
+        <div class="font-medium">${stripStops(v.jp)}</div>
+        <div class="text-gray-500">${stripStops(v.romaji || '')}</div>
         <div class="text-gray-600">${v.en || ''}</div>
         <div class="mt-1">
           <button class="btn btn-amber" data-jp="${v.jp}">🔊 Listen</button>
@@ -969,8 +967,8 @@ window.LessonShim = (() => {
       <div class="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
   ${options.map((o, i) => `
     <button class="btn btn-ghost text-left w-full min-h-12" data-i="${i}">
-      • ${o.jp}
-      <span class="block text-xs text-gray-500">${o.romaji || ''}</span>
+      • ${stripStops(o.jp)}
+    <span class="block text-xs text-gray-500">${stripStops(o.romaji || '')}</span>
     </button>
   `).join('')}
 </div>
@@ -1214,12 +1212,15 @@ window.LessonShim = (() => {
       const hintEl = ensureHintEl(card, map);
       const got = (inp?.value || "").trim();
 
-      // Accept: exact JP OR same reading as sentence romaji
-      const readingKana = sentenceReadingHira(s); // e.g., おねがいします
+      // Accept: exact JP OR same reading (punctuation-insensitive)
+      const readingKana = stripStops(sentenceReadingHira(s));     // おねがいします
+      const gotKana     = stripStops(H.toHira(got));
+      const jpKana      = stripStops(H.toHira(s.jp || ""));
+      const romajiKana  = s.romaji_full ? stripStops(H.toHira(s.romaji_full)) : null;
       const correct =
-        norm(s.jp || "") === norm(got) ||
-        H.toHira(got) === readingKana ||
-        (s.romaji_full && H.toHira(s.romaji_full) === H.toHira(got));
+      norm(s.jp || "") === norm(got) ||  // also strips punctuation/spaces
+      gotKana === jpKana ||
+      (romajiKana && gotKana === romajiKana);
 
 
       if (inp) {
