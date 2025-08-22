@@ -40,9 +40,12 @@ window.LessonShim = (() => {
     makeHint(expectedJP, gotRaw, sentence) {
       const got = H.toHira(gotRaw);
       const exp = sentence?.romaji_full ? H.toHira(sentence.romaji_full) : H.toHira(expectedJP);
+      // ignore punctuation for hint logic
+      const gotNP = (got || "").replace(PUNCT_RX, "");
+      const expNP = (exp || "").replace(PUNCT_RX, "");
 
       if (!gotRaw || !gotRaw.trim())
-        return `Type your answer. Hint: starts with 「${exp.slice(0, 2)}」`;
+        return `Type your answer. Hint: starts with 「${expNP.slice(0, 2)}」`;
 
       // Common pitfalls
       if (expectedJP.includes("こんにちは") && got.includes("こんにちわ"))
@@ -51,18 +54,18 @@ window.LessonShim = (() => {
       if (/願/.test(expectedJP) && got === "おねがいします")
         return ""; // accept kana reading for 願
 
-      if (exp.includes("っ") && !got.includes("っ")) {
-        const idx = exp.indexOf("っ"), next = exp[idx + 1] || "";
+      if (expNP.includes("っ") && !gotNP.includes("っ")) {
+        const idx = expNP.indexOf("っ"), next = expNP[idx + 1] || "";
         return `Add a small 「っ」 before 「${next}」.`;
       }
 
-      if (got.length !== exp.length)
-        return got.length < exp.length
-          ? `You're missing ${exp.length - got.length} character(s).`
-          : `You have ${got.length - exp.length} extra character(s).`;
+      if (gotNP.length !== expNP.length)
+        return gotNP.length < expNP.length
+          ? `You're missing ${expNP.length - gotNP.length} character(s).`
+          : `You have ${gotNP.length - expNP.length} extra character(s).`;
 
-      const i = H.firstDiff(got, exp);
-      if (i >= 0) return `Check character ${i + 1}: should be 「${exp[i]}」.`;
+      const i = H.firstDiff(gotNP, expNP);
+      if (i >= 0) return `Check character ${i + 1}: should be 「${expNP[i]}」.`;
 
       return "Check particles/spelling.";
     },
@@ -1214,13 +1217,13 @@ window.LessonShim = (() => {
 
       // Accept: exact JP OR same reading (punctuation-insensitive)
       const readingKana = stripStops(sentenceReadingHira(s));     // おねがいします
-      const gotKana     = stripStops(H.toHira(got));
-      const jpKana      = stripStops(H.toHira(s.jp || ""));
-      const romajiKana  = s.romaji_full ? stripStops(H.toHira(s.romaji_full)) : null;
+      const gotKana = stripStops(H.toHira(got));
+      const jpKana = stripStops(H.toHira(s.jp || ""));
+      const romajiKana = s.romaji_full ? stripStops(H.toHira(s.romaji_full)) : null;
       const correct =
-      norm(s.jp || "") === norm(got) ||  // also strips punctuation/spaces
-      gotKana === jpKana ||
-      (romajiKana && gotKana === romajiKana);
+        norm(s.jp || "") === norm(got) ||  // also strips punctuation/spaces
+        gotKana === jpKana ||
+        (romajiKana && gotKana === romajiKana);
 
 
       if (inp) {
