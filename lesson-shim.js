@@ -813,27 +813,30 @@ window.LessonShim = (() => {
 
 function show() {
   const P = pairs[i];
+
   elPrompt.textContent = P.en || "";
   elInput.value = "";
-  elHint.textContent = "";
   elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
 
-  // Compute a kana reading for the current target (prefer romaji_full if provided)
+  // ✅ compute the reading and use it everywhere we need it
   const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji }) || "";
-  const readingNoP = reading.replace(PUNCT_RX, ""); // strip punctuation for helpers
+  const readingNoP = reading.replace(PUNCT_RX, "");
 
-  // Romaji helper
+  // romaji hint
   try {
-    elRoma.textContent = splitMora(readingNoP).map(k => wanakana.toRomaji(k)).join(" ");
+    const roma = splitMora(readingNoP).map(k => wanakana.toRomaji(k)).join(" ");
+    elRoma.textContent = roma;
   } catch { elRoma.textContent = ""; }
 
-  // Re-target the smart normalizer + guide to THIS pair
-  ensureKanaBindings(elInput);                 // bind once (wanakana + smart normalizer)
-  elInput.dataset.expectedKana = readingNoP;   // what the normalizer will aim for
-  attachKanaGuide(elInput, P.jp, map, reading);// chips/hints use full reading
+  // inputs/guides
+  ensureKanaBindings(elInput);
+  elInput.dataset.expectedKana = readingNoP;         // target for the smart normalizer
+  attachKanaGuide(elInput, P.jp, map, reading);      // kana chips + “Next: …”
 
+  elHint.textContent = "";
   elInput.focus();
 }
+
 
 
 
