@@ -1,4 +1,3 @@
-
 function enableMascotMoveAndResize() {
   const mascot = document.getElementById('mascot');
   const wrap = mascot?.parentElement;
