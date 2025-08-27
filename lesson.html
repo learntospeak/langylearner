@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./lesson-shim.js?v=4"></script>
     <script type="module" src="./lesson-loader.js?v=4"></script>
+    <script type="module" src="./modules/mascot-controller.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
@@ -284,16 +285,16 @@
 
             /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
             #lesson-wrap #mascot {
-                position: absolute !important;
-                top: 10px !important;
-                right: 10px !important;
-                left: auto !important;
-                bottom: auto !important;
+                position: absolute;
+                top: 10px;
+                right: 10px;
                 width: 120px;
                 height: 120px;
                 z-index: 50;
-                pointer-events: none;
+                pointer-events: auto;
                 user-select: none;
+                cursor: move;
+                touch-action: none;
             }
 
             /* SVG sizing + animations (unchanged) */
