@@ -4,20 +4,20 @@ const ui = { list:"#jp-text", status:"#en-text", feedback:"#full-romaji", title:
 // …leave the rest unchanged…
 const map = {
   containers: { list:"#jp-text", status:"#en-text", feedback:"#full-romaji" },
-  controls: { next:"#lsNext", prev:"#lsPrev", check:"#lsCheck", showAnswer:"#lsReveal",
-              toggleRomaji:"#lsToggleRomaji", speak:"#lsSpeak",
-              speed:"#lsSpeed", speedVal:"#lsSpeedVal" },
-  classes:{ item:"lesson-item", jp:"jp", romaji:"romaji", en:"en", input:"inp", ok:"ok", bad:"bad", hint:"hint", prompt:"prompt", speakBtn:"speak-btn" },
+  controls: {
+    next:"#lsNext", prev:"#lsPrev", check:"#lsCheck", showAnswer:"#lsReveal",
+    toggleRomaji:"#lsToggleRomaji", speak:"#lsSpeak",
+    speed:"#lsSpeed", speedVal:"#lsSpeedVal"
+  },
   // add to your existing map
-flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true },
+  flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true },
   speech:{ rate:1, pitch:1, volume:1 },
   mascot:"#mascot", // ← NEW
   classes: {
-  item:"lesson-item", jp:"jp", romaji:"romaji", en:"en",
-  input:"field",                     // ← use the styled class
-  ok:"ok", bad:"bad", hint:"hint", prompt:"prompt", speakBtn:"speak-btn"
-},
- 
+    item:"lesson-item", jp:"jp", romaji:"romaji", en:"en",
+    input:"field",                     // ← use the styled class
+    ok:"ok", bad:"bad", hint:"hint", prompt:"prompt", speakBtn:"speak-btn"
+  }
 };
 
 function show(msg){ const el=document.querySelector(ui.status); if(el) el.textContent=msg; console.log("[lesson]", msg); }
