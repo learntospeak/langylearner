@@ -7,6 +7,10 @@
     <meta name="theme-color" content="#111111">
     <title>KanaReader — Lesson</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./lesson-shim.js?v=4"></script>
+    <script type="module" src="./lesson-loader.js?v=4"></script>
+    <script type="module" src="./modules/mascot-controller.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
     <style type="text/tailwindcss">
@@ -281,6 +285,19 @@
 
             /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
             #lesson-wrap #mascot {
+
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 120px;
+                height: 120px;
+                z-index: 50;
+                pointer-events: auto;
+                user-select: none;
+                cursor: move;
+                touch-action: none;
+            }
+=======
   position: absolute;
   top: 10px;
   right: 10px;
@@ -290,6 +307,7 @@
   pointer-events: none;   /* ✅ does not block taps/scrolls */
   user-select: none;
 }
+
 
 
             /* SVG sizing + animations (unchanged) */
