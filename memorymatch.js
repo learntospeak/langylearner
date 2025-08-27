@@ -1,5 +1,20 @@
 // ===== Memory Match (standalone block) =====
-(() => {
+(function () {
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { shuffle };
+  }
+
+  if (typeof document === 'undefined') return;
+
   const $ = id => document.getElementById(id);
 
   // Required elements
@@ -16,15 +31,6 @@
   let secondCard = null;
   let lockBoard = false;
   let matches = 0;
-
-  // Helpers
-  function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
 
   function speakKana(char) {
     try {
