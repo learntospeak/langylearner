@@ -1282,6 +1282,7 @@ function renderPhraseDrill(lesson, step, map) {
 
     const render = () => {
       const step = steps[state.stepIndex] || {};
+      document.body.dataset.step = step.type || "";
       switch (step.type) {
         case "read_listen": renderReadListen(lesson, step, map); break;
         case "cloze": renderCloze(lesson, step, map); break;
