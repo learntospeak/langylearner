@@ -285,6 +285,7 @@
 
             /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
             #lesson-wrap #mascot {
+
                 position: absolute;
                 top: 10px;
                 right: 10px;
@@ -296,6 +297,18 @@
                 cursor: move;
                 touch-action: none;
             }
+=======
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 120px;
+  height: 120px;
+  z-index: 50;
+  pointer-events: none;   /* ✅ does not block taps/scrolls */
+  user-select: none;
+}
+
+
 
             /* SVG sizing + animations (unchanged) */
             #lesson-wrap #mascot svg {
@@ -648,38 +661,40 @@
 
 
 
-    <!-- keep order: shim first, loader second -->
-    <script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
-    <script src="./lesson-shim.js"></script>
-    <script type="module" src="./lesson-loader.js?v=3"></script>
+    <!-- Libraries / App scripts -->
+<script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
 
-    <script>
-        (function () {
-            // Ensure body is scrollable in case a modal left it locked
-            window.addEventListener('pageshow', () => {
-                document.body.classList.remove('overflow-hidden');
-            });
+<!-- Always load the shim once, after wanakana -->
+<script src="./lesson-shim.js?v=7"></script>
 
-            // Pad the page bottom to the actual footer height + iOS safe area
-            function padForFooter() {
-                const footer = document.getElementById('footer-controls');
-                const page = document.getElementById('page');
-                if (!footer || !page) return;
-                const h = footer.offsetHeight;
-                page.style.paddingBottom = `calc(${h}px + env(safe-area-inset-bottom, 0px))`;
-            }
+<!-- Your module that renders/boots the lesson -->
+<script type="module" src="./lesson-loader.js?v=7"></script>
 
-            window.addEventListener('load', padForFooter);
-            window.addEventListener('resize', padForFooter);
-            // In case fonts / layout shift after first paint:
-            setTimeout(padForFooter, 100);
-            setTimeout(padForFooter, 400);
-        })();
-    </script>
+<!-- Optional mascot controller (if you actually use it) -->
+<script type="module" src="./modules/mascot-controller.js?v=2"></script>
 
+<!-- Page helpers (keep this last) -->
+<script>
+  (function () {
+    // Ensure body is scrollable in case a modal left it locked
+    window.addEventListener('pageshow', () => {
+      document.body.classList.remove('overflow-hidden');
+    });
 
+    // Pad the page bottom to the actual footer height + iOS safe area
+    function padForFooter() {
+      const footer = document.getElementById('footer-controls');
+      const page = document.getElementById('page');
+      if (!footer || !page) return;
+      const h = footer.offsetHeight;
+      page.style.paddingBottom = `calc(${h}px + env(safe-area-inset-bottom, 0px))`;
+    }
 
-
+    window.addEventListener('load', padForFooter);
+    window.addEventListener('resize', padForFooter);
+    setTimeout(padForFooter, 100);
+    setTimeout(padForFooter, 400);
+  })();
+</script>
 </body>
-
 </html>

@@ -813,29 +813,29 @@ window.LessonShim = (() => {
 
 function show() {
   const P = pairs[i];
-
   elPrompt.textContent = P.en || "";
   elInput.value = "";
   elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
 
-  // ✅ compute the reading and use it everywhere we need it
-  const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji }) || "";
-  const readingNoP = reading.replace(PUNCT_RX, "");
+  const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji }); // ✅ define first
 
-  // romaji hint
   try {
-    const roma = splitMora(readingNoP).map(k => wanakana.toRomaji(k)).join(" ");
-    elRoma.textContent = roma;
+    elRoma.textContent = splitMora(reading).map(k => wanakana.toRomaji(k)).join(' ');
   } catch { elRoma.textContent = ""; }
 
-  // inputs/guides
-  ensureKanaBindings(elInput);
-  elInput.dataset.expectedKana = readingNoP;         // target for the smart normalizer
-  attachKanaGuide(elInput, P.jp, map, reading);      // kana chips + “Next: …”
+  const readingNoP = reading.replace(PUNCT_RX, "");
+  elInput.dataset.expectedKana = readingNoP;
+  attachKanaGuide(elInput, P.jp, map, reading);
+
+  try {
+    const romaParts = splitMora(readingNoP).map(k => wanakana.toRomaji(k));
+    elInput.placeholder = `Type: ${romaParts.join(' ')}`;
+  } catch {}
 
   elHint.textContent = "";
   elInput.focus();
 }
+
 
 
 
