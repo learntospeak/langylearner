@@ -811,27 +811,41 @@ function renderPhraseDrill(lesson, step, map) {
   ensureKanaBindings(elInput); // IME + smart normalizer
 
   function show() {
-    const P = pairs[i];
-    elPrompt.textContent = P.en || "";
-    elInput.value = "";
-    elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
+  const P = pairs[i] || {};
 
-    // ✅ make sure "reading" exists in this scope
-    const reading = P.reading || sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji });
-    const readingNoP = reading.replace(PUNCT_RX, "");
+  // UI reset
+  elPrompt.textContent = P.en || "";
+  elInput.value = "";
+  elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
+  elHint.textContent = "";
 
-    // romaji helper line
-    try {
-      elRoma.textContent = splitMora(readingNoP).map(k => wanakana.toRomaji(k)).join(' ');
-    } catch { elRoma.textContent = ""; }
+  // Compute a safe reading (kanji → kana). Prefer provided romaji if present.
+  const reading =
+    sentenceReadingHira({
+      jp: P.jp || "",
+      romaji_full: P.romaji_full || P.romaji || ""
+    }) || "";
 
-    // targets for normalizer + guide (punctuation ignored)
-    elInput.dataset.expectedKana = readingNoP;
-    attachKanaGuide(elInput, P.jp, map, reading);
+  // Remove punctuation for guidance/placeholder targets
+  const readingNoP = reading.replace(PUNCT_RX, "");
 
-    elHint.textContent = "";
-    elInput.focus();
+  // Romaji guide line (defensive)
+  try {
+    const mora = splitMora(readingNoP);
+    const roma = window.wanakana ? mora.map(k => wanakana.toRomaji(k)).join(" ") : "";
+    elRoma.textContent = roma;
+  } catch {
+    elRoma.textContent = "";
   }
+
+  // Tell our helpers what the expected kana is
+  elInput.dataset.expectedKana = readingNoP;     // used by attachSmartNormalizer
+  attachKanaGuide(elInput, P.jp || "", map, readingNoP);
+
+  // Focus ready
+  elInput.focus();
+}
+
 
   function doCheck() {
     const P = pairs[i];
