@@ -662,26 +662,37 @@
 
 <!-- Page helpers (keep this last) -->
 <script>
-  (function () {
-    // Ensure body is scrollable in case a modal left it locked
-    window.addEventListener('pageshow', () => {
-      document.body.classList.remove('overflow-hidden');
-    });
+(function () {
+  // Make sure modals didn't leave the body locked
+  addEventListener('pageshow', () => document.body.classList.remove('overflow-hidden'));
 
-    // Pad the page bottom to the actual footer height + iOS safe area
-    function padForFooter() {
-      const footer = document.getElementById('footer-controls');
-      const page = document.getElementById('page');
-      if (!footer || !page) return;
-      const h = footer.offsetHeight;
-      page.style.paddingBottom = `calc(${h}px + env(safe-area-inset-bottom, 0px))`;
-    }
+  const page = document.getElementById('page');
+  const footer = document.getElementById('footer-controls');
+  if (!page || !footer) return; // only affects lesson.html
 
-    window.addEventListener('load', padForFooter);
-    window.addEventListener('resize', padForFooter);
-    setTimeout(padForFooter, 100);
-    setTimeout(padForFooter, 400);
-  })();
+  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-area-inset-bottom)');
+  const apply = () => {
+    const h = footer.offsetHeight || 0;
+    page.style.paddingBottom = supportsEnv
+      ? `calc(${h}px + env(safe-area-inset-bottom))`
+      : `${h + 16}px`; // tiny buffer if no env()
+  };
+
+  apply();
+  addEventListener('load', apply, { once: true });
+  addEventListener('resize', apply);
+
+  // react to footer height changes (wraps, rotates, etc.)
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(apply).observe(footer);
+  }
+
+  // let users scroll starting on the footer bar
+  footer.style.touchAction = 'pan-y';
+})();
 </script>
+<style>
+  body[data-step="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
+</style>
 </body>
 </html>
