@@ -771,16 +771,16 @@ window.LessonShim = (() => {
     feedback(map, '', true);
   }
 
-  // ---------- phrase drill (type + alternates) ----------
+ // ---------- phrase drill (type + alternates) ----------
 function renderPhraseDrill(lesson, step, map) {
   const listEl = q(map?.containers?.list); if (!listEl) return;
   listEl.innerHTML = "";
 
-  // Build pairs with a stable reading + romaji up front
+  // step.pairs: [{en, jp, alts?:[{jp,en?}], romaji_full?, romaji?}]
   const pairs = (step.pairs || []).map(p => {
-    const readingKana = sentenceReadingHira({ jp: p.jp, romaji_full: p.romaji }); // e.g., おねがいします
-    const romaji = (window.wanakana ? wanakana.toRomaji(readingKana) : "");
-    return { ...p, reading: readingKana, romaji, alts: p.alts || [] };
+    const readingKana = sentenceReadingHira({ jp: p.jp || "", romaji_full: p.romaji_full || p.romaji || "" }) || "";
+    const romaji = (window.wanakana ? wanakana.toRomaji(readingKana) : (p.romaji || "")) || "";
+    return Object.assign({ readingKana, romaji, alts: p.alts || [] }, p);
   });
 
   let i = 0;
@@ -808,83 +808,87 @@ function renderPhraseDrill(lesson, step, map) {
   const elHint   = card.querySelector(`.${map?.classes?.hint || "hint"}`);
   const altBox   = card.querySelector('#altBox');
 
-  ensureKanaBindings(elInput); // IME + smart normalizer
+  // bind input helpers once
+  ensureKanaBindings(elInput);
 
   function show() {
-  const P = pairs[i] || {};
+    const P = pairs[i] || {};
 
-  // UI reset
-  elPrompt.textContent = P.en || "";
-  elInput.value = "";
-  elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
-  elHint.textContent = "";
+    // Reset UI
+    elPrompt.textContent = P.en || "";
+    elInput.value = "";
+    elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
+    elHint.textContent = "";
 
-  // Compute a safe reading (kanji → kana). Prefer provided romaji if present.
-  const reading =
-    sentenceReadingHira({
-      jp: P.jp || "",
-      romaji_full: P.romaji_full || P.romaji || ""
-    }) || "";
+    // Safe reading (kanji → kana), punctuation stripped for guidance/compare
+    const reading =
+      sentenceReadingHira({
+        jp: P.jp || "",
+        romaji_full: P.romaji_full || P.romaji || ""
+      }) || "";
+    const readingNoP = reading.replace(PUNCT_RX, "");
 
-  // Remove punctuation for guidance/placeholder targets
-  const readingNoP = reading.replace(PUNCT_RX, "");
+    // Romaji guide (defensive)
+    try {
+      const mora = splitMora(readingNoP);
+      const roma = window.wanakana ? mora.map(k => wanakana.toRomaji(k)).join(" ") : "";
+      elRoma.textContent = roma;
+    } catch { elRoma.textContent = ""; }
 
-  // Romaji guide line (defensive)
-  try {
-    const mora = splitMora(readingNoP);
-    const roma = window.wanakana ? mora.map(k => wanakana.toRomaji(k)).join(" ") : "";
-    elRoma.textContent = roma;
-  } catch {
-    elRoma.textContent = "";
+    // Tell helpers the expected kana target
+    elInput.dataset.expectedKana = readingNoP;     // used by attachSmartNormalizer
+    attachKanaGuide(elInput, P.jp || "", map, readingNoP);
+
+    // Focus ready
+    elInput.focus();
   }
 
-  // Tell our helpers what the expected kana is
-  elInput.dataset.expectedKana = readingNoP;     // used by attachSmartNormalizer
-  attachKanaGuide(elInput, P.jp || "", map, readingNoP);
-
-  // Focus ready
-  elInput.focus();
-}
-
-
   function doCheck() {
-    const P = pairs[i];
+    const P = pairs[i] || {};
     const got  = elInput.value || "";
     const want = P.jp || "";
 
     const gotC  = canonJP(got);
     const wantC = canonJP(want);
-    const readC = canonJP(P.reading || sentenceReadingHira({ jp: want, romaji_full: P.romaji }));
+    const readC = canonJP(sentenceReadingHira({ jp: want, romaji_full: P.romaji_full || P.romaji || "" }));
 
     const ok = (gotC === wantC) || (gotC === readC);
+
     elInput.classList.toggle(map?.classes?.ok || "ok", ok);
     elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
     elHint.textContent = ok ? "" : `Hint: starts with 「${wantC.slice(0, 2)}」`;
-
-    feedback(map, ok ? "Good!" : "Try again.", ok);
-    mascotPulse && mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
+    if (typeof feedback === "function") feedback(map, ok ? "Good!" : "Try again.", ok);
+    if (typeof mascotPulse === "function") mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
   }
 
-  function speakCurrent() { const P = pairs[i]; Speech.speak(P.jp || "", map?.speech || {}); }
+  function speakCurrent() {
+    const P = pairs[i] || {};
+    Speech.speak(P.jp || "", map?.speech || {});
+  }
 
   function toggleAlts() {
-    const P = pairs[i];
-    if (!P.alts || !P.alts.length) { altBox.classList.add('hidden'); elHint.textContent = "No variations for this one."; return; }
+    const P = pairs[i] || {};
+    if (!P.alts || !P.alts.length) {
+      altBox.classList.add('hidden');
+      elHint.textContent = "No variations for this one.";
+      return;
+    }
     altBox.classList.toggle('hidden');
     if (!altBox.classList.contains('hidden')) {
       altBox.innerHTML = P.alts.map(a => `
         <button class="btn btn-ghost block w-full text-left mb-1" data-jp="${a.jp}">
           ${a.jp}
-          <span class="block text-xs text-gray-500">${wanakana ? wanakana.toRomaji(kanjiToReading(a.jp)) : ""}</span>
+          <span class="block text-xs text-gray-500">${
+            wanakana ? wanakana.toRomaji(sentenceReadingHira({ jp: a.jp })) : ""
+          }</span>
           ${a.en ? `<span class="block text-xs text-gray-600">${a.en}</span>` : ""}
-        </button>`).join('');
+        </button>
+      `).join('');
       [...altBox.querySelectorAll('[data-jp]')].forEach(b => {
         b.addEventListener('click', () => {
+          // swap target to this alternate
           const newJP = b.dataset.jp || "";
-          // Update both the JP and its reading so "reading" is always defined
           pairs[i].jp = newJP;
-          pairs[i].reading = sentenceReadingHira({ jp: newJP });
-          pairs[i].romaji  = wanakana ? wanakana.toRomaji(pairs[i].reading) : "";
           show();
           altBox.classList.add('hidden');
         });
@@ -892,15 +896,19 @@ function renderPhraseDrill(lesson, step, map) {
     }
   }
 
+  // wire buttons
   card.querySelector('[data-act="check"]').addEventListener('click', doCheck);
   card.querySelector('[data-act="speak"]').addEventListener('click', speakCurrent);
   card.querySelector('[data-act="alt"]').addEventListener('click', toggleAlts);
-  card.querySelector('[data-act="next"]').addEventListener('click', () => { i = (i + 1) % pairs.length; show(); });
+  card.querySelector('[data-act="next"]').addEventListener('click', () => {
+    i = (i + 1) % pairs.length; show();
+  });
 
   show();
   setStatus(map, 'Type the phrase; explore variations.');
   feedback(map, '', true);
 }
+
 
 
   // ---------- variations (browse + quick quiz) ----------
