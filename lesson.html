@@ -8,13 +8,14 @@
     <title>KanaReader — Lesson</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-  /* Safety padding so content doesn't hide under the fixed footer */
-  #page { padding-bottom: 8.5rem; }
+  /* Only when the current step is phrase_drill */
+  body[data-step="phrase_drill"] #page { padding-bottom: 8.5rem; }
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    #page { padding-bottom: calc(8.5rem + env(safe-area-inset-bottom)); }
+    body[data-step="phrase_drill"] #page {
+      padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+    }
   }
 </style>
-
     <script type="module" src="./modules/mascot-controller.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
