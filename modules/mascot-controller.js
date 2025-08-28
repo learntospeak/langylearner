@@ -50,7 +50,7 @@ function enableMascotMoveAndResize() {
 }
 
 document.addEventListener('DOMContentLoaded', enableMascotMoveAndResize);
-=======
+
 // modules/mascot-controller.js
 // Simple drag for #mascot inside #lesson-wrap. No external deps.
 (() => {

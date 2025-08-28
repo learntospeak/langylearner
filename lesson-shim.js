@@ -772,22 +772,22 @@ window.LessonShim = (() => {
   }
 
   // ---------- phrase drill (type + alternates) ----------
-  function renderPhraseDrill(lesson, step, map) {
-    const listEl = q(map?.containers?.list); if (!listEl) return;
-    listEl.innerHTML = "";
+function renderPhraseDrill(lesson, step, map) {
+  const listEl = q(map?.containers?.list); if (!listEl) return;
+  listEl.innerHTML = "";
 
-    // step.pairs: [{en, jp, alts?:[{jp,en?}]}]
-    const pairs = (step.pairs || []).map(p => {
-      const reading = kanjiToReading(p.jp || "");
-      const romaji = window.wanakana ? wanakana.toRomaji(reading) : "";
-      return Object.assign({ reading, romaji, alts: p.alts || [] }, p);
-    });
+  // Build pairs with a stable reading + romaji up front
+  const pairs = (step.pairs || []).map(p => {
+    const readingKana = sentenceReadingHira({ jp: p.jp, romaji_full: p.romaji }); // e.g., おねがいします
+    const romaji = (window.wanakana ? wanakana.toRomaji(readingKana) : "");
+    return { ...p, reading: readingKana, romaji, alts: p.alts || [] };
+  });
 
-    let i = 0;
+  let i = 0;
 
-    const card = document.createElement('div');
-    card.className = map?.classes?.item || "lesson-item";
-    card.innerHTML = `
+  const card = document.createElement('div');
+  card.className = map?.classes?.item || "lesson-item";
+  card.innerHTML = `
     <div class="${map?.classes?.prompt || "prompt"} mb-1"></div>
     <input class="${map?.classes?.input || "jp-input"}" placeholder="Type in Japanese…" />
     <div class="${map?.classes?.romaji || "romaji"} text-gray-500 mb-1"></div>
@@ -800,104 +800,93 @@ window.LessonShim = (() => {
     <div class="${map?.classes?.hint || "hint"} text-sm text-amber-700 mt-2"></div>
     <div id="altBox" class="hidden mt-3 p-2 border rounded"></div>
   `;
-    listEl.appendChild(card);
+  listEl.appendChild(card);
 
-    const elPrompt = card.querySelector(`.${map?.classes?.prompt || "prompt"}`);
-    const elInput = card.querySelector("input");
-    const elRoma = card.querySelector(`.${map?.classes?.romaji || "romaji"}`);
-    const elHint = card.querySelector(`.${map?.classes?.hint || "hint"}`);
-    const altBox = card.querySelector('#altBox');
+  const elPrompt = card.querySelector(`.${map?.classes?.prompt || "prompt"}`);
+  const elInput  = card.querySelector("input");
+  const elRoma   = card.querySelector(`.${map?.classes?.romaji || "romaji"}`);
+  const elHint   = card.querySelector(`.${map?.classes?.hint || "hint"}`);
+  const altBox   = card.querySelector('#altBox');
 
-    // bind input (reuse your tools)
-    ensureKanaBindings(elInput); // once
+  ensureKanaBindings(elInput); // IME + smart normalizer
 
-function show() {
-  const P = pairs[i];
-  elPrompt.textContent = P.en || "";
-  elInput.value = "";
-  elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
+  function show() {
+    const P = pairs[i];
+    elPrompt.textContent = P.en || "";
+    elInput.value = "";
+    elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
 
-  const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji }); // ✅ define first
+    // ✅ make sure "reading" exists in this scope
+    const reading = P.reading || sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji });
+    const readingNoP = reading.replace(PUNCT_RX, "");
 
-  try {
-    elRoma.textContent = splitMora(reading).map(k => wanakana.toRomaji(k)).join(' ');
-  } catch { elRoma.textContent = ""; }
+    // romaji helper line
+    try {
+      elRoma.textContent = splitMora(readingNoP).map(k => wanakana.toRomaji(k)).join(' ');
+    } catch { elRoma.textContent = ""; }
 
-  const readingNoP = reading.replace(PUNCT_RX, "");
-  elInput.dataset.expectedKana = readingNoP;
-  attachKanaGuide(elInput, P.jp, map, reading);
+    // targets for normalizer + guide (punctuation ignored)
+    elInput.dataset.expectedKana = readingNoP;
+    attachKanaGuide(elInput, P.jp, map, reading);
 
-  try {
-    const romaParts = splitMora(readingNoP).map(k => wanakana.toRomaji(k));
-    elInput.placeholder = `Type: ${romaParts.join(' ')}`;
-  } catch {}
+    elHint.textContent = "";
+    elInput.focus();
+  }
 
-  elHint.textContent = "";
-  elInput.focus();
-}
+  function doCheck() {
+    const P = pairs[i];
+    const got  = elInput.value || "";
+    const want = P.jp || "";
 
+    const gotC  = canonJP(got);
+    const wantC = canonJP(want);
+    const readC = canonJP(P.reading || sentenceReadingHira({ jp: want, romaji_full: P.romaji }));
 
+    const ok = (gotC === wantC) || (gotC === readC);
+    elInput.classList.toggle(map?.classes?.ok || "ok", ok);
+    elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
+    elHint.textContent = ok ? "" : `Hint: starts with 「${wantC.slice(0, 2)}」`;
 
+    feedback(map, ok ? "Good!" : "Try again.", ok);
+    mascotPulse && mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
+  }
 
+  function speakCurrent() { const P = pairs[i]; Speech.speak(P.jp || "", map?.speech || {}); }
 
-    function doCheck() {
-      const P = pairs[i];
-      const got = elInput.value || "";
-      const want = P.jp || "";
-
-      const gotC = canonJP(got);
-      const wantC = canonJP(want);
-      const readC = canonJP(sentenceReadingHira({ jp: want, romaji_full: P.romaji }));
-
-      const ok = (gotC === wantC) || (gotC === readC);
-
-      elInput.classList.toggle(map?.classes?.ok || "ok", ok);
-      elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
-      elHint.textContent = ok ? "" : `Hint: starts with 「${wantC.slice(0, 2)}」`;
-      if (typeof feedback === "function") feedback(map, ok ? "Good!" : "Try again.", ok);
-      if (typeof mascotPulse === "function") mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
-    }
-
-
-    function speakCurrent() {
-      const P = pairs[i]; Speech.speak(P.jp || "", map?.speech || {});
-    }
-
-    function toggleAlts() {
-      const P = pairs[i];
-      if (!P.alts || !P.alts.length) { altBox.classList.add('hidden'); elHint.textContent = "No variations for this one."; return; }
-      altBox.classList.toggle('hidden');
-      if (!altBox.classList.contains('hidden')) {
-        altBox.innerHTML = P.alts.map(a => `
+  function toggleAlts() {
+    const P = pairs[i];
+    if (!P.alts || !P.alts.length) { altBox.classList.add('hidden'); elHint.textContent = "No variations for this one."; return; }
+    altBox.classList.toggle('hidden');
+    if (!altBox.classList.contains('hidden')) {
+      altBox.innerHTML = P.alts.map(a => `
         <button class="btn btn-ghost block w-full text-left mb-1" data-jp="${a.jp}">
-          ${a.jp}<span class="block text-xs text-gray-500">${wanakana ? wanakana.toRomaji(kanjiToReading(a.jp)) : ""}
-</span>
+          ${a.jp}
+          <span class="block text-xs text-gray-500">${wanakana ? wanakana.toRomaji(kanjiToReading(a.jp)) : ""}</span>
           ${a.en ? `<span class="block text-xs text-gray-600">${a.en}</span>` : ""}
         </button>`).join('');
-        [...altBox.querySelectorAll('[data-jp]')].forEach(b => {
-          b.addEventListener('click', () => {
-            // swap target to this alternate
-            const newJP = b.dataset.jp || "";
-            pairs[i].jp = newJP;
-            show();
-            altBox.classList.add('hidden');
-          });
+      [...altBox.querySelectorAll('[data-jp]')].forEach(b => {
+        b.addEventListener('click', () => {
+          const newJP = b.dataset.jp || "";
+          // Update both the JP and its reading so "reading" is always defined
+          pairs[i].jp = newJP;
+          pairs[i].reading = sentenceReadingHira({ jp: newJP });
+          pairs[i].romaji  = wanakana ? wanakana.toRomaji(pairs[i].reading) : "";
+          show();
+          altBox.classList.add('hidden');
         });
-      }
+      });
     }
-
-    // wire buttons
-    card.querySelector('[data-act="check"]').addEventListener('click', doCheck);
-    card.querySelector('[data-act="speak"]').addEventListener('click', speakCurrent);
-    card.querySelector('[data-act="alt"]').addEventListener('click', toggleAlts);
-    card.querySelector('[data-act="next"]').addEventListener('click', () => {
-      i = (i + 1) % pairs.length; show();
-    });
-
-    show();
-    setStatus(map, 'Type the phrase; explore variations.');
-    feedback(map, '', true);
   }
+
+  card.querySelector('[data-act="check"]').addEventListener('click', doCheck);
+  card.querySelector('[data-act="speak"]').addEventListener('click', speakCurrent);
+  card.querySelector('[data-act="alt"]').addEventListener('click', toggleAlts);
+  card.querySelector('[data-act="next"]').addEventListener('click', () => { i = (i + 1) % pairs.length; show(); });
+
+  show();
+  setStatus(map, 'Type the phrase; explore variations.');
+  feedback(map, '', true);
+}
 
 
   // ---------- variations (browse + quick quiz) ----------
