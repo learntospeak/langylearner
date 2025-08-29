@@ -22,14 +22,7 @@ window.LessonShim = (() => {
       attachSmartNormalizer(inp);
       inp.dataset.smartBound = "1";
     }
-    showR.addEventListener('change', () => {
-      map.flags = map.flags || {};
-      map.flags.showRomaji = showR.checked;
-      renderBilingualScene(lesson, step, map);
-      padFooter(); // <-- add this line
-    });
-
-  }
+     }
 
   // Canonicalize for comparisons only (do NOT bind to input events)
   // Compare-friendly canonicalizer (keeps kana; ignores punctuation/spaces)
@@ -1102,9 +1095,7 @@ window.LessonShim = (() => {
     root.appendChild(box);
 
     const list = box.querySelector('#sceneList');
-    const auto = box.querySelector('#sceneAuto');
-    const showR = box.querySelector('#sceneShowRomaji');
-
+    
     // Render lines
     segs.forEach((g, i) => {
       const line = document.createElement('div');
@@ -1113,7 +1104,7 @@ window.LessonShim = (() => {
       line.innerHTML = `
       <div class="text-xs text-gray-500">${g.speaker} • ${g.lang === 'ja' ? 'Japanese' : 'English'}</div>
       <div class="font-medium ${map?.classes?.jp || 'jp'}">${g.lang === 'ja' ? (g.jp || g.text) : g.en}</div>
-      ${g.lang === 'ja' && (map?.flags?.showRomaji || showR.checked)
+      ${g.lang === 'ja' && map?.flags?.showRomaji
           ? `<div class="${map?.classes?.romaji || 'romaji'} text-gray-500">${g.romaji || ''}</div>` : ''}
       ${g.lang === 'ja'
           ? `<div class="${map?.classes?.en || 'en'} text-gray-600">${g.en || ''}</div>`
@@ -1153,7 +1144,7 @@ window.LessonShim = (() => {
       u.onstart = () => { playing = true; currentUtt = u; mascotSet && mascotSet('mascot-talk'); highlight(i); };
       u.onend = () => {
         playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
-        if (auto.checked && i < segs.length - 1) speakIndex(i + 1);
+        if (map?.flags?.sceneAuto && i < segs.length - 1) speakIndex(i + 1);
       };
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
@@ -1177,14 +1168,7 @@ window.LessonShim = (() => {
       speakIndex(i);
     });
 
-    // React to Romaji toggle
-    showR.addEventListener('change', () => {
-      map.flags = map.flags || {};
-      map.flags.showRomaji = showR.checked;
-      // re-render lines to show/hide romaji
-      renderBilingualScene(lesson, step, map);
-    });
-
+   
     // preload voices (Chrome sometimes async)
     if ('speechSynthesis' in window) speechSynthesis.getVoices();
 
