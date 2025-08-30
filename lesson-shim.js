@@ -1,3 +1,20 @@
+// --- TOP OF lesson-shim.js ---
+import TTS from './modules/tts-adapter.js';
+
+// Point the adapter at your backend route. Keep fallback on.
+// Allow override via window.__TTS_ENDPOINT to avoid port conflicts (e.g., ntopng on :3000).
+const overrideEndpoint = window.__TTS_ENDPOINT;
+const isLiveServer = location.port === '5500';
+const defaultEndpoint = isLiveServer ? 'http://localhost:3000/api/tts' : '/api/tts';
+TTS.configure({ endpoint: overrideEndpoint ?? defaultEndpoint, allowFallback: true });
+
+// Expose a pointer to the current scene so the Speak button knows what to play.
+// (If you already set this elsewhere, keep yours.)
+window.__KR_CURRENT_SCENE__ ||= null;
+
+console.info('[lesson-shim] build=no-scene-toggles v9');
+window.__LS_BUILD = 'no-scene-toggles@v9';
+
 // lesson-shim.js — with Pronounce + Romaji toggle
 window.LessonShim = (() => {
   // ---------- utils ----------
@@ -137,9 +154,6 @@ window.LessonShim = (() => {
     render();
   }
 
-
-
-  // === Canonical readings + helpers (ONE copy only) ===
   // === Canonical readings + helpers (ONE copy only) ===
   const READINGS = {
     "お願いします": "おねがいします",
@@ -482,7 +496,10 @@ window.LessonShim = (() => {
     });
     // wire per-line speak buttons
     qa(`${map?.containers?.list} .${map?.classes?.speakBtn || "speak-btn"}`)
-      .forEach(btn => btn.addEventListener("click", () => Speech.speak(btn.dataset.jp || "", map?.speech || {})));
+      .forEach(btn => btn.addEventListener("click", () => {
+        const txt = btn.dataset.jp || "";
+        if (txt) TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+      }));
     setStatus(map, "Read, listen, and repeat. Use 🔊 or Speak.");
     feedback(map, "", true);
   }
@@ -715,7 +732,7 @@ window.LessonShim = (() => {
 
     function speakPrompt() {
       const t = turns[idx]; if (!t) return;
-      Speech.speak(t.expectJP, map?.speech || {});
+      if (t.expectJP) TTS.speak({ text: t.expectJP, lang: 'ja', rate: map?.speech?.rate ?? 1 });
     }
 
     async function startRec() {
@@ -871,7 +888,7 @@ window.LessonShim = (() => {
 
     function speakCurrent() {
       const P = pairs[i] || {};
-      Speech.speak(P.jp || "", map?.speech || {});
+      if (P.jp) TTS.speak({ text: P.jp, lang: 'ja', rate: map?.speech?.rate ?? 1 });
     }
 
     function toggleAlts() {
@@ -969,7 +986,9 @@ window.LessonShim = (() => {
         </div>
       `;
         line.querySelector('[data-jp]')
-          .addEventListener('click', () => Speech.speak(v.jp, map?.speech || {}));
+          .addEventListener('click', () => {
+            if (v.jp) TTS.speak({ text: v.jp, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+          });
         list.appendChild(line);
       });
     }
@@ -1112,6 +1131,12 @@ window.LessonShim = (() => {
         }
     `;
       list.appendChild(line);
+
+      (() => {
+  // remove any legacy toggles if some other code injected them
+  document.querySelectorAll('#sceneAuto, #sceneShowRomaji')
+    .forEach(i => i.closest('label')?.remove());
+})();
     });
 
     // Highlight helper
@@ -1130,24 +1155,19 @@ window.LessonShim = (() => {
     // Speech sequence
     let i = 0, playing = false, currentUtt = null;
 
-    function speakIndex(k) {
-      if (!('speechSynthesis' in window)) { feedback(map, 'TTS not supported in this browser.', false); return; }
+    async function speakIndex(k) {
       if (k < 0 || k >= segs.length) return;
       i = k;
       const seg = segs[i];
-      const u = new SpeechSynthesisUtterance(seg.text);
-      const lang = seg.lang === 'ja' ? 'ja-JP' : 'en-US';
-      u.lang = lang;
-      const v = pickVoiceByLang(seg.lang);
-      if (v) u.voice = v;
-      u.rate = seg.lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0; // keep EN natural
-      u.onstart = () => { playing = true; currentUtt = u; mascotSet && mascotSet('mascot-talk'); highlight(i); };
-      u.onend = () => {
+      playing = true;
+      mascotSet && mascotSet('mascot-talk');
+      highlight(i);
+      try {
+        await TTS.speak({ text: seg.text, lang: seg.lang === 'ja' ? 'ja' : 'en', rate: seg.lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0 });
+      } finally {
         playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
         if (map?.flags?.sceneAuto && i < segs.length - 1) speakIndex(i + 1);
-      };
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
+      }
     }
 
     // Controls
@@ -1156,7 +1176,7 @@ window.LessonShim = (() => {
       speakIndex(i);
     });
     box.querySelector('[data-act="pause"]').addEventListener('click', () => {
-      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
       playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
     });
     box.querySelector('[data-act="prev"]').addEventListener('click', () => {
@@ -1169,10 +1189,10 @@ window.LessonShim = (() => {
     });
 
    
-    // preload voices (Chrome sometimes async)
-    if ('speechSynthesis' in window) speechSynthesis.getVoices();
+    // expose scene for footer Speak
+    try { window.__KR_CURRENT_SCENE__ = { lines: segs.map(s => ({ jp: s.jp, en: s.en, romaji: s.romaji, lang: s.lang })) }; } catch {}
 
-    setStatus(map, 'Listen through the mini-scene. Use ▶ or Autoplay.');
+    setStatus(map, 'Listen through the mini-scene. Use ▶ to hear the dialogue.');
     feedback(map, '', true);
     padFooter();
   }
@@ -1358,20 +1378,27 @@ window.LessonShim = (() => {
       map.flags.showRomaji = !map.flags.showRomaji;
       render();
     };
-    const onSpeak = () => {
+    const onSpeak = async () => {
       const step = steps[state.stepIndex] || {};
+      if (step.type === "dialogue" && window.__KR_CURRENT_SCENE__?.lines?.length) {
+        for (const seg of window.__KR_CURRENT_SCENE__.lines) {
+          const lang = seg.lang || (seg.jp ? 'ja' : 'en');
+          const text = lang === 'ja' ? (seg.jp || '') : (seg.en || '');
+          if (text) await TTS.speak({ text, lang, rate: lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0 }).catch(() => {});
+        }
+        return;
+      }
       let texts = [];
-      if (step.type === "read_listen") {
-        texts = (step.item_refs || [])
-          .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
-          .filter(Boolean);
-      } else if (step.type === "translate_to_jp") {
+      if (step.type === "read_listen" || step.type === "translate_to_jp") {
         texts = (step.item_refs || [])
           .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
           .filter(Boolean);
       }
-      if (texts.length) Speech.speakList(texts, map?.speech || {});
-      else feedback(map, "Nothing to speak on this step.", false);
+      if (texts.length) {
+        for (const t of texts) await TTS.speak({ text: t, lang: 'ja', rate: map?.speech?.rate ?? 1 }).catch(() => {});
+      } else {
+        feedback(map, "Nothing to speak on this step.", false);
+      }
     };
 
     bindOnce(q(map?.controls?.next), "click", onNext);

@@ -587,8 +587,7 @@
     <!-- Libraries / App scripts -->
 <script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
 
-<script src="./lesson-shim.js?v=8"></script>
-
+<script type="module" src="./lesson-shim.js?v=9"></script>
 
 <!-- Your module that renders/boots the lesson -->
 <script type="module" src="./lesson-loader.js?v=7"></script>
@@ -638,6 +637,21 @@
   footer.style.touchAction = 'pan-y';
 })();
 </script>
+
+<script>
+  (function killSceneToggles(){
+    const zap = () => {
+      document.querySelectorAll('#sceneAuto, #sceneShowRomaji')
+        .forEach(i => i.closest('label')?.remove());
+    };
+    // run now and after scene render
+    zap();
+    document.addEventListener('lesson:rendered', zap, { once:true });
+    // or poll briefly if you don't dispatch events
+    let t = setInterval(() => { zap(); if (!document.querySelector('#sceneAuto')) clearInterval(t); }, 150);
+  })();
+</script>
+
 
 <style>
   body[data-step="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
