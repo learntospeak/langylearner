@@ -23,8 +23,11 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
-// Explicitly answer preflight
-app.options('*', cors(corsOptions));
+// Generic preflight responder to avoid path-to-regexp pitfalls in Express 5
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 // Static files (serve the project root)
 app.use(express.static(path.join(__dirname), { redirect: false }));
