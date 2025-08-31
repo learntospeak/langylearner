@@ -29,8 +29,36 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static files (serve the project root)
-app.use(express.static(path.join(__dirname), { redirect: false }));
+// POST /api/chat -> minimal chat bridge to OpenAI
+app.post('/api/chat', async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
+    const { messages = [], level = 'A1', persona = 'tutor' } = req.body || {};
+    const sys = `You are a friendly Japanese ${persona}. Keep replies short (1-2 sentences). Speak mostly in Japanese at CEFR ${level}. If the user is stuck, briefly explain in simple English then continue in Japanese. Avoid romaji unless asked. Use polite Japanese unless the user asks for casual.`;
+    const body = {
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: sys }, ...messages].slice(-24),
+      temperature: 0.6,
+    };
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const details = await r.text().catch(() => '');
+      return res.status(502).json({ error: 'OpenAI chat error', details });
+    }
+    const data = await r.json();
+    const reply = data?.choices?.[0]?.message?.content || '';
+    return res.json({ reply });
+  } catch (e) {
+    res.status(500).json({ error: 'Chat request failed', details: String(e) });
+  }
+});
 
 // POST /api/tts -> proxies to OpenAI TTS and returns audio/mpeg
 app.post('/api/tts', async (req, res) => {
@@ -68,6 +96,12 @@ app.post('/api/tts', async (req, res) => {
     res.status(500).json({ error: 'TTS request failed', details: String(e) });
   }
 });
+
+// After APIs: serve static files (prevents any chance of POST being eaten by static)
+app.use(express.static(path.join(__dirname), { redirect: false }));
+
+// Simple health check
+app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
   console.log(`[server] http://localhost:${PORT}  (OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'})`);

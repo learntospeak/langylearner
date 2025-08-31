@@ -1,12 +1,19 @@
-// --- TOP OF lesson-shim.js ---
+﻿// --- TOP OF lesson-shim.js ---
 import TTS from './modules/tts-adapter.js';
+import Chat from './modules/chat-adapter.js';
 
 // Point the adapter at your backend route. Keep fallback on.
 // Allow override via window.__TTS_ENDPOINT to avoid port conflicts (e.g., ntopng on :3000).
 const overrideEndpoint = window.__TTS_ENDPOINT;
 const isLiveServer = location.port === '5500';
-const defaultEndpoint = isLiveServer ? 'http://localhost:3000/api/tts' : '/api/tts';
-TTS.configure({ endpoint: overrideEndpoint ?? defaultEndpoint, allowFallback: true });
+const defaultTtsEndpoint = isLiveServer ? 'http://localhost:3000/api/tts' : '/api/tts';
+const selectedTtsEndpoint = overrideEndpoint ?? defaultTtsEndpoint;
+TTS.configure({ endpoint: selectedTtsEndpoint, allowFallback: true });
+
+// Derive chat endpoint from the TTS endpoint by swapping /tts -> /chat, unless explicitly overridden.
+const derivedChat = (selectedTtsEndpoint || '').replace(/\/tts(\b|$)/, '/chat');
+const defaultChatEndpoint = isLiveServer ? (derivedChat || 'http://localhost:3000/api/chat') : '/api/chat';
+Chat.configure({ endpoint: window.__CHAT_ENDPOINT ?? defaultChatEndpoint });
 
 // Expose a pointer to the current scene so the Speak button knows what to play.
 // (If you already set this elsewhere, keep yours.)
@@ -498,7 +505,9 @@ window.LessonShim = (() => {
     qa(`${map?.containers?.list} .${map?.classes?.speakBtn || "speak-btn"}`)
       .forEach(btn => btn.addEventListener("click", () => {
         const txt = btn.dataset.jp || "";
-        if (txt) TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+        if (!txt) return;
+        if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
+        TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
       }));
     setStatus(map, "Read, listen, and repeat. Use 🔊 or Speak.");
     feedback(map, "", true);
@@ -888,7 +897,9 @@ window.LessonShim = (() => {
 
     function speakCurrent() {
       const P = pairs[i] || {};
-      if (P.jp) TTS.speak({ text: P.jp, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+      if (!P.jp) return;
+      if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
+      TTS.speak({ text: P.jp, lang: 'ja', rate: map?.speech?.rate ?? 1 });
     }
 
     function toggleAlts() {
@@ -987,7 +998,9 @@ window.LessonShim = (() => {
       `;
         line.querySelector('[data-jp]')
           .addEventListener('click', () => {
-            if (v.jp) TTS.speak({ text: v.jp, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+            if (!v.jp) return;
+            if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
+            TTS.speak({ text: v.jp, lang: 'ja', rate: map?.speech?.rate ?? 1 });
           });
         list.appendChild(line);
       });
@@ -1101,14 +1114,7 @@ window.LessonShim = (() => {
     const box = document.createElement('div');
     box.className = map?.classes?.item || 'lesson-item';
     box.innerHTML = `
-    <div class="mb-2 text-sm text-gray-600">Mini-scene: listen to a short dialogue that mixes English and Japanese.</div>
-   <div class="flex flex-wrap items-center gap-2 mb-3">
-  <button class="btn btn-primary w-full sm:w-auto" data-act="play">▶ Play</button>
-  <button class="btn btn-ghost   w-full sm:w-auto" data-act="pause">⏸ Pause</button>
-  <button class="btn btn-ghost   w-full sm:w-auto" data-act="prev">⬅ Prev</button>
-  <button class="btn btn-dark    w-full sm:w-auto" data-act="next">Next ➡</button>
-</div>
-
+      <div class="mb-2 text-sm text-gray-600">Mini-scene. Browse lines; use the footer Speak to play the dialogue.</div>
     <div id="sceneList" class="space-y-2"></div>
   `;
     root.appendChild(box);
@@ -1139,60 +1145,94 @@ window.LessonShim = (() => {
 })();
     });
 
-    // Highlight helper
-    function highlight(idx) {
-      list.querySelectorAll('[data-idx]').forEach(el => {
-        const on = Number(el.dataset.idx) === idx;
-        el.classList.toggle('ring-2', on);
-        el.classList.toggle('ring-amber-400', on);
-        el.classList.toggle('bg-amber-50', on);
-      });
-      // keep current line in view
-      const el = list.querySelector(`[data-idx="${idx}"]`);
-      if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-
-    // Speech sequence
-    let i = 0, playing = false, currentUtt = null;
-
-    async function speakIndex(k) {
-      if (k < 0 || k >= segs.length) return;
-      i = k;
-      const seg = segs[i];
-      playing = true;
-      mascotSet && mascotSet('mascot-talk');
-      highlight(i);
-      try {
-        await TTS.speak({ text: seg.text, lang: seg.lang === 'ja' ? 'ja' : 'en', rate: seg.lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0 });
-      } finally {
-        playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
-        if (map?.flags?.sceneAuto && i < segs.length - 1) speakIndex(i + 1);
-      }
-    }
-
-    // Controls
-    box.querySelector('[data-act="play"]').addEventListener('click', () => {
-      if (playing) { /* already playing current */ return; }
-      speakIndex(i);
-    });
-    box.querySelector('[data-act="pause"]').addEventListener('click', () => {
-      if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
-      playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
-    });
-    box.querySelector('[data-act="prev"]').addEventListener('click', () => {
-      if (i > 0) i--;
-      speakIndex(i);
-    });
-    box.querySelector('[data-act="next"]').addEventListener('click', () => {
-      if (i < segs.length - 1) i++;
-      speakIndex(i);
-    });
+    // Inline controls removed; use footer Speak to play the full scene.
 
    
     // expose scene for footer Speak
     try { window.__KR_CURRENT_SCENE__ = { lines: segs.map(s => ({ jp: s.jp, en: s.en, romaji: s.romaji, lang: s.lang })) }; } catch {}
 
-    setStatus(map, 'Listen through the mini-scene. Use ▶ to hear the dialogue.');
+    setStatus(map, 'Browse the mini-scene. Use footer Speak to play.');
+    feedback(map, '', true);
+    padFooter();
+  }
+
+  // ---------- AI Tutor (interactive JP conversation) ----------
+  function renderAiTutor(lesson, step, map) {
+    const root = q(map?.containers?.list); if (!root) return;
+    root.innerHTML = '';
+
+    const card = document.createElement('div');
+    card.className = map?.classes?.item || 'lesson-item';
+    card.innerHTML = `
+      <div class="text-sm text-gray-600 mb-2">Practice a short conversation in Japanese with the tutor.</div>
+      <div id="chatLog" class="space-y-2 mb-3 max-h-[50vh] overflow-auto p-2 border rounded"></div>
+      <div class="flex items-center gap-2">
+        <input id="chatInput" class="${map?.classes?.input || 'field'} flex-1" placeholder="Type in Japanese (or use 🎤)…" />
+        <button class="btn btn-amber" data-act="mic">🎤</button>
+        <button class="btn btn-primary" data-act="send">Send</button>
+      </div>
+    `;
+    root.appendChild(card);
+
+    const log = card.querySelector('#chatLog');
+    const inp = card.querySelector('#chatInput');
+
+    // Persist chat state across re-renders of this step\n    const state = step.__chatState || { msgs: [], seeded: false };\n    step.__chatState = state;\n    const msgs = state.msgs;
+    const level = step.level || 'A1';
+    const persona = step.persona || 'tutor';
+
+    function add(role, text) {
+      const line = document.createElement('div');
+      line.className = `${role === 'assistant' ? 'bg-amber-50' : 'bg-gray-50'} p-2 rounded`;
+      line.textContent = (role === 'assistant' ? `Tutor: ${text}` : `You: ${text}`);
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    async function reply(userText) {
+      if (!userText) return;
+      add('user', userText);
+      msgs.push({ role: 'user', content: userText });
+      setStatus(map, 'Thinking…');
+      try {
+        const r = await Chat.send({ messages: msgs, level, persona });
+        msgs.push({ role: 'assistant', content: r });
+        add('assistant', r);
+        // Speak JP parts; default to ja (TTS && typeof TTS.cancel === 'function') TTS.cancel();
+.speak({ text: r, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+        setStatus(map, '');
+      } catch (e) {
+        feedback(map, 'Chat failed. Check backend/API key.', false);
+      }
+    }
+
+    // Seed greeting
+    (async () => { await reply(step.opening || 'こんにちは。今日は何を練習しますか？'); })();
+
+    // Send button
+    card.querySelector('[data-act="send"]').addEventListener('click', async () => {
+      const v = inp.value.trim(); inp.value = '';
+      await reply(v);
+    });
+    inp.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const v = inp.value.trim(); inp.value = ''; await reply(v); }
+    });
+
+    // Mic (optional Web Speech)
+    const hasRec = ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+    const btnMic = card.querySelector('[data-act="mic"]');
+    btnMic.disabled = !hasRec;
+    if (hasRec) {
+      btnMic.addEventListener('click', () => {
+        const Ctor = window.webkitSpeechRecognition || window.SpeechRecognition;
+        const r = new Ctor(); r.lang = 'ja-JP'; r.interimResults = false; r.maxAlternatives = 1;
+        r.onresult = async (evt) => { const said = (evt.results[0][0].transcript || '').trim(); await reply(said); };
+        r.onerror = () => feedback(map, 'Didn’t catch that—try again.', false);
+        r.start();
+      });
+    }
+
+    setStatus(map, 'Chat with the tutor in Japanese.');
     feedback(map, '', true);
     padFooter();
   }
@@ -1305,7 +1345,9 @@ window.LessonShim = (() => {
         case "translate_to_jp": map?.flags?.syllableMode ? renderTranslateSyllables(lesson, step, map)
           : renderTranslate(lesson, step, map); break;
         case "roleplay": renderRoleplay(lesson, step, map); break;
-        case "dialogue": renderBilingualScene(lesson, step, map); break;
+        // Replace mini-scene with interactive AI Tutor conversation
+        case "dialogue": renderAiTutor(lesson, step, map); break;
+        case "ai_tutor": renderAiTutor(lesson, step, map); break;
         case "variations": renderVariations(lesson, step, map); break;
         case "phrase_drill": renderPhraseDrill(lesson, step, map); break;
         case "reflect":
@@ -1413,3 +1455,9 @@ window.LessonShim = (() => {
 
   return { start: run };
 })();
+
+
+
+
+
+
