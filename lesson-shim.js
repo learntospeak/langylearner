@@ -1206,7 +1206,7 @@ window.LessonShim = (() => {
       elPhrase.innerHTML = `
         <div class="text-xs text-gray-500 mb-1">Step 1 · Phrase</div>
         <div class="text-xl font-semibold mb-1">${stripStops(jp)}</div>
-        ${roma ? `<div class="text-gray-500 mb-1">${stripStops(roma)}</div>` : ''}
+        ${map?.flags?.showRomaji && roma ? `<div class="text-gray-500 mb-1">${stripStops(roma)}</div>` : ''}
         ${en ? `<div class="text-gray-700 mb-2">${en}</div>` : ''}
         <div class="flex items-center gap-2">
           <button class="btn btn-primary" data-act="say-normal">Play</button>
@@ -1289,7 +1289,7 @@ window.LessonShim = (() => {
       elBuild.innerHTML = `
         <div class="text-xs text-gray-500 mb-1">Step 4 · Build a phrase</div>
         <div class="font-medium mb-1">${stripStops(txt)}</div>
-        <div class="text-gray-500 mb-2">${stripStops(d.build_romaji || (wanakana ? wanakana.toRomaji(sentenceReadingHira({ jp: txt })) : ''))}</div>
+        ${map?.flags?.showRomaji ? `<div class="text-gray-500 mb-2">${stripStops(d.build_romaji || (wanakana ? wanakana.toRomaji(sentenceReadingHira({ jp: txt })) : ''))}</div>` : ''}
         <div class="flex items-center gap-2">
           <button class="btn btn-amber" data-act="play-slow">Play slow</button>
           <button class="btn btn-ghost" data-act="play-normal">Play</button>
@@ -1409,8 +1409,11 @@ window.LessonShim = (() => {
         const r = await Chat.send({ messages: msgs, level, persona });
         msgs.push({ role: 'assistant', content: r });
         add('assistant', r);
-        // Speak JP parts; default to ja (TTS && typeof TTS.cancel === 'function') TTS.cancel();
-.speak({ text: r, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+        // Speak JP parts; default to ja
+        if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
+        if (TTS && typeof TTS.speak === 'function') {
+          TTS.speak({ text: r, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+        }
         setStatus(map, '');
       } catch (e) {
         feedback(map, 'Chat failed. Check backend/API key.', false);
