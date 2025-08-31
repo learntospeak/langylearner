@@ -19,8 +19,8 @@ Chat.configure({ endpoint: window.__CHAT_ENDPOINT ?? defaultChatEndpoint });
 // (If you already set this elsewhere, keep yours.)
 window.__KR_CURRENT_SCENE__ ||= null;
 
-console.info('[lesson-shim] build=no-scene-toggles v10');
-window.__LS_BUILD = 'no-scene-toggles@v10';
+console.info('[lesson-shim] build=no-scene-toggles v11');
+window.__LS_BUILD = 'no-scene-toggles@v11';
 
 // lesson-shim.js — with Pronounce + Romaji toggle
 window.LessonShim = (() => {
@@ -1633,7 +1633,8 @@ window.LessonShim = (() => {
     mascotSet("mascot-idle");
     if (!lesson || !lesson.steps) return;
     const state = { stepIndex: 0 };
-    const steps = (lesson.steps || []);
+    // Remove the cloze step (second page) per request
+    const steps = (lesson.steps || []).filter(s => (s && s.type) !== 'cloze');
 
 
 
