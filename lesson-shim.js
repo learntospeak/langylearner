@@ -19,8 +19,8 @@ Chat.configure({ endpoint: window.__CHAT_ENDPOINT ?? defaultChatEndpoint });
 // (If you already set this elsewhere, keep yours.)
 window.__KR_CURRENT_SCENE__ ||= null;
 
-console.info('[lesson-shim] build=no-scene-toggles v9');
-window.__LS_BUILD = 'no-scene-toggles@v9';
+console.info('[lesson-shim] build=no-scene-toggles v10');
+window.__LS_BUILD = 'no-scene-toggles@v10';
 
 // lesson-shim.js — with Pronounce + Romaji toggle
 window.LessonShim = (() => {
