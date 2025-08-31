@@ -226,6 +226,12 @@
           ]
         },
         {
+          "type": "guided_convo",
+          "topic": "greetings",
+          "seed": "konnichiwa",
+          "level": "A1"
+        },
+        {
           "type": "dialogue",
           "segments": [
             {

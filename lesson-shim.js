@@ -1156,6 +1156,217 @@ window.LessonShim = (() => {
     padFooter();
   }
 
+  // ---------- guided conversation (GPT-led) ----------
+  function renderGuidedConvo(lesson, step, map) {
+    const root = q(map?.containers?.list); if (!root) return;
+    root.innerHTML = '';
+
+    const card = document.createElement('div');
+    card.className = map?.classes?.item || 'lesson-item';
+    card.innerHTML = `
+      <div class="text-sm text-gray-600 mb-2">Guided conversation. Learn, repeat, and check understanding.</div>
+      <div id="gIntro" class="mb-3 p-3 border rounded bg-amber-50 hidden"></div>
+      <div id="gPhrase" class="mb-3 p-3 border rounded hidden"></div>
+      <div id="gExplain" class="mb-3 p-3 border rounded hidden"></div>
+      <div id="gPronounce" class="mb-3 p-3 border rounded hidden"></div>
+      <div id="gBuild" class="mb-3 p-3 border rounded hidden"></div>
+      <div id="gQuiz" class="mb-3 p-3 border rounded hidden"></div>
+    `;
+    root.appendChild(card);
+
+    const elIntro = card.querySelector('#gIntro');
+    const elPhrase = card.querySelector('#gPhrase');
+    const elExplain = card.querySelector('#gExplain');
+    const elPron = card.querySelector('#gPronounce');
+    const elBuild = card.querySelector('#gBuild');
+    const elQuiz = card.querySelector('#gQuiz');
+
+    // Persist state so re-render doesn’t refetch
+    const state = step.__gcState || { loaded: false, data: null };
+    step.__gcState = state;
+
+    function parseJSONLoose(txt) {
+      try { return JSON.parse(txt); } catch {}
+      // try to extract a JSON block
+      const m = txt.match(/[\[{][\s\S]*[\]}]/);
+      if (m) { try { return JSON.parse(m[0]); } catch {} }
+      return null;
+    }
+
+    function showIntro() {
+      elIntro.classList.remove('hidden');
+      elIntro.textContent = 'Tutor: 今日は、基本のあいさつを練習しましょう。';
+    }
+
+    function showPhrase(d) {
+      elPhrase.classList.remove('hidden');
+      const jp = d.phrase_jp || d.jp || '';
+      const roma = d.romaji || '';
+      const en = d.english || d.en || '';
+      elPhrase.innerHTML = `
+        <div class="text-xs text-gray-500 mb-1">Step 1 · Phrase</div>
+        <div class="text-xl font-semibold mb-1">${stripStops(jp)}</div>
+        ${roma ? `<div class="text-gray-500 mb-1">${stripStops(roma)}</div>` : ''}
+        ${en ? `<div class="text-gray-700 mb-2">${en}</div>` : ''}
+        <div class="flex items-center gap-2">
+          <button class="btn btn-primary" data-act="say-normal">Play</button>
+          <button class="btn btn-amber" data-act="say-slow">Play slow</button>
+        </div>
+      `;
+      const btnN = elPhrase.querySelector('[data-act="say-normal"]');
+      const btnS = elPhrase.querySelector('[data-act="say-slow"]');
+      btnN?.addEventListener('click', () => { if (jp) TTS.speak({ text: jp, lang: 'ja', rate: map?.speech?.rate ?? 1 }); });
+      btnS?.addEventListener('click', () => { if (jp) TTS.speak({ text: jp, lang: 'ja', rate: Math.max(0.7, (map?.speech?.rate ?? 1) - 0.2) }); });
+    }
+
+    function showExplain(d) {
+      elExplain.classList.remove('hidden');
+      const txt = d.explain || d.usage || '';
+      const examples = Array.isArray(d.usage_examples) ? d.usage_examples : [];
+      elExplain.innerHTML = `
+        <div class="text-xs text-gray-500 mb-1">Step 2 · Meaning & when to use</div>
+        <div class="text-gray-700 mb-2">${txt || 'Short explanation will appear here.'}</div>
+        ${examples.length ? `<ul class="list-disc pl-5 text-sm text-gray-600">${examples.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+      `;
+    }
+
+    function showPronounce(d) {
+      elPron.classList.remove('hidden');
+      const jp = d.phrase_jp || d.jp || '';
+      const target = sentenceReadingHira({ jp, romaji_full: d.romaji || '' });
+      elPron.innerHTML = `
+        <div class="text-xs text-gray-500 mb-1">Step 3 · Your turn</div>
+        <div class="text-gray-600 mb-2">Say it now. Click mic and speak.</div>
+        <div class="flex items-center gap-2 mb-2">
+          <button class="btn btn-primary" data-act="mic">🎤 Start</button>
+          <button class="btn btn-ghost" data-act="hear">▶️ Play once</button>
+        </div>
+        <div class="text-sm text-gray-700" id="heard"></div>
+        <div class="${map?.classes?.hint || 'hint'} text-sm text-amber-700 mt-1" id="pHint"></div>
+      `;
+      const elHeard = elPron.querySelector('#heard');
+      const elHint = elPron.querySelector('#pHint');
+      elPron.querySelector('[data-act="hear"]').addEventListener('click', () => {
+        if (jp) TTS.speak({ text: jp, lang: 'ja', rate: Math.max(0.8, (map?.speech?.rate ?? 1) - 0.1) });
+      });
+      const canRec = hasRecognition();
+      const btn = elPron.querySelector('[data-act="mic"]');
+      btn.disabled = !canRec;
+      if (canRec) {
+        btn.addEventListener('click', () => {
+          const r = makeRecognition();
+          elHint.textContent = 'Listening...';
+          r.onresult = (evt) => {
+            const heard = (evt.results[0][0].transcript || '').trim();
+            elHeard.textContent = `You said: ${heard}`;
+            const score = kanaSim(heard, target);
+            const ok = score >= 0.82;
+            feedback(map, ok ? 'Great pronunciation!' : 'Close—try again.', ok);
+            mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
+            if (!ok) {
+              const want = splitMora(target); const got = splitMora(toHira(heard));
+              let p = 0; while (p < want.length && p < got.length && want[p] === got[p]) p++;
+              const next = want[p] || '';
+              const rj = next ? (wanakana ? wanakana.toRomaji(next) : '') : '';
+              elHint.textContent = next ? `Aim for: ${next} (${rj})` : 'Try once more.';
+            } else {
+              elHint.textContent = 'Nice! Move on.';
+            }
+          };
+          r.onerror = () => { elHint.textContent = 'Didn\'t catch that. Try again.'; };
+          r.start();
+        });
+      } else {
+        elHint.textContent = 'Speech recognition not supported in this browser.';
+      }
+    }
+
+    function showBuild(d) {
+      elBuild.classList.remove('hidden');
+      const base = d.phrase_jp || d.jp || '';
+      const ext = d.build_phrase || '';
+      const txt = ext || `${base}、はじめまして。`;
+      elBuild.innerHTML = `
+        <div class="text-xs text-gray-500 mb-1">Step 4 · Build a phrase</div>
+        <div class="font-medium mb-1">${stripStops(txt)}</div>
+        <div class="text-gray-500 mb-2">${stripStops(d.build_romaji || (wanakana ? wanakana.toRomaji(sentenceReadingHira({ jp: txt })) : ''))}</div>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-amber" data-act="play-slow">Play slow</button>
+          <button class="btn btn-ghost" data-act="play-normal">Play</button>
+        </div>
+      `;
+      elBuild.querySelector('[data-act="play-slow"]').addEventListener('click', () => {
+        TTS.speak({ text: txt, lang: 'ja', rate: Math.max(0.7, (map?.speech?.rate ?? 1) - 0.2) });
+      });
+      elBuild.querySelector('[data-act="play-normal"]').addEventListener('click', () => {
+        TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+      });
+    }
+
+    function showQuiz(d) {
+      elQuiz.classList.remove('hidden');
+      const qs = Array.isArray(d.questions) ? d.questions.slice(0, 3) : [];
+      if (!qs.length) { elQuiz.textContent = 'All set!'; return; }
+      elQuiz.innerHTML = `
+        <div class="text-xs text-gray-500 mb-1">Step 5 · Quick check</div>
+        <div class="space-y-3"></div>
+      `;
+      const holder = elQuiz.querySelector('div.space-y-3');
+      qs.forEach((q, qi) => {
+        const box = document.createElement('div');
+        box.className = 'p-2 border rounded';
+        const opts = (q.options || []).map((o, i) => `<button class="btn btn-ghost mr-2 mb-1" data-i="${i}">${o}</button>`).join('');
+        box.innerHTML = `
+          <div class="mb-2">${q.q || ''}</div>
+          <div>${opts}</div>
+        `;
+        box.querySelectorAll('[data-i]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.i);
+            const ok = idx === (q.answer_index ?? -1);
+            feedback(map, ok ? 'Correct!' : 'Not quite—try another.', ok);
+            mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1000 : 800);
+          });
+        });
+        holder.appendChild(box);
+      });
+    }
+
+    async function ensureData() {
+      if (state.loaded && state.data) return state.data;
+      setStatus(map, 'Preparing lesson...');
+      const topic = step.topic || 'greetings';
+      const seed = step.seed || '';
+      const ask = `Create a beginner-friendly Japanese guided phrase card as JSON only with keys: phrase_jp, romaji, english, explain, usage_examples (array of short EN lines), build_phrase, build_romaji, questions (array of {q, options:[...], answer_index}). Focus on ${topic}. ${seed ? 'The phrase should be ' + seed + '.' : ''}`;
+      const msgs = [{ role: 'user', content: ask }];
+      try {
+        const txt = await Chat.send({ messages: msgs, level: step.level || 'A1', persona: 'tutor' });
+        const data = parseJSONLoose(txt) || {};
+        state.loaded = true; state.data = data;
+        return data;
+      } catch (e) {
+        feedback(map, 'Could not get tutor content. Check API.', false);
+        return null;
+      } finally {
+        setStatus(map, '');
+      }
+    }
+
+    (async () => {
+      showIntro();
+      const data = await ensureData(); if (!data) return;
+      showPhrase(data);
+      showExplain(data);
+      showPronounce(data);
+      showBuild(data);
+      showQuiz(data);
+      padFooter();
+    })();
+
+    setStatus(map, 'Follow the guided steps.');
+    feedback(map, '', true);
+  }
+
   // ---------- AI Tutor (interactive JP conversation) ----------
   function renderAiTutor(lesson, step, map) {
     const root = q(map?.containers?.list); if (!root) return;
@@ -1347,6 +1558,7 @@ window.LessonShim = (() => {
         case "roleplay": renderRoleplay(lesson, step, map); break;
         // Replace mini-scene with interactive AI Tutor conversation
         case "dialogue": renderAiTutor(lesson, step, map); break;
+        case "guided_convo": renderGuidedConvo(lesson, step, map); break;
         case "ai_tutor": renderAiTutor(lesson, step, map); break;
         case "variations": renderVariations(lesson, step, map); break;
         case "phrase_drill": renderPhraseDrill(lesson, step, map); break;
