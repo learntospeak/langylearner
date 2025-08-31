@@ -1156,6 +1156,96 @@ window.LessonShim = (() => {
     padFooter();
   }
 
+  // Drag-and-drop tile builder for kana (replaces syllable typing)
+  function renderTranslateTiles(lesson, step, map) {
+    const listEl = q(map?.containers?.list); if (!listEl) return;
+    listEl.innerHTML = '';
+
+    const SND = {
+      correct: new Audio('sounds/correct.wav'),
+      wrong: new Audio('sounds/wrong.wav'),
+      chime: new Audio('sounds/swoosh.wav'),
+      play(a){ try { a.currentTime = 0; a.play(); } catch {} }
+    };
+
+    (step.item_refs || [])
+      .map(id => (lesson.sentences || []).find(x => x.sid === id))
+      .filter(Boolean)
+      .forEach((s, cardIdx) => {
+        const reading = sentenceReadingHira(s).replace(PUNCT_RX, '');
+        const moras = splitMora(reading);
+        const shuffled = moras.map((m, i) => ({ m, i })).sort(() => Math.random() - 0.5);
+
+        const card = document.createElement('div');
+        card.className = map?.classes?.item || 'lesson-item';
+        card.innerHTML = `
+          <div class="${map?.classes?.prompt || 'prompt'} mb-2">${s.en || ''}</div>
+          <div class="mora-row mb-2" data-role="slots"></div>
+          <div class="mora-row" data-role="bank"></div>
+          ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || 'romaji'} text-gray-500">${s.romaji_full || ''}</div>` : ''}
+          <div class="${map?.classes?.hint || 'hint'} text-sm text-amber-700 mt-1"></div>
+        `;
+        listEl.appendChild(card);
+
+        const slots = card.querySelector('[data-role="slots"]');
+        const bank = card.querySelector('[data-role="bank"]');
+        const hintEl = card.querySelector(`.${map?.classes?.hint || 'hint'}`);
+
+        const mkSlot = (exp) => {
+          const d = document.createElement('div');
+          d.className = 'mora-slot flex items-center justify-center border rounded w-10 h-10 text-lg bg-white';
+          d.dataset.expected = exp;
+          d.dataset.filled = '0';
+          d.addEventListener('dragover', (e) => { e.preventDefault(); });
+          d.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const id = e.dataTransfer.getData('text/plain');
+            const tile = id && document.getElementById(id);
+            if (!tile || d.dataset.filled === '1') return;
+            const val = tile?.dataset?.mora || '';
+            if (val === exp) {
+              d.appendChild(tile);
+              d.dataset.filled = '1';
+              d.classList.add(map?.classes?.ok || 'ok');
+              tile.draggable = false;
+              SND.play(SND.correct);
+              hintEl.textContent = '';
+              const allFilled = [...slots.querySelectorAll('.mora-slot')].every(x => x.dataset.filled === '1');
+              if (allFilled) {
+                SND.play(SND.chime);
+                feedback(map, 'Great! Phrase completed.', true);
+                if (TTS && typeof TTS.speak === 'function') TTS.speak({ text: s.jp || reading, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+              }
+            } else {
+              hintEl.textContent = 'Not that one—try another tile.';
+              d.classList.add(map?.classes?.bad || 'bad');
+              setTimeout(() => d.classList.remove(map?.classes?.bad || 'bad'), 300);
+              SND.play(SND.wrong);
+            }
+          });
+          return d;
+        };
+
+        const mkTile = (m, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'mora-tile btn btn-ghost border w-10 h-10 text-lg';
+          b.textContent = m;
+          b.id = `tile-${cardIdx}-${i}`;
+          b.draggable = true;
+          b.dataset.mora = m;
+          b.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', b.id); });
+          return b;
+        };
+
+        moras.forEach(m => slots.appendChild(mkSlot(m)));
+        shuffled.forEach(({ m }, i) => bank.appendChild(mkTile(m, i)));
+      });
+
+    setStatus(map, 'Drag each kana tile into the correct order.');
+    feedback(map, '', true);
+  }
+
   // ---------- guided conversation (GPT-led) ----------
   function renderGuidedConvo(lesson, step, map) {
     const root = q(map?.containers?.list); if (!root) return;
@@ -1489,11 +1579,10 @@ window.LessonShim = (() => {
 
   function checkTranslate(lesson, step, map) {
     if (map?.flags?.syllableMode) {
-      const open = qa(`${map?.containers?.list} input.mora:not([disabled])`);
-      const bad = qa(`${map?.containers?.list} input.mora.${map?.classes?.bad || "bad"}`);
-      const ok = open.length === 0 && bad.length === 0;
-      feedback(map, ok ? "All syllables correct!" : "Finish each syllable in order.", ok);
-      if (typeof mascotPulse === "function") mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
+      const openSlots = qa(`${map?.containers?.list} .mora-slot`).filter(x => x.dataset.filled !== '1');
+      const ok = openSlots.length === 0;
+      feedback(map, ok ? 'All tiles placed—nice!' : 'Place all tiles in order.', ok);
+      if (typeof mascotPulse === 'function') mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
       return ok;
     }
     const cards = qa(`${map?.containers?.list} [data-sid]`);
@@ -1556,7 +1645,7 @@ window.LessonShim = (() => {
       switch (step.type) {
         case "read_listen": renderReadListen(lesson, step, map); break;
         case "cloze": renderCloze(lesson, step, map); break;
-        case "translate_to_jp": map?.flags?.syllableMode ? renderTranslateSyllables(lesson, step, map)
+        case "translate_to_jp": map?.flags?.syllableMode ? renderTranslateTiles(lesson, step, map)
           : renderTranslate(lesson, step, map); break;
         case "roleplay": renderRoleplay(lesson, step, map); break;
         // Replace mini-scene with interactive AI Tutor conversation
