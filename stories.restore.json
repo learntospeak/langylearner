@@ -1,4 +1,4 @@
-{
+﻿{
   "lessons": [
     {
       "id": "greetings-001",
@@ -7,37 +7,37 @@
       "sentences": [
         {
           "sid": "S1",
-          "jp": "おはようございます。",
+          "jp": "πüèπü»πéêπüåπüöπüûπüäπü╛πüÖπÇé",
           "romaji_full": "ohayou gozaimasu.",
           "en": "Good morning."
         },
         {
           "sid": "S2",
-          "jp": "こんにちは。",
+          "jp": "πüôπéôπü½πüíπü»πÇé",
           "romaji_full": "konnichiwa.",
           "en": "Hello."
         },
         {
           "sid": "S3",
-          "jp": "こんばんは。",
+          "jp": "πüôπéôπü░πéôπü»πÇé",
           "romaji_full": "konbanwa.",
           "en": "Good evening."
         },
         {
           "sid": "S4",
-          "jp": "はじめまして。",
+          "jp": "πü»πüÿπéüπü╛πüùπüªπÇé",
           "romaji_full": "hajimemashite.",
           "en": "Nice to meet you."
         },
         {
           "sid": "S5",
-          "jp": "よろしくお願いします。",
+          "jp": "πéêπéìπüùπüÅπüèΘíÿπüäπüùπü╛πüÖπÇé",
           "romaji_full": "yoroshiku onegaishimasu.",
           "en": "Please treat me well."
         },
         {
           "sid": "S6",
-          "jp": "さようなら。",
+          "jp": "πüòπéêπüåπü¬πéëπÇé",
           "romaji_full": "sayounara.",
           "en": "Goodbye."
         }
@@ -60,38 +60,38 @@
             {
               "ref": "S2",
               "blanks": [
-                "こんにちは"
+                "πüôπéôπü½πüíπü»"
               ]
             },
             {
               "ref": "S4",
               "blanks": [
-                "はじめまして"
+                "πü»πüÿπéüπü╛πüùπüª"
               ]
             },
             {
               "ref": "S5",
               "blanks": [
-                "よろしく",
-                "お願いします"
+                "πéêπéìπüùπüÅ",
+                "πüèΘíÿπüäπüùπü╛πüÖ"
               ]
             },
             {
               "ref": "S1",
               "blanks": [
-                "おはようございます"
+                "πüèπü»πéêπüåπüöπüûπüäπü╛πüÖ"
               ]
             },
             {
               "ref": "S3",
               "blanks": [
-                "こんばんは"
+                "πüôπéôπü░πéôπü»"
               ]
             },
             {
               "ref": "S6",
               "blanks": [
-                "さようなら"
+                "πüòπéêπüåπü¬πéë"
               ]
             }
           ]
@@ -111,7 +111,7 @@
           "type": "variations",
           "variations": [
             {
-              "jp": "こんにちは。",
+              "jp": "πüôπéôπü½πüíπü»πÇé",
               "en": "Hello (daytime).",
               "tags": [
                 "general",
@@ -119,7 +119,7 @@
               ]
             },
             {
-              "jp": "おはようございます。",
+              "jp": "πüèπü»πéêπüåπüöπüûπüäπü╛πüÖπÇé",
               "en": "Good morning (polite).",
               "tags": [
                 "polite",
@@ -127,7 +127,7 @@
               ]
             },
             {
-              "jp": "おはよう。",
+              "jp": "πüèπü»πéêπüåπÇé",
               "en": "Morning! (casual).",
               "tags": [
                 "casual",
@@ -135,14 +135,14 @@
               ]
             },
             {
-              "jp": "こんばんは。",
+              "jp": "πüôπéôπü░πéôπü»πÇé",
               "en": "Good evening.",
               "tags": [
                 "evening"
               ]
             },
             {
-              "jp": "はじめまして。",
+              "jp": "πü»πüÿπéüπü╛πüùπüªπÇé",
               "en": "Nice to meet you (first time).",
               "tags": [
                 "first_meeting",
@@ -150,7 +150,7 @@
               ]
             },
             {
-              "jp": "よろしくお願いします。",
+              "jp": "πéêπéìπüùπüÅπüèΘíÿπüäπüùπü╛πüÖπÇé",
               "en": "Please treat me well. (set phrase)",
               "tags": [
                 "first_meeting",
@@ -159,14 +159,14 @@
               ]
             },
             {
-              "jp": "もしもし。",
+              "jp": "πééπüùπééπüùπÇé",
               "en": "Hello? (on the phone).",
               "tags": [
                 "phone"
               ]
             },
             {
-              "jp": "お疲れ様です。",
+              "jp": "πüèτû▓πéîµºÿπüºπüÖπÇé",
               "en": "Hello (workplace greeting).",
               "tags": [
                 "work",
@@ -174,7 +174,7 @@
               ]
             },
             {
-              "jp": "どうも。",
+              "jp": "πü⌐πüåπééπÇé",
               "en": "Hey / thanks (very casual).",
               "tags": [
                 "casual"
@@ -187,41 +187,41 @@
           "pairs": [
             {
               "en": "Hello (daytime).",
-              "jp": "こんにちは。",
+              "jp": "πüôπéôπü½πüíπü»πÇé",
               "alts": [
                 {
-                  "jp": "どうも。",
+                  "jp": "πü⌐πüåπééπÇé",
                   "en": "Hey. (very casual)"
                 },
                 {
-                  "jp": "お疲れ様です。",
+                  "jp": "πüèτû▓πéîµºÿπüºπüÖπÇé",
                   "en": "Hello. (workplace)"
                 }
               ]
             },
             {
               "en": "Nice to meet you.",
-              "jp": "はじめまして。",
+              "jp": "πü»πüÿπéüπü╛πüùπüªπÇé",
               "alts": [
                 {
-                  "jp": "どうぞよろしくお願いします。",
+                  "jp": "πü⌐πüåπü₧πéêπéìπüùπüÅπüèΘíÿπüäπüùπü╛πüÖπÇé",
                   "en": "Pleased to meet you."
                 }
               ]
             },
             {
               "en": "Please treat me well. (set phrase)",
-              "jp": "よろしくお願いします。",
+              "jp": "πéêπéìπüùπüÅπüèΘíÿπüäπüùπü╛πüÖπÇé",
               "alts": [
                 {
-                  "jp": "よろしく〜",
+                  "jp": "πéêπéìπüùπüÅπÇ£",
                   "en": "Nice to meet you! (casual)"
                 }
               ]
             },
             {
               "en": "Hello? (on the phone)",
-              "jp": "もしもし。"
+              "jp": "πééπüùπééπüùπÇé"
             }
           ]
         },
@@ -230,6 +230,31 @@
           "topic": "greetings",
           "seed": "konnichiwa",
           "level": "A1"
+        },
+        {
+          "type": "dialogue",
+          "segments": [
+            {
+              "ref": "S1",
+              "lang": "ja",
+              "speaker": "Ami"
+            },
+            {
+              "en": "Hi! I'm Alex. Nice to meet you.",
+              "lang": "en",
+              "speaker": "You"
+            },
+            {
+              "ref": "S2",
+              "lang": "ja",
+              "speaker": "Ami"
+            },
+            {
+              "en": "LikewiseΓÇöπéêπéìπüùπüÅπüèΘíÿπüäπüùπü╛πüÖπÇé",
+              "lang": "en",
+              "speaker": "You"
+            }
+          ]
         },
         {
           "type": "roleplay",
