@@ -1879,7 +1879,10 @@ window.LessonShim = (() => {
             .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
             .filter(Boolean);
         } else if (step.type === 'variations') {
-          texts = (step.variations || []).map(v => v?.jp).filter(Boolean);
+          // Speak only the phrases currently visible in the variations list, in on-screen order
+          const btns = Array.from(document.querySelectorAll('#varList [data-jp]'))
+            .filter(el => !!(el && el.closest('#varList') && el.offsetParent !== null));
+          texts = btns.map(b => b.dataset.jp).filter(Boolean);
         } else if (step.type === 'phrase_drill') {
           texts = (step.pairs || []).map(p => p?.jp).filter(Boolean);
         } else if (step.type === 'roleplay') {
