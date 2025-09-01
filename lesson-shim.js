@@ -1852,26 +1852,49 @@ window.LessonShim = (() => {
       render();
     };
     const onSpeak = async () => {
-      const step = steps[state.stepIndex] || {};
-      if (step.type === "dialogue" && window.__KR_CURRENT_SCENE__?.lines?.length) {
-        for (const seg of window.__KR_CURRENT_SCENE__.lines) {
-          const lang = seg.lang || (seg.jp ? 'ja' : 'en');
-          const text = lang === 'ja' ? (seg.jp || '') : (seg.en || '');
-          if (text) await TTS.speak({ text, lang, rate: lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0 }).catch(() => {});
+      const btn = q(map?.controls?.speak);
+      const disable = () => { if (btn) { btn.disabled = true; btn.classList.add('opacity-50','cursor-not-allowed'); } };
+      const enable  = () => { if (btn) { btn.disabled = false; btn.classList.remove('opacity-50','cursor-not-allowed'); } };
+      const rate = map?.speech?.rate ?? 1;
+      try {
+        disable();
+        // stop any current playback so it won't overlap
+        if (TTS && typeof TTS.cancel === 'function') TTS.cancel();
+
+        const step = steps[state.stepIndex] || {};
+        // Dialogue scene speaks JP+EN per segment
+        if (step.type === "dialogue" && window.__KR_CURRENT_SCENE__?.lines?.length) {
+          for (const seg of window.__KR_CURRENT_SCENE__.lines) {
+            const lang = seg.lang || (seg.jp ? 'ja' : 'en');
+            const text = lang === 'ja' ? (seg.jp || '') : (seg.en || '');
+            if (text) await TTS.speak({ text, lang, rate: lang === 'ja' ? rate : 1.0 }).catch(() => {});
+          }
+          return;
         }
-        return;
-      }
-      let texts = [];
-      if (step.type === "read_listen" || step.type === "translate_to_jp") {
-        texts = (step.item_refs || [])
-          .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
-          .filter(Boolean);
-      }
-      if (texts.length) {
-        for (const t of texts) await TTS.speak({ text: t, lang: 'ja', rate: map?.speech?.rate ?? 1 }).catch(() => {});
-      } else {
-        feedback(map, "Nothing to speak on this step.", false);
-      }
+
+        // Collect JP texts based on step type
+        let texts = [];
+        if (step.type === "read_listen" || step.type === "translate_to_jp") {
+          texts = (step.item_refs || [])
+            .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
+            .filter(Boolean);
+        } else if (step.type === 'variations') {
+          texts = (step.variations || []).map(v => v?.jp).filter(Boolean);
+        } else if (step.type === 'phrase_drill') {
+          texts = (step.pairs || []).map(p => p?.jp).filter(Boolean);
+        } else if (step.type === 'roleplay') {
+          texts = (step.item_refs || [])
+            .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
+            .filter(Boolean);
+        }
+
+        if (texts.length) {
+          // speak sequentially, with cancellation prevention handled by adapter
+          for (const t of texts) await TTS.speak({ text: t, lang: 'ja', rate }).catch(() => {});
+        } else {
+          feedback(map, "Nothing to speak on this step.", false);
+        }
+      } finally { enable(); }
     };
 
     bindOnce(q(map?.controls?.next), "click", onNext);
