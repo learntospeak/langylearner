@@ -124,6 +124,13 @@
         margin: '0.5rem',
       });
       el.dataset.content = card.content;
+      // Show romaji on hover via tooltip
+      try {
+        const roma = (window.wanakana ? wanakana.toRomaji(card.content) : '') || '';
+        el.title = roma;
+        el.setAttribute('aria-label', roma);
+        el.dataset.romaji = roma;
+      } catch {}
       el.dataset.index = idx;
       el.textContent = ''; // face-down
       el.addEventListener('click', onCardClick);
