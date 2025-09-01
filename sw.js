@@ -34,6 +34,20 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Helpers
+function shouldCache(req, res) {
+  try {
+    if (!res) return false;
+    if (!res.ok) return false;                  // non-2xx
+    if (res.status !== 200) return false;       // skip 206 Partial Content
+    // Skip range/partial responses (common for audio/video)
+    const hasRange = req && req.headers && (req.headers.get('range') || req.headers.get('Range'));
+    if (hasRange) return false;
+    if (res.headers && (res.headers.get('Content-Range') || res.headers.get('content-range'))) return false;
+    return true;
+  } catch { return false; }
+}
+
 // Fetch: strategies
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -56,10 +70,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.endsWith('/stories.json') || url.pathname === '/stories.json' || url.pathname.endsWith('stories.json')) {
     event.respondWith(
       fetch(req).then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
-        }
+        if (shouldCache(req, res)) caches.open(CACHE_NAME).then((c) => c.put(req, res.clone()));
         return res;
       }).catch(() => caches.match(req))
     );
@@ -71,10 +82,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((res) => {
-        if (res && res.ok && res.type !== 'opaque') {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy));
-        }
+        if (shouldCache(req, res) && res.type !== 'opaque') caches.open(CACHE_NAME).then((c) => c.put(req, res.clone()));
         return res;
       });
     })
