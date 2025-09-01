@@ -1165,7 +1165,65 @@ window.LessonShim = (() => {
       correct: new Audio('sounds/correct.wav'),
       wrong: new Audio('sounds/wrong.wav'),
       chime: new Audio('sounds/swoosh.wav'),
-      play(a){ try { a.currentTime = 0; a.play(); } catch {} }
+      // Short, arcade-y beeps using WebAudio. Falls back to sped-up WAVs.
+      async beep(kind = 'correct') {
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) throw new Error('No AudioContext');
+          if (!this._ctx) this._ctx = new AC();
+          if (this._ctx.state === 'suspended') { try { await this._ctx.resume(); } catch {} }
+
+          const ctx = this._ctx;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          gain.gain.value = 0.0;
+          osc.connect(gain).connect(ctx.destination);
+
+          const now = ctx.currentTime;
+          let dur = 0.14, f1 = 1000, f2 = 1600, a = 0.001, d = 0.04, s = 0.06, r = 0.03, peak = 0.18;
+
+          if (kind === 'correct') {
+            dur = 0.14; f1 = 1200; f2 = 2000; peak = 0.2;
+          } else if (kind === 'chime') {
+            dur = 0.18; f1 = 900; f2 = 1600; peak = 0.2;
+          } else if (kind === 'wrong') {
+            dur = 0.16; f1 = 300; f2 = 180; peak = 0.18;
+          }
+
+          // Frequency glide
+          osc.frequency.setValueAtTime(f1, now);
+          if (kind === 'wrong') {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(1, f2), now + dur);
+          } else {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(1, f2), now + dur);
+          }
+
+          // Quick ADSR envelope for a snappy blip
+          gain.gain.setValueAtTime(0.0, now);
+          gain.gain.linearRampToValueAtTime(peak, now + a);
+          gain.gain.linearRampToValueAtTime(peak * 0.7, now + a + d);
+          gain.gain.linearRampToValueAtTime(peak * 0.4, now + a + d + s);
+          gain.gain.linearRampToValueAtTime(0.0, now + dur + r);
+
+          osc.start(now);
+          osc.stop(now + dur + r + 0.01);
+        } catch (err) {
+          // Fallback: use existing WAVs but shorter/faster
+          const a = kind === 'correct' ? this.correct : kind === 'chime' ? this.chime : this.wrong;
+          try {
+            a.pause(); a.currentTime = 0; a.playbackRate = 1.8; a.volume = 0.5; a.play();
+            setTimeout(() => { try { a.pause(); a.currentTime = 0; } catch {} }, 180);
+          } catch {}
+        }
+      },
+      play(a){
+        // Legacy usage: prefer short beep equivalent based on handle
+        if (a === this.correct) return this.beep('correct');
+        if (a === this.wrong)   return this.beep('wrong');
+        if (a === this.chime)   return this.beep('chime');
+        try { a.currentTime = 0; a.play(); } catch {}
+      }
     };
 
     (step.item_refs || [])
@@ -1207,20 +1265,23 @@ window.LessonShim = (() => {
               d.appendChild(tile);
               d.dataset.filled = '1';
               d.classList.add(map?.classes?.ok || 'ok');
+              // Visual success styling for slot and tile
+              d.classList.add('border-green-500','bg-green-50');
+              tile.classList.add('bg-green-500','text-white','border-green-600');
               tile.draggable = false;
-              SND.play(SND.correct);
+              SND.beep('correct');
               hintEl.textContent = '';
               const allFilled = [...slots.querySelectorAll('.mora-slot')].every(x => x.dataset.filled === '1');
               if (allFilled) {
-                SND.play(SND.chime);
+                SND.beep('chime');
                 feedback(map, 'Great! Phrase completed.', true);
                 if (TTS && typeof TTS.speak === 'function') TTS.speak({ text: s.jp || reading, lang: 'ja', rate: map?.speech?.rate ?? 1 });
               }
             } else {
-              hintEl.textContent = 'Not that one—try another tile.';
+              hintEl.textContent = 'Not that one-try another tile.';
               d.classList.add(map?.classes?.bad || 'bad');
               setTimeout(() => d.classList.remove(map?.classes?.bad || 'bad'), 300);
-              SND.play(SND.wrong);
+              SND.beep('wrong');
             }
           });
           return d;
@@ -1645,6 +1706,61 @@ window.LessonShim = (() => {
 
 
 
+    // Create or update a header explaining the current page with index
+    function ensureExplainer(steps, idx) {
+      try {
+        const wrap = document.getElementById('lesson-wrap');
+        if (!wrap) return;
+        let head = document.getElementById('page-explainer');
+        if (!head) {
+          head = document.createElement('div');
+          head.id = 'page-explainer';
+          head.className = 'mb-3 p-3 rounded border bg-gray-50 text-gray-800';
+          // insert before the main jp list so it sits on top
+          const jp = document.getElementById('jp-text');
+          wrap.insertBefore(head, jp || wrap.firstChild);
+        }
+        const total = steps.length;
+        const pos = Math.min(Math.max(idx + 1, 1), total);
+        const step = steps[idx] || {};
+        const label = (() => {
+          // Custom label if provided on the step JSON
+          if (step.title) return step.title;
+          if (step.label) return step.label;
+          switch (step.type) {
+            case 'read_listen': return 'Introduction to Phrases';
+            case 'translate_to_jp': return 'Learn Kana Through Tiles';
+            case 'cloze': return 'Fill in the Blanks';
+            case 'variations': return 'Phrase Variations';
+            case 'phrase_drill': return 'Phrase Drill';
+            case 'guided_convo': return 'Guided Conversation';
+            case 'dialogue': return 'Mini Scene';
+            case 'roleplay': return 'Roleplay Practice';
+            case 'reflect': return 'Reflect and Review';
+            default: return (step.type || 'Lesson Step').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          }
+        })();
+        const desc = (() => {
+          if (step.explainer) return step.explainer;
+          switch (step.type) {
+            case 'read_listen': return 'Read, listen, and repeat the key phrases.';
+            case 'translate_to_jp': return 'Drag kana tiles to build the phrase in order.';
+            case 'cloze': return 'Type the missing parts to complete each phrase.';
+            case 'variations': return 'Explore alternate ways to say the phrase.';
+            case 'phrase_drill': return 'Practice with quick prompts and variations.';
+            case 'guided_convo': return 'Follow a guided, beginner-friendly conversation.';
+            case 'dialogue': return 'Browse a short bilingual scene and listen.';
+            case 'roleplay': return 'Speak the phrase and get feedback.';
+            case 'reflect': return 'Wrap up and schedule review.';
+            default: return '';
+          }
+        })();
+        head.innerHTML = `<div class="text-sm text-gray-600">Page ${pos} of ${total}</div>
+                          <div class="font-medium">${label}</div>
+                          ${desc ? `<div class="text-sm text-gray-700">${desc}</div>` : ''}`;
+      } catch {}
+    }
+
     const render = () => {
       const step = steps[state.stepIndex] || {};
       // tell CSS which step is active
@@ -1673,6 +1789,9 @@ window.LessonShim = (() => {
           feedback(map, "This step type is not supported.", false);
           break;
       }
+
+      // Update page explainer header after content is rendered
+      ensureExplainer(steps, state.stepIndex);
 
     };
 

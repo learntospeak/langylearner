@@ -83,6 +83,8 @@ const TTS = {
   async speak({ text, lang = 'ja', rate = 1, pitch = 1, volume = 1 } = {}) {
     if (!text) return false;
     try {
+      // Prevent overlapping playback by canceling any current speech/audio
+      try { TTS.cancel(); } catch {}
       if (cfg.endpoint && endpointEnabled) {
         await speakViaEndpoint({ text, lang, rate });
         return true;
