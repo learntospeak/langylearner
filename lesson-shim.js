@@ -1234,6 +1234,13 @@ window.LessonShim = (() => {
           b.id = `tile-${cardIdx}-${i}`;
           b.draggable = true;
           b.dataset.mora = m;
+          // Show romaji on hover via native tooltip
+          try {
+            const roma = (window.wanakana ? wanakana.toRomaji(m) : '') || '';
+            b.title = roma;           // browser tooltip
+            b.setAttribute('aria-label', roma);
+            b.dataset.romaji = roma;  // available for any custom tooltip styling
+          } catch {}
           b.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', b.id); });
           return b;
         };
