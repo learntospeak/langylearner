@@ -29,7 +29,10 @@ async function speakViaWebSpeech({ text, lang = 'ja', rate = 1, pitch = 1, volum
     if (v) u.voice = v;
     u.lang = v?.lang || (lang === 'ja' ? 'ja-JP' : 'en-US');
     u.rate = rate; u.pitch = pitch; u.volume = volume;
-    u.onend = () => resolve(true);
+    u.onstart = () => { try { document.dispatchEvent(new CustomEvent('tts:start')); } catch {} };
+    u.onend = () => { try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {} };
+    u.onerror = () => { try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {} };
+    u.onend = () => { try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {} ; resolve(true); };
     try { speechSynthesis.cancel(); } catch {}
     speechSynthesis.speak(u);
   });
@@ -62,9 +65,10 @@ async function speakViaEndpoint({ text, lang = 'ja', rate = 1 }) {
     currentAudio = audio;
     audio.src = url;
     try { audio.playbackRate = Number(rate) || 1; } catch {}
-    audio.onended = () => { if (currentAudio === audio) currentAudio = null; resolve(true); };
-    audio.onerror = () => { if (currentAudio === audio) currentAudio = null; reject(new Error('Audio playback failed')); };
-    audio.play().catch(err => { if (currentAudio === audio) currentAudio = null; reject(err); });
+    audio.onplay = () => { try { document.dispatchEvent(new CustomEvent('tts:start')); } catch {} };
+    audio.onended = () => { if (currentAudio === audio) currentAudio = null; try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {} ; resolve(true); };
+    audio.onerror = () => { if (currentAudio === audio) currentAudio = null; try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {} ; reject(new Error('Audio playback failed')); };
+    audio.play().catch(err => { if (currentAudio === audio) currentAudio = null; try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {} ; reject(err); });
   });
 }
 
@@ -86,6 +90,7 @@ const TTS = {
       // Prevent overlapping playback by canceling any current speech/audio
       try { TTS.cancel(); } catch {}
       if (cfg.endpoint && endpointEnabled) {
+        // Endpoint path
         await speakViaEndpoint({ text, lang, rate });
         return true;
       }
@@ -93,20 +98,24 @@ const TTS = {
     } catch (e) {
       endpointEnabled = false;
       if (!cfg.allowFallback) throw e;
+      // Fallback path
       return speakViaWebSpeech({ text, lang, rate, pitch, volume });
     }
   },
   async speakList(texts = [], { lang = 'ja', rate = 1 } = {}) {
+    try { document.dispatchEvent(new CustomEvent('tts:seqstart')); } catch {}
     for (const t of texts) {
       if (!t) continue;
       await TTS.speak({ text: t, lang, rate }).catch(() => {});
     }
+    try { document.dispatchEvent(new CustomEvent('tts:seqend')); } catch {}
     return true;
   },
   cancel() {
     try { if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; } } catch {}
     currentAudio = null;
     try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch {}
+    try { document.dispatchEvent(new CustomEvent('tts:end')); } catch {}
   }
 };
 
