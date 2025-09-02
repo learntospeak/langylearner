@@ -399,6 +399,91 @@ window.LessonShim = (() => {
   }
 
 
+  // React mascot to TTS adapter events so the mouth animates while speaking
+  try {
+    document.addEventListener('tts:start', () => mascotSet('mascot-talk'));
+    document.addEventListener('tts:end', () => mascotSet('mascot-idle'));
+    document.addEventListener('tts:seqend', () => mascotSet('mascot-idle'));
+  } catch {}
+
+  // ---------- mascot tip bubble (contextual hints) ----------
+  const MascotTip = (() => {
+    let tipEl = null;
+    let activeTimer = null;
+    let bound = false;
+
+    function injectCssOnce() {
+      if (document.getElementById('mascot-tip-style')) return;
+      const css = `
+        .mascot-tip{position:absolute;max-width:240px;padding:8px 10px;border-radius:10px;background:#fff;color:#111;
+          border:1px solid #e5e7eb;box-shadow:0 6px 18px rgba(0,0,0,.12);font-size:.9rem;line-height:1.25;z-index:25}
+        .mascot-tip.ok{border-color:#86efac;background:#f0fdf4}
+        .mascot-tip.warn{border-color:#f59e0b;background:#fffbeb}
+        .mascot-tip.bad{border-color:#fca5a5;background:#fef2f2}
+        .mascot-tip::before{content:"";position:absolute;left:-8px;top:14px;border-width:8px;border-style:solid;
+          border-color:transparent #e5e7eb transparent transparent}
+        .mascot-tip::after{content:"";position:absolute;left:-7px;top:14px;border-width:8px;border-style:solid;
+          border-color:transparent #fff transparent transparent}
+      `;
+      const st = document.createElement('style'); st.id = 'mascot-tip-style'; st.textContent = css; document.head.appendChild(st);
+    }
+
+    function ensureTipEl() {
+      if (tipEl && tipEl.isConnected) return tipEl;
+      injectCssOnce();
+      const host = document.getElementById('lesson-wrap') || document.body;
+      tipEl = document.createElement('div');
+      tipEl.className = 'mascot-tip';
+      tipEl.style.display = 'none';
+      host.appendChild(tipEl);
+      if (!bound) {
+        bound = true;
+        addEventListener('resize', () => position());
+        addEventListener('scroll', () => position(), true);
+      }
+      return tipEl;
+    }
+
+    function getAnchor() {
+      const sel = __MAP__?.mascot;
+      return sel ? document.querySelector(sel) : null;
+    }
+
+    function position() {
+      if (!tipEl || tipEl.style.display === 'none') return;
+      const wrap = document.getElementById('lesson-wrap');
+      const anchor = getAnchor();
+      if (!wrap || !anchor) return;
+      const wr = wrap.getBoundingClientRect();
+      const ar = anchor.getBoundingClientRect();
+      const left = Math.round(ar.right - wr.left + 10);
+      const top = Math.round(ar.top - wr.top + 6);
+      tipEl.style.left = left + 'px';
+      tipEl.style.top = top + 'px';
+    }
+
+    function hide() {
+      if (!tipEl) return;
+      tipEl.style.display = 'none';
+      if (activeTimer) { clearTimeout(activeTimer); activeTimer = null; }
+    }
+
+    function show(msg, { tone = 'warn', ms = 2800 } = {}) {
+      if (!msg) return;
+      const el = ensureTipEl();
+      el.textContent = msg;
+      el.classList.remove('ok','warn','bad');
+      el.classList.add(tone);
+      el.style.display = 'block';
+      position();
+      if (activeTimer) clearTimeout(activeTimer);
+      activeTimer = setTimeout(() => hide(), ms);
+    }
+
+    return { show, hide, position };
+  })();
+
+
   function setStatus(map, msg) { const el = q(map?.containers?.status); if (el) el.textContent = msg || ""; }
   function feedback(map, msg, ok) {
     const el = q(map?.containers?.feedback); if (!el) return;
@@ -1618,6 +1703,7 @@ window.LessonShim = (() => {
   function checkCloze(map) {
     const blocks = qa(`${map?.containers?.list} .${map?.classes?.item || "lesson-item"}`);
     let allOk = true;
+    let bubbleTip = "";
     blocks.forEach(block => {
       const inputs = Array.from(block.querySelectorAll('input[data-answer]'));
       const hintEl = ensureHintEl(block, map);
@@ -1637,11 +1723,12 @@ window.LessonShim = (() => {
         }
       });
       hintEl.textContent = localOk ? "" : firstHint;
-      if (!localOk) allOk = false;
+      if (!localOk) { allOk = false; if (!bubbleTip && firstHint) bubbleTip = firstHint; }
     });
     feedback(map, allOk ? "Great! All blanks correct." : "Some blanks need fixing.", allOk);
     if (allOk) mascotPulse && mascotPulse("mascot-celebrate", 1200);
     else mascotPulse && mascotPulse("mascot-confused", 800);
+    if (!allOk && bubbleTip) MascotTip.show(bubbleTip, { tone:'warn' }); else MascotTip.hide();
     return allOk;
   }
 
@@ -1649,12 +1736,13 @@ window.LessonShim = (() => {
     if (map?.flags?.syllableMode) {
       const openSlots = qa(`${map?.containers?.list} .mora-slot`).filter(x => x.dataset.filled !== '1');
       const ok = openSlots.length === 0;
-      feedback(map, ok ? 'All tiles placed—nice!' : 'Place all tiles in order.', ok);
+      feedback(map, ok ? 'All tiles placed-nice!' : 'Place all tiles in order.', ok);
       if (typeof mascotPulse === 'function') mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
       return ok;
     }
     const cards = qa(`${map?.containers?.list} [data-sid]`);
     let allOk = true;
+    let firstTip = "";
     cards.forEach(card => {
       const sid = card.getAttribute("data-sid");
       const s = (lesson.sentences || []).find(x => x.sid === sid) || {};
@@ -1677,12 +1765,14 @@ window.LessonShim = (() => {
         inp.classList.toggle(map?.classes?.ok || "ok", correct);
         inp.classList.toggle(map?.classes?.bad || "bad", !correct);
       }
-      hintEl.textContent = correct ? "" : H.makeHint(s.jp || "", got, s);
-      if (!correct) allOk = false;
+      const tip = correct ? "" : H.makeHint(s.jp || "", got, s);
+      hintEl.textContent = tip;
+      if (!correct) { allOk = false; if (!firstTip && tip) firstTip = tip; }
     });
-    feedback(map, allOk ? "Nice—perfect translations!" : "Check the highlighted answers.", allOk);
+    feedback(map, allOk ? "Nice-perfect translations!" : "Check the highlighted answers.", allOk);
     if (allOk) mascotPulse && mascotPulse("mascot-celebrate", 1200);
     else mascotPulse && mascotPulse("mascot-confused", 800);
+    if (!allOk && firstTip) MascotTip.show(firstTip, { tone:'warn' }); else MascotTip.hide();
     return allOk;
   }
 
