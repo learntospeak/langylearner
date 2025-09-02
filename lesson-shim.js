@@ -390,7 +390,7 @@ window.LessonShim = (() => {
     const el = (sel) => (typeof sel === "string" ? document.querySelector(sel) : null);
     const root = __MAP__?.mascot ? el(__MAP__.mascot) : null;
     if (!root) return;
-    root.classList.remove("mascot-idle", "mascot-talk", "mascot-celebrate", "mascot-confused");
+    root.classList.remove("mascot-idle", "mascot-talk", "mascot-celebrate", "mascot-confused", "mascot-think");
     if (state) root.classList.add(state);
   }
   function mascotPulse(state, ms = 900) {
@@ -481,6 +481,37 @@ window.LessonShim = (() => {
     }
 
     return { show, hide, position };
+  })();
+
+  // ---------- mascot visual feedback (blink + think) ----------
+  const MascotVisuals = (() => {
+    let cssInjected = false;
+
+    function injectCss() {
+      if (cssInjected) return; cssInjected = true;
+      const css = `
+        @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.12); } }
+        @keyframes think { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+        #mascot .eye { transform-origin: center center; animation: blink 4.2s ease-in-out infinite; }
+        #mascot.mascot-think { animation: think 0.7s ease-in-out 0s 2; }
+      `;
+      const st = document.createElement('style'); st.id = 'mascot-visual-style'; st.textContent = css; document.head.appendChild(st);
+    }
+
+    function markEyes() {
+      const root = document.getElementById('mascot'); if (!root) return;
+      const svg = root.querySelector('svg'); if (!svg) return;
+      const circles = Array.from(svg.querySelectorAll('circle'));
+      circles.forEach(c => {
+        const r = parseFloat(c.getAttribute('r') || '0');
+        const cy = parseFloat(c.getAttribute('cy') || '0');
+        // Heuristic: the eye circles are small (r≈3) and near y≈46
+        if (r <= 3.5 && cy >= 42 && cy <= 50) c.classList.add('eye');
+      });
+    }
+
+    function init() { injectCss(); markEyes(); }
+    return { init };
   })();
 
 
@@ -1923,6 +1954,8 @@ window.LessonShim = (() => {
 
     const onReveal = () => {
       const step = steps[state.stepIndex] || {};
+      // Visual cue: thinking wiggle on reveal
+      try { mascotPulse && mascotPulse('mascot-think', 900); } catch {}
       if (step.type === "cloze") {
         qa(`${map?.containers?.list} input[data-answer]`).forEach(i => i.value = i.dataset.answer || "");
         feedback(map, "Answers revealed.", true);
@@ -1996,6 +2029,9 @@ window.LessonShim = (() => {
     bindOnce(q(map?.controls?.showAnswer), "click", onReveal);
     bindOnce(q(map?.controls?.toggleRomaji), "click", onToggleRomaji);
     bindOnce(q(map?.controls?.speak), "click", onSpeak);
+
+    // Initialize visual tweaks once per run
+    try { MascotVisuals.init(); } catch {}
 
     render();
   }
