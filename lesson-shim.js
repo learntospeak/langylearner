@@ -402,8 +402,8 @@ window.LessonShim = (() => {
   // React mascot to TTS adapter events so the mouth animates while speaking
   try {
     let __speaking = false;
-    document.addEventListener('tts:start', () => { __speaking = true; mascotSet('mascot-talk'); });
-    document.addEventListener('tts:end', () => { __speaking = false; mascotSet('mascot-idle'); });
+    document.addEventListener('tts:start', () => { __speaking = true; try { window.__speaking = true; } catch {} ; mascotSet('mascot-talk'); });
+    document.addEventListener('tts:end', () => { __speaking = false; try { window.__speaking = false; } catch {} ; mascotSet('mascot-idle'); });
     document.addEventListener('tts:seqend', () => mascotSet('mascot-idle'));
   } catch {}
 
@@ -517,6 +517,76 @@ window.LessonShim = (() => {
 
     function init() { injectCss(); markEyes(); }
     return { init };
+  })();
+
+  // Arm-pointing helper: wraps arm paths, rotates toward a target
+  const MascotArms = (() => {
+    let cssInjected = false;
+    let arms = { left: null, right: null };
+
+    function injectCss() {
+      if (cssInjected) return; cssInjected = true;
+      const css = `
+        #mascot .arm { transform-box: fill-box; transform-origin: left center; transition: transform .22s ease; }
+        #mascot .arm-left { transform-origin: right center; }
+      `;
+      const st = document.createElement('style'); st.id = 'mascot-arm-style'; st.textContent = css; document.head.appendChild(st);
+    }
+
+    function markArms() {
+      const root = document.getElementById('mascot'); if (!root) return;
+      const svg = root.querySelector('svg'); if (!svg) return;
+      if (arms.left && arms.right) return;
+      const paths = Array.from(svg.querySelectorAll('path'));
+      const armPaths = paths.filter(p => (p.getAttribute('fill') === 'none') && /#?E0A700/i.test(p.getAttribute('stroke')||'') && (parseFloat(p.getAttribute('stroke-width')||'0') >= 2.5));
+      if (armPaths.length >= 2) {
+        const [p1, p2] = armPaths;
+        const px1 = parseFloat((p1.getAttribute('d')||'').match(/M(\d+(?:\.\d+)?)/)?.[1] || '0');
+        const px2 = parseFloat((p2.getAttribute('d')||'').match(/M(\d+(?:\.\d+)?)/)?.[1] || '0');
+        const leftPath = (px1 <= px2) ? p1 : p2;
+        const rightPath = (px1 <= px2) ? p2 : p1;
+        const wrap = (path, cls) => {
+          if (path.parentElement && path.parentElement.tagName.toLowerCase() === 'g' && path.parentElement.classList.contains('arm')) return path.parentElement;
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.classList.add('arm', cls);
+          path.parentNode.insertBefore(g, path);
+          g.appendChild(path);
+          return g;
+        };
+        arms.left = wrap(leftPath, 'arm-left');
+        arms.right = wrap(rightPath, 'arm-right');
+      }
+    }
+
+    function angleToTarget(target) {
+      const root = document.getElementById('mascot'); if (!root) return null;
+      const mr = root.getBoundingClientRect();
+      const tr = target.getBoundingClientRect();
+      const mx = mr.left + mr.width / 2; const my = mr.top + mr.height / 2;
+      const tx = tr.left + tr.width / 2; const ty = tr.top + tr.height / 2;
+      const dx = tx - mx; const dy = ty - my;
+      let deg = Math.atan2(dy, dx) * 180 / Math.PI; // 0=right
+      return { deg, dx, dy };
+    }
+
+    function pointTo(target, ms = 1200) {
+      if (!target) return;
+      injectCss();
+      markArms();
+      if (!arms.left || !arms.right) return;
+      const a = angleToTarget(target); if (!a) return;
+      const useRight = a.dx >= 0;
+      const active = useRight ? arms.right : arms.left;
+      if (!active) return;
+      if (useRight) active.style.transform = `rotate(${a.deg}deg)`;
+      else active.style.transform = `rotate(${a.deg - 180}deg)`;
+      const root = document.getElementById('mascot');
+      root && root.classList.add('mascot-point');
+      setTimeout(() => { root && root.classList.remove('mascot-point'); active.style.transform = ''; }, ms);
+    }
+
+    function init() { injectCss(); markArms(); }
+    return { init, pointTo };
   })();
 
   // ---------- mascot progress (pips or X/Y) ----------
@@ -677,24 +747,26 @@ window.LessonShim = (() => {
 
     function pulse(el){ if(!el) return; el.classList.add('cue-pulse'); setTimeout(()=> el.classList.remove('cue-pulse'), 1600); }
 
-    function pointMascot(){ mascotSet('mascot-point'); setTimeout(()=> mascotSet('mascot-idle'), 1200); }
+    function pointMascot(){ /* body wiggle still applied by arms module */ }
 
-    function maybeNudge(targetSel, stepIndex){
+    function maybeNudge(targetSel, stepIndex, { force=false } = {}){
       const target = (typeof targetSel === 'string') ? document.querySelector(targetSel) : (targetSel || null);
       if (!target) return;
+      // don't nudge while speaking
+      if (window.__speaking) return;
       // avoid spamming: at most once every 60s and not on same step repeatedly
       const tNow = now();
       const last = getTS('krCue:lastNudge', 0);
       const okTime = (tNow - last) > 60000; // 60s
       const stepChanged = (stepIndex !== lastStep);
-      if (!okTime && !stepChanged) return;
+      if (!force && !okTime && !stepChanged) return;
       // Do it every 2nd step or if enough time has passed
       const count = inc('krCue:nudgeCount');
-      if (!okTime && (count % 2 !== 0)) return;
+      if (!force && !okTime && (count % 2 !== 0)) return;
       setTS('krCue:lastNudge', tNow);
       lastStep = stepIndex;
       pulse(target);
-      pointMascot();
+      try { MascotArms.pointTo(target); } catch { mascotSet('mascot-point'); setTimeout(()=> mascotSet('mascot-idle'), 1200); }
     }
 
     return { maybeNudge };
@@ -2247,7 +2319,7 @@ window.LessonShim = (() => {
     bindOnce(q(map?.controls?.speak), "click", onSpeak);
 
     // Initialize visual tweaks once per run
-    try { MascotVisuals.init(); } catch {}
+    try { MascotVisuals.init(); MascotArms.init?.(); } catch {}
 
     // expose small debug helpers for attention cues
     try {
@@ -2278,6 +2350,27 @@ window.LessonShim = (() => {
         } catch {}
       };
     } catch {}
+
+    // Dev nudge loop (configure with map.flags.nudgeMs)
+    let __nudgeTimer = null;
+    const startNudgeLoop = () => {
+      const ms = Number(map?.flags?.nudgeMs || 0);
+      if (ms > 0 && !__nudgeTimer) {
+        __nudgeTimer = setInterval(() => {
+          try {
+            const speakSel = map?.controls?.speak || '#lsSpeak';
+            const listSel = map?.containers?.list || '#jp-text';
+            const speakBtnCls = map?.classes?.speakBtn || 'speak-btn';
+            const speakAnchor = document.querySelector(speakSel)
+              || document.querySelector(`${listSel} .${speakBtnCls}`)
+              || document.querySelector(`.${speakBtnCls}`);
+            MascotNudge.maybeNudge(speakAnchor || speakSel, state.stepIndex, { force:true });
+          } catch {}
+        }, ms);
+      }
+    };
+
+    startNudgeLoop();
 
     render();
   }

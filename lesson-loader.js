@@ -11,7 +11,7 @@ const map = {
   },
   // add to your existing map
   // Turn off bubble-style attention cues; we'll use mascot nudges instead
-  flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true, attentionCues: false },
+  flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true, attentionCues: false, nudgeMs: 12000 },
   speech:{ rate:1, pitch:1, volume:1 },
   mascot:"#mascot", // ← NEW
   classes: {
