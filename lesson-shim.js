@@ -1617,9 +1617,10 @@ window.LessonShim = (() => {
         .manga { display:grid; gap:12px; grid-template-columns: repeat(1, minmax(0,1fr)); }
         @media (min-width: 640px){ .manga { grid-template-columns: repeat(2, minmax(0,1fr)); } }
         @media (min-width: 1024px){ .manga { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-        .panel { position:relative; background:#fff; border:2px solid #111; border-radius:6px; padding:10px; box-shadow: 2px 4px 0 #111; min-height:120px; overflow:hidden; }
+        .panel { position:relative; background:#fff; border:2px solid #111; border-radius:6px; padding:10px; box-shadow: 2px 4px 0 #111; min-height: var(--panel-minh, 120px); overflow:hidden; }
         .panel.tone { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 6px 6px; background-color:#fff; }
         .panel.bg { background-size: cover; background-position: center; }
+        .panel.bg-contain { background-size: contain; background-repeat: no-repeat; background-position: center; }
         .panel.wide { grid-column: span 2; }
         .panel.tall { grid-row: span 2; min-height: 260px; }
         .panel.big  { grid-column: span 2; grid-row: span 2; min-height: 320px; }
@@ -1692,6 +1693,8 @@ window.LessonShim = (() => {
     const refList = box.querySelector('#refList');
 
     const confPageSize = Math.max(1, Number((step.manga && step.manga.pageSize) || 6));
+    const confMinH = Number((step.manga && step.manga.minH) || 0);
+    if (confMinH > 0) { try { list.style.setProperty('--panel-minh', `${confMinH}px`); } catch {} }
     let pageIndex = 0;
 
     function renderPage(idx = 0) {
@@ -1704,9 +1707,14 @@ window.LessonShim = (() => {
         const who = (i % 2 ? 'You' : 'Ami');
         const panel = document.createElement('div');
         const size = (v.size || '').toLowerCase(); // 'wide' | 'tall' | 'big'
-        const extra = ['wide','tall','big','tone','bg'].filter(k => (size && size.includes(k)) || (k==='tone' && v.tone) || (k==='bg' && (v.img || v.video))).join(' ');
-        panel.className = `panel ${extra}`;
-        if (v.img) panel.style.backgroundImage = `url('${v.img}')`;
+        const fitContain = (String(v.fit || '').toLowerCase() === 'contain') || !!v.noBubble; // default contain for art with baked-in bubble
+        const cls = ['wide','tall','big','tone','bg'].filter(k => (size && size.includes(k)) || (k==='tone' && v.tone) || (k==='bg' && (v.img || v.video))).join(' ');
+        panel.className = `panel ${cls} ${fitContain ? 'bg-contain' : ''}`;
+        if (v.minH) { const mh = (typeof v.minH === 'number') ? `${v.minH}px` : String(v.minH); panel.style.minHeight = mh; }
+        if (v.img) {
+          panel.style.backgroundImage = `url('${v.img}')`;
+          if (v.bgPos || v.imagePosition) panel.style.backgroundPosition = String(v.bgPos || v.imagePosition);
+        }
         panel.innerHTML = `
           <div class="num">${i + 1}</div>
           ${v.narration ? `<div class=\"narration\">${v.narration}</div>` : ''}
