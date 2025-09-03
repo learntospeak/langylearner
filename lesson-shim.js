@@ -588,7 +588,7 @@ window.LessonShim = (() => {
       if (cssInjected) return; cssInjected = true;
       const css = `
         .attention-cue{position:absolute;max-width:220px;padding:8px 10px;border-radius:10px;background:#111;color:#fff;
-          border:1px solid #000;box-shadow:0 10px 24px rgba(0,0,0,.25);font-size:.9rem;line-height:1.25;z-index:40}
+          border:1px solid #000;box-shadow:0 10px 24px rgba(0,0,0,.25);font-size:.9rem;line-height:1.25;z-index:1000}
         .attention-cue .arrow{position:absolute; width:0; height:0; border-style:solid}
         .attention-cue.tt-top .arrow{bottom:-8px; left:12px; border-width:8px 8px 0 8px; border-color:#111 transparent transparent transparent}
         .attention-cue.tt-bottom .arrow{top:-8px; left:12px; border-width:0 8px 8px 8px; border-color:transparent transparent #111 transparent}
@@ -2040,14 +2040,18 @@ window.LessonShim = (() => {
       // attention cues: show once per session (can disable via map.flags.attentionCues=false)
       try {
         if (map?.flags?.attentionCues !== false) {
-          // Prefer to nudge Speak on steps that have audio
-          const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
-          if (speakable.includes(step.type || '')) {
-            const showed = AttentionCue.showOnce('speak', map?.controls?.speak, 'Tap Speak to hear it.');
-            if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
-          } else {
-            AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
-          }
+          // Delay a tick so footer hoist/reflow completes before measuring
+          setTimeout(() => {
+            try {
+              const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
+              if (speakable.includes(step.type || '')) {
+                const showed = AttentionCue.showOnce('speak', map?.controls?.speak, 'Tap Speak to hear it.', { ms: 3500, place:'top' });
+                if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.', { ms: 3000, place:'top' });
+              } else {
+                AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.', { ms: 3000, place:'top' });
+              }
+            } catch {}
+          }, 120);
         }
       } catch {}
       switch (step.type) {
