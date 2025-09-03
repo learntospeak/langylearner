@@ -401,8 +401,9 @@ window.LessonShim = (() => {
 
   // React mascot to TTS adapter events so the mouth animates while speaking
   try {
-    document.addEventListener('tts:start', () => mascotSet('mascot-talk'));
-    document.addEventListener('tts:end', () => mascotSet('mascot-idle'));
+    let __speaking = false;
+    document.addEventListener('tts:start', () => { __speaking = true; mascotSet('mascot-talk'); });
+    document.addEventListener('tts:end', () => { __speaking = false; mascotSet('mascot-idle'); });
     document.addEventListener('tts:seqend', () => mascotSet('mascot-idle'));
   } catch {}
 
@@ -492,8 +493,12 @@ window.LessonShim = (() => {
       const css = `
         @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.12); } }
         @keyframes think { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+        @keyframes point { 0%,100% { transform: translate(0,0) rotate(0deg); } 30% { transform: translate(6px, 2px) rotate(6deg); } 70% { transform: translate(6px, 2px) rotate(6deg); } }
         #mascot .eye { transform-origin: center center; animation: blink 4.2s ease-in-out infinite; }
         #mascot.mascot-think { animation: think 0.7s ease-in-out 0s 2; }
+        #mascot.mascot-point { animation: point 0.8s ease-in-out 0s 2; }
+        @keyframes cuePulse { 0%{ box-shadow:0 0 0 0 rgba(96,165,250,.6);} 100%{ box-shadow:0 0 0 14px rgba(96,165,250,0);} }
+        .cue-pulse { position: relative; z-index: 100; animation: cuePulse 1.2s ease-out 0s 2; }
       `;
       const st = document.createElement('style'); st.id = 'mascot-visual-style'; st.textContent = css; document.head.appendChild(st);
     }
@@ -660,6 +665,39 @@ window.LessonShim = (() => {
     }
 
     return { showOnce, hide };
+  })();
+
+  // ---------- mascot nudge (occasional pointing + button pulse) ----------
+  const MascotNudge = (() => {
+    let lastStep = -1;
+    function now() { return Date.now(); }
+    function getTS(k, def=0){ try{ const v=sessionStorage.getItem(k); return v? Number(v): def; }catch{ return def; } }
+    function setTS(k, v){ try{ sessionStorage.setItem(k, String(v)); }catch{} }
+    function inc(k){ try{ const n = (Number(sessionStorage.getItem(k))||0)+1; sessionStorage.setItem(k,String(n)); return n; }catch{ return 0; } }
+
+    function pulse(el){ if(!el) return; el.classList.add('cue-pulse'); setTimeout(()=> el.classList.remove('cue-pulse'), 1600); }
+
+    function pointMascot(){ mascotSet('mascot-point'); setTimeout(()=> mascotSet('mascot-idle'), 1200); }
+
+    function maybeNudge(targetSel, stepIndex){
+      const target = (typeof targetSel === 'string') ? document.querySelector(targetSel) : (targetSel || null);
+      if (!target) return;
+      // avoid spamming: at most once every 60s and not on same step repeatedly
+      const tNow = now();
+      const last = getTS('krCue:lastNudge', 0);
+      const okTime = (tNow - last) > 60000; // 60s
+      const stepChanged = (stepIndex !== lastStep);
+      if (!okTime && !stepChanged) return;
+      // Do it every 2nd step or if enough time has passed
+      const count = inc('krCue:nudgeCount');
+      if (!okTime && (count % 2 !== 0)) return;
+      setTS('krCue:lastNudge', tNow);
+      lastStep = stepIndex;
+      pulse(target);
+      pointMascot();
+    }
+
+    return { maybeNudge };
   })();
 
 
@@ -2037,7 +2075,17 @@ window.LessonShim = (() => {
       if (window.__padFooter) window.__padFooter();
       // update mascot progress indicator
       try { MascotProgress.render(steps.length, state.stepIndex); } catch {}
-      // attention cues: show once per session (can disable via map.flags.attentionCues=false)
+      // occasional mascot nudge toward Speak button
+      try {
+        const speakSel = map?.controls?.speak || '#lsSpeak';
+        const listSel = map?.containers?.list || '#jp-text';
+        const speakBtnCls = map?.classes?.speakBtn || 'speak-btn';
+        const speakAnchor = document.querySelector(speakSel)
+          || document.querySelector(`${listSel} .${speakBtnCls}`)
+          || document.querySelector(`.${speakBtnCls}`);
+        MascotNudge.maybeNudge(speakAnchor || speakSel, state.stepIndex);
+      } catch {}
+      // legacy attention cues (bubbles): disabled by default; can enable with flags.attentionCues=true
       try {
         if (map?.flags?.attentionCues !== false) {
           // Delay a tick so footer hoist/reflow completes before measuring
