@@ -514,6 +514,71 @@ window.LessonShim = (() => {
     return { init };
   })();
 
+  // ---------- mascot progress (pips or X/Y) ----------
+  const MascotProgress = (() => {
+    let host = null; let cssInjected = false; let bound = false;
+
+    function injectCss() {
+      if (cssInjected) return; cssInjected = true;
+      const css = `
+        .mascot-progress{position:absolute;display:flex;gap:4px;align-items:center;
+          padding:4px 6px;border-radius:999px;background:#ffffff; border:1px solid #e5e7eb;
+          box-shadow:0 6px 18px rgba(0,0,0,.10); font-size:12px; color:#111; z-index:24}
+        .mascot-progress .pip{width:7px;height:7px;border-radius:999px;background:#e5e7eb}
+        .mascot-progress .pip.on{background:#60a5fa}
+        .mascot-progress .badge{font-variant-numeric:tabular-nums}
+      `;
+      const st = document.createElement('style'); st.id = 'mascot-progress-style'; st.textContent = css; document.head.appendChild(st);
+    }
+
+    function ensure() {
+      if (host && host.isConnected) return host;
+      injectCss();
+      const wrap = document.getElementById('lesson-wrap') || document.body;
+      host = document.createElement('div');
+      host.className = 'mascot-progress';
+      host.style.display = 'none';
+      wrap.appendChild(host);
+      if (!bound) {
+        bound = true;
+        addEventListener('resize', position);
+        addEventListener('scroll', position, true);
+      }
+      return host;
+    }
+
+    function anchorRects() {
+      const wrap = document.getElementById('lesson-wrap');
+      const anchor = __MAP__?.mascot ? document.querySelector(__MAP__.mascot) : null;
+      if (!wrap || !anchor) return null;
+      return { wr: wrap.getBoundingClientRect(), ar: anchor.getBoundingClientRect() };
+    }
+
+    function position() {
+      if (!host || host.style.display === 'none') return;
+      const r = anchorRects(); if (!r) return;
+      const left = Math.round(r.ar.right - r.wr.left + 8);
+      const top = Math.round(r.ar.bottom - r.wr.top - 12);
+      host.style.left = left + 'px';
+      host.style.top = top + 'px';
+    }
+
+    function render(total = 0, index = 0) {
+      const el = ensure();
+      if (!total || total < 2) { el.style.display = 'none'; return; }
+      if (total <= 10) {
+        const pips = Array.from({ length: total }, (_, i) => `<span class="pip ${i <= index ? 'on' : ''}"></span>`).join('');
+        el.innerHTML = pips;
+      } else {
+        el.innerHTML = `<span class="badge">${index + 1}/${total}</span>`;
+      }
+      el.style.display = 'flex';
+      position();
+    }
+
+    return { render, position };
+  })();
+
 
   function setStatus(map, msg) { const el = q(map?.containers?.status); if (el) el.textContent = msg || ""; }
   function feedback(map, msg, ok) {
@@ -1887,6 +1952,8 @@ window.LessonShim = (() => {
       // tell CSS which step is active
       document.body.dataset.step = (step && step.type) || '';
       if (window.__padFooter) window.__padFooter();
+      // update mascot progress indicator
+      try { MascotProgress.render(steps.length, state.stepIndex); } catch {}
       switch (step.type) {
         case "read_listen": renderReadListen(lesson, step, map); break;
         case "cloze": renderCloze(lesson, step, map); break;
