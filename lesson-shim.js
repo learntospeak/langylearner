@@ -2043,19 +2043,14 @@ window.LessonShim = (() => {
           // Delay a tick so footer hoist/reflow completes before measuring
           setTimeout(() => {
             try {
-              const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
-              if (speakable.includes(step.type || '')) {
-                const speakSel = map?.controls?.speak || '#lsSpeak';
-                const listSel = map?.containers?.list || '#jp-text';
-                const speakBtnCls = map?.classes?.speakBtn || 'speak-btn';
-                const speakAnchor = document.querySelector(speakSel)
-                  || document.querySelector(`${listSel} .${speakBtnCls}`)
-                  || document.querySelector(`.${speakBtnCls}`);
-                const showed = AttentionCue.showOnce('speak', speakAnchor || speakSel, 'Tap Speak to hear it.', { ms: 3500, place:'top' });
-                if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji || '#lsToggleRomaji', 'Toggle Romaji view.', { ms: 3000, place:'top' });
-              } else {
-                AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji || '#lsToggleRomaji', 'Toggle Romaji view.', { ms: 3000, place:'top' });
-              }
+              const speakSel = map?.controls?.speak || '#lsSpeak';
+              const listSel = map?.containers?.list || '#jp-text';
+              const speakBtnCls = map?.classes?.speakBtn || 'speak-btn';
+              const speakAnchor = document.querySelector(speakSel)
+                || document.querySelector(`${listSel} .${speakBtnCls}`)
+                || document.querySelector(`.${speakBtnCls}`);
+              const showed = AttentionCue.showOnce('speak', speakAnchor || speakSel, 'Tap Speak to hear it.', { ms: 3500, place:'top' });
+              if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji || '#lsToggleRomaji', 'Toggle Romaji view.', { ms: 3000, place:'top' });
             } catch {}
           }, 300);
         }
