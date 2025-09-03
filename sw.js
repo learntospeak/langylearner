@@ -1,5 +1,5 @@
 // service-worker.js
-const VERSION = 'v1.0.3';                      // bump when core changes
+const VERSION = 'v1.0.4';                      // bump when core changes
 const CACHE_NAME = `jp-lesson-${VERSION}`;
 
 const CORE = [
@@ -70,7 +70,12 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.endsWith('/stories.json') || url.pathname === '/stories.json' || url.pathname.endsWith('stories.json')) {
     event.respondWith(
       fetch(req).then((res) => {
-        if (shouldCache(req, res)) caches.open(CACHE_NAME).then((c) => c.put(req, res.clone()));
+        try {
+          if (shouldCache(req, res)) {
+            const copy = res.clone();
+            event.waitUntil(caches.open(CACHE_NAME).then((c) => c.put(req, copy)));
+          }
+        } catch {}
         return res;
       }).catch(() => caches.match(req))
     );
@@ -82,9 +87,14 @@ self.addEventListener('fetch', (event) => {
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((res) => {
-        if (shouldCache(req, res) && res.type !== 'opaque') caches.open(CACHE_NAME).then((c) => c.put(req, res.clone()));
+        try {
+          if (shouldCache(req, res) && res.type !== 'opaque') {
+            const copy = res.clone();
+            event.waitUntil(caches.open(CACHE_NAME).then((c) => c.put(req, copy)));
+          }
+        } catch {}
         return res;
-      });
+      }).catch(() => caches.match(req));
     })
   );
 });
