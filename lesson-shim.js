@@ -417,12 +417,12 @@ window.LessonShim = (() => {
       if (document.getElementById('mascot-tip-style')) return;
       const css = `
         .mascot-tip{position:absolute;max-width:240px;padding:8px 10px;border-radius:10px;background:#fff;color:#111;
-          border:1px solid #e5e7eb;box-shadow:0 6px 18px rgba(0,0,0,.12);font-size:.9rem;line-height:1.25;z-index:25}
-        .mascot-tip.ok{border-color:#86efac;background:#f0fdf4}
-        .mascot-tip.warn{border-color:#f59e0b;background:#fffbeb}
-        .mascot-tip.bad{border-color:#fca5a5;background:#fef2f2}
-        .mascot-tip::before{content:"";position:absolute;left:-8px;top:14px;border-width:8px;border-style:solid;
-          border-color:transparent #e5e7eb transparent transparent}
+          border:1px solid #e5e7eb;box-shadow:0 6px 18px rgba(0,0,0,.12);font-size:.9rem;line-height:1.25;z-index:1300}
+          .mascot-tip.ok{border-color:#86efac;background:#f0fdf4}
+          .mascot-tip.warn{border-color:#f59e0b;background:#fffbeb}
+          .mascot-tip.bad{border-color:#fca5a5;background:#fef2f2}
+          .mascot-tip::before{content:"";position:absolute;left:-8px;top:14px;border-width:8px;border-style:solid;
+            border-color:transparent #e5e7eb transparent transparent}
         .mascot-tip::after{content:"";position:absolute;left:-7px;top:14px;border-width:8px;border-style:solid;
           border-color:transparent #fff transparent transparent}
       `;
@@ -1594,6 +1594,202 @@ window.LessonShim = (() => {
     padFooter();
   }
 
+
+  // ---------- comic/manga conversation (replaces variations) ----------
+  function renderComic(lesson, step, map) {
+    const root = q(map?.containers?.list); if (!root) return;
+    root.innerHTML = "";
+
+    // Build script from variations: alternate speakers Ami/You
+    const items = (step.variations || []).map(v => {
+      if (!v.romaji && v.jp && window.wanakana) {
+        const reading = sentenceReadingHira({ jp: v.jp, romaji_full: v.romaji });
+        v.romaji = wanakana.toRomaji(reading);
+      }
+      return v;
+    });
+
+    const box = document.createElement('div');
+    box.className = map?.classes?.item || 'lesson-item';
+    const videoUrl = step.video || step.videoUrl || (step.media && step.media.video);
+    box.innerHTML = `
+      <style>
+        .manga { display:grid; gap:12px; grid-template-columns: repeat(1, minmax(0,1fr)); }
+        @media (min-width: 640px){ .manga { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+        @media (min-width: 1024px){ .manga { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+        .panel { position:relative; background:#fff; border:2px solid #111; border-radius:6px; padding:10px; box-shadow: 2px 4px 0 #111; min-height:120px; overflow:hidden; }
+        .panel.tone { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 6px 6px; background-color:#fff; }
+        .panel.bg { background-size: cover; background-position: center; }
+        .panel.wide { grid-column: span 2; }
+        .panel.tall { grid-row: span 2; min-height: 260px; }
+        .panel.big  { grid-column: span 2; grid-row: span 2; min-height: 320px; }
+        .panel video.bgvid { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.95; }
+        .panel .content { position:relative; z-index:2; }
+        .panel .overlays { position:absolute; inset:0; pointer-events:none; z-index:1; }
+        .panel .overlays img { position:absolute; display:block; }
+        .panel .pattern{ position:absolute; inset:0; pointer-events:none; opacity:.22; z-index:0 }
+        .panel .pattern.speed{ background:
+          repeating-conic-gradient(from 0deg, rgba(0,0,0,.2) 0 6deg, transparent 6deg 12deg);
+          mask-image: radial-gradient(circle at 50% 50%, #000, transparent 65%);
+        }
+        .panel .pattern.hatch{ background:
+          repeating-linear-gradient(45deg, rgba(0,0,0,.18) 0 2px, transparent 2px 8px);
+        }
+        .panel .pattern.cross{ background:
+          repeating-linear-gradient(45deg, rgba(0,0,0,.14) 0 2px, transparent 2px 8px),
+          repeating-linear-gradient(-45deg, rgba(0,0,0,.14) 0 2px, transparent 2px 8px);
+        }
+        /* Bubble variants */
+        .bubble.shout{ border-width:2px; box-shadow:none; background:#fff; clip-path: polygon(5% 0, 15% 6%, 25% 1%, 35% 7%, 45% 0, 55% 6%, 65% 1%, 75% 8%, 85% 2%, 95% 6%, 95% 94%, 85% 88%, 75% 94%, 65% 88%, 55% 95%, 45% 89%, 35% 95%, 25% 90%, 15% 96%, 5% 90%);
+        }
+        .bubble.whisper{ border-style:dashed; opacity:.95 }
+        .bubble.thought{ border-radius:18px; }
+        .bubble.thought .dots{ position:absolute; width:10px; height:10px; background:#fff; border:1px solid #e5e7eb; border-radius:999px; left:-14px; bottom:6px; }
+        .row.r .bubble.thought .dots{ left:auto; right:-14px; }
+        .bubble.thought .dots::after{ content:""; position:absolute; width:7px; height:7px; background:#fff; border:1px solid #e5e7eb; border-radius:999px; left:-10px; bottom:-6px; }
+        .row.r .bubble.thought .dots::after{ left:auto; right:-10px; }
+        .panel .num { position:absolute; top:6px; right:8px; font-size:.8rem; color:#6b7280 }
+        .panel .row { display:flex; align-items:flex-start; gap:8px; }
+        .panel .row.r { flex-direction: row-reverse; }
+        .avatar { width:32px; height:32px; border-radius:999px; background:#ffd166; border:2px solid #e0a700; display:flex; align-items:center; justify-content:center; font-weight:700; color:#333; flex:0 0 auto }
+        .bubble { position:relative; max-width: 100%; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; box-shadow:0 3px 12px rgba(0,0,0,.06); }
+        .row.r .bubble { background:#f9fafb }
+        .bubble .jp { font-weight:700; }
+        .bubble .en { color:#374151; margin-top:2px; font-size:.92rem; }
+        .tail-left::after{ content:""; position:absolute; left:-10px; top:12px; border-width:8px; border-style:solid; border-color:transparent #e5e7eb transparent transparent }
+        .tail-left::before{ content:""; position:absolute; left:-9px; top:12px; border-width:8px; border-style:solid; border-color:transparent #fff transparent transparent }
+        .tail-right::after{ content:""; position:absolute; right:-10px; top:12px; border-width:8px; border-style:solid; border-color:transparent transparent transparent #e5e7eb }
+        .tail-right::before{ content:""; position:absolute; right:-9px; top:12px; border-width:8px; border-style:solid; border-color:transparent transparent transparent #f9fafb }
+        .toolbar { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+        .sfx { position:absolute; left:8px; bottom:6px; font-weight:800; font-size:.8rem; color:#9ca3af }
+        .narration { position:absolute; top:8px; left:8px; background:#111; color:#fff; padding:4px 6px; border-radius:6px; font-size:.8rem; }
+        .pagebar { display:flex; align-items:center; gap:8px; margin:6px 0 12px; color:#374151 }
+        .pagebar button { padding:4px 8px; border:1px solid #e5e7eb; border-radius:8px; background:#fff }
+      </style>
+      <div class="toolbar">
+        <button class="btn btn-primary" data-act="play">🔊 Play All</button>
+        <button class="btn btn-ghost" data-act="ref">📖 Reference</button>
+      </div>
+      ${videoUrl ? `<div class="mb-3"><video src="${videoUrl}" controls preload="metadata" class="max-w-full rounded shadow"></video></div>` : ''}
+      <div class="pagebar"><button data-act="prev">Prev</button><div class="pos"></div><button data-act="next">Next</button></div>
+      <div class="manga" id="comicList"></div>
+      <div id="comicRef" class="hidden fixed inset-0 z-[1200]">
+        <div class="absolute inset-0 bg-black/40"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[min(92vw,720px)] max-h-[80vh] overflow-auto p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-semibold">Phrase Reference</div>
+            <button class="btn btn-ghost" data-act="closeRef">✖</button>
+          </div>
+          <div id="refList" class="space-y-2"></div>
+        </div>
+      </div>
+    `;
+    root.appendChild(box);
+
+    const list = box.querySelector('#comicList');
+    const pagebar = box.querySelector('.pagebar');
+    const ref = box.querySelector('#comicRef');
+    const refList = box.querySelector('#refList');
+
+    const confPageSize = Math.max(1, Number((step.manga && step.manga.pageSize) || 6));
+    let pageIndex = 0;
+
+    function renderPage(idx = 0) {
+      pageIndex = Math.max(0, Math.min(idx, Math.ceil(items.length / confPageSize) - 1));
+      const start = pageIndex * confPageSize;
+      const page = items.slice(start, start + confPageSize);
+      list.innerHTML = '';
+      page.forEach((v, ii) => {
+        const i = start + ii;
+        const who = (i % 2 ? 'You' : 'Ami');
+        const panel = document.createElement('div');
+        const size = (v.size || '').toLowerCase(); // 'wide' | 'tall' | 'big'
+        const extra = ['wide','tall','big','tone','bg'].filter(k => (size && size.includes(k)) || (k==='tone' && v.tone) || (k==='bg' && (v.img || v.video))).join(' ');
+        panel.className = `panel ${extra}`;
+        if (v.img) panel.style.backgroundImage = `url('${v.img}')`;
+        panel.innerHTML = `
+          <div class="num">${i + 1}</div>
+          ${v.narration ? `<div class=\"narration\">${v.narration}</div>` : ''}
+          <div class="content">
+            <div class="row ${i % 2 ? 'r' : ''}">
+              <div class="avatar" title="${who}">${who === 'Ami' ? 'A' : 'Y'}</div>
+              ${v.noBubble ? '' : `<div class=\"bubble ${i % 2 ? 'tail-right' : 'tail-left'} ${(v.bubble||'').toLowerCase()}\" data-jp=\"${v.jp || ''}\" data-en=\"${v.en || ''}\"><div class=\"jp\">${stripStops(v.jp || '')}</div><div class=\"en\">${v.en || ''}</div>${((v.bubble||'').toLowerCase()==='thought') ? '<div class=\\\"dots\\\"></div>' : ''}</div>`}
+            </div>
+            ${v.sfx ? `<div class=\"sfx\">${v.sfx}</div>` : ''}
+          </div>
+        `;
+        // panel background video support
+        if (v.video) {
+          const vid = document.createElement('video');
+          vid.className = 'bgvid';
+          vid.src = v.video;
+          vid.autoplay = true; vid.loop = true; vid.muted = true; vid.playsInline = true; vid.preload = 'metadata';
+          panel.insertBefore(vid, panel.firstChild);
+        }
+        // pattern overlays
+        const patternKey = (v.pattern || (v.speed && 'speed') || (v.hatch && 'hatch') || (v.cross && 'cross'));
+        if (patternKey) {
+          const p = document.createElement('div'); p.className = `pattern ${patternKey}`; panel.appendChild(p);
+        }
+        // overlay images (stickers), optional: overlays:[{src,x,y,w,h,rotate}]
+        if (Array.isArray(v.overlays) && v.overlays.length) {
+          const ov = document.createElement('div'); ov.className = 'overlays';
+          v.overlays.forEach(o => {
+            if (!o || !o.src) return;
+            const img = document.createElement('img'); img.src = o.src; img.loading = 'lazy';
+            const unit = (val) => (typeof val === 'number' ? `${val}px` : (val || ''));
+            img.style.left = unit(o.x || 0);
+            img.style.top = unit(o.y || 0);
+            if (o.w) img.style.width = unit(o.w);
+            if (o.h) img.style.height = unit(o.h);
+            if (o.rotate) img.style.transform = `rotate(${typeof o.rotate === 'number' ? o.rotate + 'deg' : o.rotate})`;
+            ov.appendChild(img);
+          });
+          panel.appendChild(ov);
+        }
+        const speakTarget = panel.querySelector('.bubble') || panel;
+        speakTarget.addEventListener('click', () => {
+          const txt = v.jp || '';
+          if (txt) TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+        });
+        list.appendChild(panel);
+      });
+      const pos = pagebar?.querySelector('.pos'); if (pos) pos.textContent = `Page ${pageIndex + 1} / ${Math.ceil(items.length / confPageSize)}`;
+    }
+
+    renderPage(0);
+
+    // build reference list
+    refList.innerHTML = items.map(v => `
+      <div class="p-2 border rounded">
+        <div class="font-medium">${stripStops(v.jp || '')}</div>
+        ${v.romaji ? `<div class="text-gray-500">${stripStops(v.romaji)}</div>` : ''}
+        <div class="text-gray-600">${v.en || ''}</div>
+      </div>`).join('');
+
+    const onPlayAll = async () => {
+      const rate = map?.speech?.rate ?? 1;
+      const start = pageIndex * confPageSize;
+      const page = items.slice(start, start + confPageSize);
+      for (const v of page) {
+        const t = v.jp || '';
+        if (!t) continue;
+        await TTS.speak({ text: t, lang: 'ja', rate }).catch(() => {});
+      }
+    };
+
+    const showRef = () => { ref.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); };
+    const hideRef = () => { ref.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); };
+    ref.addEventListener('click', (e) => { if (e.target === ref) hideRef(); });
+    box.querySelector('[data-act="closeRef"]').addEventListener('click', hideRef);
+    box.querySelector('[data-act="ref"]').addEventListener('click', showRef);
+    box.querySelector('[data-act="play"]').addEventListener('click', onPlayAll);
+    pagebar?.querySelector('[data-act="prev"]').addEventListener('click', () => renderPage(pageIndex - 1));
+    pagebar?.querySelector('[data-act="next"]').addEventListener('click', () => renderPage(pageIndex + 1));
+
+    setStatus(map, 'Watch the comic and listen. Open Reference for details.');
+    feedback(map, '', true);
+  }
   // Drag-and-drop tile builder for kana (replaces syllable typing)
   function renderTranslateTiles(lesson, step, map) {
     const listEl = q(map?.containers?.list); if (!listEl) return;
@@ -2174,7 +2370,7 @@ window.LessonShim = (() => {
             case 'read_listen': return 'Introduction to Phrases';
             case 'translate_to_jp': return 'Learn Kana Through Tiles';
             case 'cloze': return 'Fill in the Blanks';
-            case 'variations': return 'Phrase Variations';
+            case 'variations': return 'Comic Conversation';
             case 'phrase_drill': return 'Phrase Drill';
             case 'guided_convo': return 'Guided Conversation';
             case 'dialogue': return 'Mini Scene';
@@ -2189,7 +2385,7 @@ window.LessonShim = (() => {
             case 'read_listen': return 'Read, listen, and repeat the key phrases.';
             case 'translate_to_jp': return 'Drag kana tiles to build the phrase in order.';
             case 'cloze': return 'Type the missing parts to complete each phrase.';
-            case 'variations': return 'Explore alternate ways to say the phrase.';
+            case 'variations': return 'Watch a short dialogue using key phrases.';
             case 'phrase_drill': return 'Practice with quick prompts and variations.';
             case 'guided_convo': return 'Follow a guided, beginner-friendly conversation.';
             case 'dialogue': return 'Browse a short bilingual scene and listen.';
@@ -2249,7 +2445,7 @@ window.LessonShim = (() => {
         case "dialogue": renderAiTutor(lesson, step, map); break;
         case "guided_convo": renderGuidedConvo(lesson, step, map); break;
         case "ai_tutor": renderAiTutor(lesson, step, map); break;
-        case "variations": renderVariations(lesson, step, map); break;
+        case "variations": renderComic(lesson, step, map); break;
         case "phrase_drill": renderPhraseDrill(lesson, step, map); break;
         case "reflect":
           const listEl = q(map?.containers?.list);
@@ -2354,10 +2550,10 @@ window.LessonShim = (() => {
             .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
             .filter(Boolean);
         } else if (step.type === 'variations') {
-          // Speak only the phrases currently visible in the variations list, in on-screen order
-          const btns = Array.from(document.querySelectorAll('#varList [data-jp]'))
-            .filter(el => !!(el && el.closest('#varList') && el.offsetParent !== null));
-          texts = btns.map(b => b.dataset.jp).filter(Boolean);
+          // Speak visible bubbles in the comic renderer
+          const bubbles = Array.from(document.querySelectorAll('#comicList .bubble[data-jp]'))
+            .filter(el => !!(el && el.closest('#comicList') && el.offsetParent !== null));
+          texts = bubbles.map(b => b.dataset.jp).filter(Boolean);
         } else if (step.type === 'phrase_drill') {
           texts = (step.pairs || []).map(p => p?.jp).filter(Boolean);
         } else if (step.type === 'roleplay') {
@@ -2439,11 +2635,13 @@ window.LessonShim = (() => {
     // Mascot help: build and toggle on mascot click
     const buildHelpHtml = () => {
       const romajiOn = !!(map?.flags?.showRomaji);
+      const docked = (() => { try { return sessionStorage.getItem('krCue:mascotDocked') === '1'; } catch { return false; } })();
       return `
         <h4>Need a hand?</h4>
         <div class="row">
           <button data-act="speak">🔊 Speak this page</button>
           <button data-act="romaji">${romajiOn ? '🅁 Hide Romaji' : '🅁 Show Romaji'}</button>
+          <button data-act="dock">${docked ? '📍 Undock Mascot' : '📍 Dock Mascot Near Controls'}</button>
           <button data-act="hint">💡 Get a hint</button>
           <button data-act="close">✖ Close</button>
         </div>`;
@@ -2494,7 +2692,44 @@ window.LessonShim = (() => {
           }
         }
         if (!tip) tip = 'Try Speak to hear the phrase and repeat.';
+        MascotHelp.hide();
         MascotTip.show(tip, { tone: 'warn', ms: 3200 });
+        return;
+      }
+      if (act === 'dock') {
+        const masc = document.getElementById('mascot');
+        const wrap = document.getElementById('lesson-wrap');
+        const speak = q(map?.controls?.speak || '#lsSpeak');
+        if (!masc || !wrap || !speak) return;
+        const docked = (() => { try { return sessionStorage.getItem('krCue:mascotDocked') === '1'; } catch { return false; } })();
+        const wr = wrap.getBoundingClientRect();
+        const sr = speak.getBoundingClientRect();
+        if (!docked) {
+          // store original position once
+          if (!masc.dataset.origLeft) masc.dataset.origLeft = masc.style.left || '';
+          if (!masc.dataset.origTop) masc.dataset.origTop = masc.style.top || '';
+          // Size
+          const mw = masc.offsetWidth || 64; const mh = masc.offsetHeight || 80;
+          // place above-left of the Speak button
+          let left = Math.round(sr.left - wr.left - mw - 8);
+          let top = Math.round(sr.top - wr.top - mh - 8);
+          // clamp inside wrap
+          const maxL = Math.max(0, (wr.width - mw));
+          const maxT = Math.max(0, (wr.height - mh));
+          left = Math.min(Math.max(0, left), maxL);
+          top = Math.min(Math.max(0, top), maxT);
+          masc.style.position = 'absolute';
+          masc.style.left = left + 'px';
+          masc.style.top = top + 'px';
+          try { sessionStorage.setItem('krCue:mascotDocked', '1'); } catch {}
+        } else {
+          // restore
+          if (masc.dataset.origLeft) masc.style.left = masc.dataset.origLeft;
+          if (masc.dataset.origTop) masc.style.top = masc.dataset.origTop;
+          try { sessionStorage.removeItem('krCue:mascotDocked'); } catch {}
+        }
+        // re-open panel with updated label
+        setTimeout(() => MascotHelp.show(buildHelpHtml()), 10);
         return;
       }
     };
