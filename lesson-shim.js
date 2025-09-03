@@ -579,6 +579,89 @@ window.LessonShim = (() => {
     return { render, position };
   })();
 
+  // ---------- attention cues (one-time nudges) ----------
+  const AttentionCue = (() => {
+    let el = null; let timer = null; let cssInjected = false; let bound = false;
+    const shown = new Set();
+
+    function injectCss() {
+      if (cssInjected) return; cssInjected = true;
+      const css = `
+        .attention-cue{position:absolute;max-width:220px;padding:8px 10px;border-radius:10px;background:#111;color:#fff;
+          border:1px solid #000;box-shadow:0 10px 24px rgba(0,0,0,.25);font-size:.9rem;line-height:1.25;z-index:40}
+        .attention-cue .arrow{position:absolute; width:0; height:0; border-style:solid}
+        .attention-cue.tt-top .arrow{bottom:-8px; left:12px; border-width:8px 8px 0 8px; border-color:#111 transparent transparent transparent}
+        .attention-cue.tt-bottom .arrow{top:-8px; left:12px; border-width:0 8px 8px 8px; border-color:transparent transparent #111 transparent}
+      `;
+      const st = document.createElement('style'); st.id = 'attention-cue-style'; st.textContent = css; document.head.appendChild(st);
+    }
+
+    function ensure() {
+      if (el && el.isConnected) return el;
+      injectCss();
+      el = document.createElement('div');
+      el.className = 'attention-cue tt-top';
+      el.style.display = 'none';
+      el.innerHTML = '<div class="text"></div><div class="arrow"></div>';
+      document.body.appendChild(el);
+      if (!bound) {
+        bound = true;
+        addEventListener('resize', position);
+        addEventListener('scroll', position, true);
+      }
+      return el;
+    }
+
+    let anchorEl = null; let prefer = 'top';
+    function position() {
+      if (!el || !anchorEl || el.style.display === 'none') return;
+      const r = anchorEl.getBoundingClientRect();
+      const pad = 8;
+      const yTop = window.scrollY + r.top - el.offsetHeight - pad;
+      const yBottom = window.scrollY + r.bottom + pad;
+      const x = window.scrollX + r.left;
+      // Choose top unless there is no room
+      const useBottom = (prefer === 'bottom') || (yTop < window.scrollY + 10);
+      el.classList.toggle('tt-top', !useBottom);
+      el.classList.toggle('tt-bottom', useBottom);
+      el.style.left = Math.max(8, x) + 'px';
+      el.style.top = (useBottom ? yBottom : yTop) + 'px';
+    }
+
+    function hide() {
+      if (!el) return;
+      el.style.display = 'none';
+      if (timer) { clearTimeout(timer); timer = null; }
+      anchorEl = null;
+    }
+
+    function showFor(sel, msg, { ms = 3000, place = 'top' } = {}) {
+      const host = ensure();
+      anchorEl = (typeof sel === 'string') ? document.querySelector(sel) : sel;
+      if (!anchorEl) return false;
+      prefer = place;
+      host.querySelector('.text').textContent = msg || '';
+      host.style.display = 'block';
+      position();
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => hide(), ms);
+      return true;
+    }
+
+    function keyFor(k) { return `krCue:${k}`; }
+    function wasShown(k) { try { return shown.has(k) || sessionStorage.getItem(keyFor(k)) === '1'; } catch { return shown.has(k); } }
+    function markShown(k) { shown.add(k); try { sessionStorage.setItem(keyFor(k), '1'); } catch {} }
+
+    function showOnce(key, sel, msg, opts) {
+      if (!key || wasShown(key)) return false;
+      const ok = showFor(sel, msg, opts);
+      if (ok) markShown(key);
+      return ok;
+    }
+
+    return { showOnce, hide };
+  })();
+
 
   function setStatus(map, msg) { const el = q(map?.containers?.status); if (el) el.textContent = msg || ""; }
   function feedback(map, msg, ok) {
@@ -1954,6 +2037,17 @@ window.LessonShim = (() => {
       if (window.__padFooter) window.__padFooter();
       // update mascot progress indicator
       try { MascotProgress.render(steps.length, state.stepIndex); } catch {}
+      // attention cues: show once per session
+      try {
+        // Prefer to nudge Speak on steps that have audio
+        const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
+        if (speakable.includes(step.type || '')) {
+          const showed = AttentionCue.showOnce('speak', map?.controls?.speak, 'Tap Speak to hear it.');
+          if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
+        } else {
+          AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
+        }
+      } catch {}
       switch (step.type) {
         case "read_listen": renderReadListen(lesson, step, map); break;
         case "cloze": renderCloze(lesson, step, map); break;
