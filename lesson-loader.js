@@ -10,7 +10,7 @@ const map = {
     speed:"#lsSpeed", speedVal:"#lsSpeedVal"
   },
   // add to your existing map
-  flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true },
+  flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true, attentionCues: true },
   speech:{ rate:1, pitch:1, volume:1 },
   mascot:"#mascot", // ← NEW
   classes: {

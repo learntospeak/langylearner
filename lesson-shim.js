@@ -2037,15 +2037,17 @@ window.LessonShim = (() => {
       if (window.__padFooter) window.__padFooter();
       // update mascot progress indicator
       try { MascotProgress.render(steps.length, state.stepIndex); } catch {}
-      // attention cues: show once per session
+      // attention cues: show once per session (can disable via map.flags.attentionCues=false)
       try {
-        // Prefer to nudge Speak on steps that have audio
-        const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
-        if (speakable.includes(step.type || '')) {
-          const showed = AttentionCue.showOnce('speak', map?.controls?.speak, 'Tap Speak to hear it.');
-          if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
-        } else {
-          AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
+        if (map?.flags?.attentionCues !== false) {
+          // Prefer to nudge Speak on steps that have audio
+          const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
+          if (speakable.includes(step.type || '')) {
+            const showed = AttentionCue.showOnce('speak', map?.controls?.speak, 'Tap Speak to hear it.');
+            if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
+          } else {
+            AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.');
+          }
         }
       } catch {}
       switch (step.type) {
