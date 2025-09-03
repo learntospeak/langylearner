@@ -1,4 +1,4 @@
-{
+﻿{
   "lessons": [
     {
       "id": "greetings-001",
@@ -7,37 +7,37 @@
       "sentences": [
         {
           "sid": "S1",
-          "jp": "おはようございます。",
+          "jp": "ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™ã€‚",
           "romaji_full": "ohayou gozaimasu.",
           "en": "Good morning."
         },
         {
           "sid": "S2",
-          "jp": "こんにちは。",
+          "jp": "ã“ã‚“ã«ã¡ã¯ã€‚",
           "romaji_full": "konnichiwa.",
           "en": "Hello."
         },
         {
           "sid": "S3",
-          "jp": "こんばんは。",
+          "jp": "ã“ã‚“ã°ã‚“ã¯ã€‚",
           "romaji_full": "konbanwa.",
           "en": "Good evening."
         },
         {
           "sid": "S4",
-          "jp": "はじめまして。",
+          "jp": "ã¯ã˜ã‚ã¾ã—ã¦ã€‚",
           "romaji_full": "hajimemashite.",
           "en": "Nice to meet you."
         },
         {
           "sid": "S5",
-          "jp": "よろしくお願いします。",
+          "jp": "ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™ã€‚",
           "romaji_full": "yoroshiku onegaishimasu.",
           "en": "Please treat me well."
         },
         {
           "sid": "S6",
-          "jp": "さようなら。",
+          "jp": "ã•ã‚ˆã†ãªã‚‰ã€‚",
           "romaji_full": "sayounara.",
           "en": "Goodbye."
         }
@@ -60,38 +60,38 @@
             {
               "ref": "S2",
               "blanks": [
-                "こんにちは"
+                "ã“ã‚“ã«ã¡ã¯"
               ]
             },
             {
               "ref": "S4",
               "blanks": [
-                "はじめまして"
+                "ã¯ã˜ã‚ã¾ã—ã¦"
               ]
             },
             {
               "ref": "S5",
               "blanks": [
-                "よろしく",
-                "お願いします"
+                "ã‚ˆã‚ã—ã",
+                "ãŠé¡˜ã„ã—ã¾ã™"
               ]
             },
             {
               "ref": "S1",
               "blanks": [
-                "おはようございます"
+                "ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™"
               ]
             },
             {
               "ref": "S3",
               "blanks": [
-                "こんばんは"
+                "ã“ã‚“ã°ã‚“ã¯"
               ]
             },
             {
               "ref": "S6",
               "blanks": [
-                "さようなら"
+                "ã•ã‚ˆã†ãªã‚‰"
               ]
             }
           ]
@@ -112,6 +112,13 @@
           "variations": [
             {
               "jp": "こんにちは。",
+              "en": "Hello.",
+              "img": "images/konnichiha.png",
+              "noBubble": true,
+              "tags": ["general","daytime"]
+            },
+            {
+              "jp": "ã“ã‚“ã«ã¡ã¯ã€‚",
               "en": "Hello (daytime).",
               "tags": [
                 "general",
@@ -119,7 +126,7 @@
               ]
             },
             {
-              "jp": "おはようございます。",
+              "jp": "ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™ã€‚",
               "en": "Good morning (polite).",
               "tags": [
                 "polite",
@@ -127,7 +134,7 @@
               ]
             },
             {
-              "jp": "おはよう。",
+              "jp": "ãŠã¯ã‚ˆã†ã€‚",
               "en": "Morning! (casual).",
               "tags": [
                 "casual",
@@ -135,14 +142,14 @@
               ]
             },
             {
-              "jp": "こんばんは。",
+              "jp": "ã“ã‚“ã°ã‚“ã¯ã€‚",
               "en": "Good evening.",
               "tags": [
                 "evening"
               ]
             },
             {
-              "jp": "はじめまして。",
+              "jp": "ã¯ã˜ã‚ã¾ã—ã¦ã€‚",
               "en": "Nice to meet you (first time).",
               "tags": [
                 "first_meeting",
@@ -150,7 +157,7 @@
               ]
             },
             {
-              "jp": "よろしくお願いします。",
+              "jp": "ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™ã€‚",
               "en": "Please treat me well. (set phrase)",
               "tags": [
                 "first_meeting",
@@ -159,14 +166,14 @@
               ]
             },
             {
-              "jp": "もしもし。",
+              "jp": "ã‚‚ã—ã‚‚ã—ã€‚",
               "en": "Hello? (on the phone).",
               "tags": [
                 "phone"
               ]
             },
             {
-              "jp": "お疲れ様です。",
+              "jp": "ãŠç–²ã‚Œæ§˜ã§ã™ã€‚",
               "en": "Hello (workplace greeting).",
               "tags": [
                 "work",
@@ -174,7 +181,7 @@
               ]
             },
             {
-              "jp": "どうも。",
+              "jp": "ã©ã†ã‚‚ã€‚",
               "en": "Hey / thanks (very casual).",
               "tags": [
                 "casual"
@@ -187,41 +194,41 @@
           "pairs": [
             {
               "en": "Hello (daytime).",
-              "jp": "こんにちは。",
+              "jp": "ã“ã‚“ã«ã¡ã¯ã€‚",
               "alts": [
                 {
-                  "jp": "どうも。",
+                  "jp": "ã©ã†ã‚‚ã€‚",
                   "en": "Hey. (very casual)"
                 },
                 {
-                  "jp": "お疲れ様です。",
+                  "jp": "ãŠç–²ã‚Œæ§˜ã§ã™ã€‚",
                   "en": "Hello. (workplace)"
                 }
               ]
             },
             {
               "en": "Nice to meet you.",
-              "jp": "はじめまして。",
+              "jp": "ã¯ã˜ã‚ã¾ã—ã¦ã€‚",
               "alts": [
                 {
-                  "jp": "どうぞよろしくお願いします。",
+                  "jp": "ã©ã†ãžã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™ã€‚",
                   "en": "Pleased to meet you."
                 }
               ]
             },
             {
               "en": "Please treat me well. (set phrase)",
-              "jp": "よろしくお願いします。",
+              "jp": "ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™ã€‚",
               "alts": [
                 {
-                  "jp": "よろしく〜",
+                  "jp": "ã‚ˆã‚ã—ãã€œ",
                   "en": "Nice to meet you! (casual)"
                 }
               ]
             },
             {
               "en": "Hello? (on the phone)",
-              "jp": "もしもし。"
+              "jp": "ã‚‚ã—ã‚‚ã—ã€‚"
             }
           ]
         },
@@ -247,3 +254,4 @@
     }
   ]
 }
+
