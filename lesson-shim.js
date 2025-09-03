@@ -737,6 +737,70 @@ window.LessonShim = (() => {
     return { showOnce, hide };
   })();
 
+  // ---------- mascot help (click to open quick actions) ----------
+  const MascotHelp = (() => {
+    let panel = null; let cssInjected = false; let bound = false;
+    function injectCss() {
+      if (cssInjected) return; cssInjected = true;
+      const css = `
+        .mascot-help{position:absolute; min-width:220px; max-width:280px; padding:8px; border-radius:10px;
+          background:#fff; color:#111; border:1px solid #e5e7eb; box-shadow:0 10px 24px rgba(0,0,0,.18); z-index:1100}
+        .mascot-help h4{margin:4px 6px 8px; font-size:.95rem; font-weight:600; color:#111}
+        .mascot-help .row{display:flex; flex-direction:column; gap:6px}
+        .mascot-help button{display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+          padding:6px 8px; border-radius:8px; border:1px solid #e5e7eb; background:#f9fafb}
+        .mascot-help button:hover{background:#f3f4f6}
+      `;
+      const st = document.createElement('style'); st.id = 'mascot-help-style'; st.textContent = css; document.head.appendChild(st);
+    }
+    function ensure() {
+      if (panel && panel.isConnected) return panel;
+      injectCss();
+      const host = document.getElementById('lesson-wrap') || document.body;
+      panel = document.createElement('div');
+      panel.className = 'mascot-help';
+      panel.style.display = 'none';
+      host.appendChild(panel);
+      if (!bound) {
+        bound = true;
+        addEventListener('resize', () => position());
+        addEventListener('scroll', () => position(), true);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+        document.addEventListener('click', (e) => {
+          if (!panel || panel.style.display === 'none') return;
+          const masc = document.getElementById('mascot');
+          if (panel.contains(e.target) || masc?.contains(e.target)) return;
+          hide();
+        });
+      }
+      return panel;
+    }
+    function position() {
+      if (!panel || panel.style.display === 'none') return;
+      const wrap = document.getElementById('lesson-wrap');
+      const anchor = document.getElementById('mascot');
+      if (!wrap || !anchor) return;
+      const wr = wrap.getBoundingClientRect();
+      const ar = anchor.getBoundingClientRect();
+      const left = Math.round(ar.right - wr.left + 10);
+      const top = Math.round(ar.top - wr.top + 6);
+      panel.style.left = left + 'px';
+      panel.style.top = top + 'px';
+    }
+    function hide() { if (panel) panel.style.display = 'none'; }
+    function show(html) {
+      const el = ensure();
+      el.innerHTML = html;
+      el.style.display = 'block';
+      position();
+    }
+    function toggle(html) {
+      const el = ensure();
+      if (el.style.display === 'none') show(html); else hide();
+    }
+    return { toggle, show, hide, position };
+  })();
+
   // ---------- mascot nudge (occasional pointing + button pulse) ----------
   const MascotNudge = (() => {
     let lastStep = -1;
@@ -2371,6 +2435,80 @@ window.LessonShim = (() => {
     };
 
     startNudgeLoop();
+
+    // Mascot help: build and toggle on mascot click
+    const buildHelpHtml = () => {
+      const romajiOn = !!(map?.flags?.showRomaji);
+      return `
+        <h4>Need a hand?</h4>
+        <div class="row">
+          <button data-act="speak">🔊 Speak this page</button>
+          <button data-act="romaji">${romajiOn ? '🅁 Hide Romaji' : '🅁 Show Romaji'}</button>
+          <button data-act="hint">💡 Get a hint</button>
+          <button data-act="close">✖ Close</button>
+        </div>`;
+    };
+
+    const onHelpClick = (e) => {
+      const t = e.target.closest('button[data-act]'); if (!t) return;
+      const act = t.getAttribute('data-act');
+      if (act === 'close') { MascotHelp.hide(); return; }
+      if (act === 'speak') {
+        const btn = q(map?.controls?.speak || '#lsSpeak');
+        if (btn) btn.click();
+        MascotHelp.hide();
+        return;
+      }
+      if (act === 'romaji') {
+        const btn = q(map?.controls?.toggleRomaji || '#lsToggleRomaji');
+        if (btn) btn.click();
+        // re-render help content to reflect new label
+        setTimeout(() => MascotHelp.show(buildHelpHtml()), 10);
+        return;
+      }
+      if (act === 'hint') {
+        // Try to compute a context hint based on step
+        const step = steps[state.stepIndex] || {};
+        let tip = '';
+        if (step.type === 'translate_to_jp' && !map?.flags?.syllableMode) {
+          const cards = qa(`${map?.containers?.list} [data-sid]`);
+          for (const card of cards) {
+            const sid = card.getAttribute('data-sid');
+            const s = (lesson.sentences || []).find(x => x.sid === sid) || {};
+            const inp = card.querySelector('input');
+            const got = (inp?.value || '').trim();
+            const jp = s.jp || '';
+            const candidate = H.makeHint(jp, got, s);
+            if (got !== jp) { tip = candidate; break; }
+          }
+        } else if (step.type === 'cloze') {
+          const blocks = qa(`${map?.containers?.list} [data-block]`);
+          for (const block of blocks) {
+            const inputs = Array.from(block.querySelectorAll('input[data-answer]'));
+            for (const inp of inputs) {
+              const expected = inp.dataset.answer || '';
+              const got = inp.value || '';
+              if ((norm(expected) !== norm(got))) { tip = H.makeHint(expected, got); break; }
+            }
+            if (tip) break;
+          }
+        }
+        if (!tip) tip = 'Try Speak to hear the phrase and repeat.';
+        MascotTip.show(tip, { tone: 'warn', ms: 3200 });
+        return;
+      }
+    };
+
+    const toggleHelp = () => {
+      const html = buildHelpHtml();
+      MascotHelp.toggle(html);
+      // bind actions each time it opens
+      const panel = document.querySelector('.mascot-help');
+      panel?.removeEventListener('click', onHelpClick);
+      panel?.addEventListener('click', onHelpClick);
+    };
+
+    bindOnce(document.getElementById('mascot'), 'click', toggleHelp, 'lsHelp');
 
     render();
   }
