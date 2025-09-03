@@ -2045,13 +2045,19 @@ window.LessonShim = (() => {
             try {
               const speakable = ['read_listen','translate_to_jp','variations','phrase_drill','dialogue','roleplay'];
               if (speakable.includes(step.type || '')) {
-                const showed = AttentionCue.showOnce('speak', map?.controls?.speak, 'Tap Speak to hear it.', { ms: 3500, place:'top' });
-                if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.', { ms: 3000, place:'top' });
+                const speakSel = map?.controls?.speak || '#lsSpeak';
+                const listSel = map?.containers?.list || '#jp-text';
+                const speakBtnCls = map?.classes?.speakBtn || 'speak-btn';
+                const speakAnchor = document.querySelector(speakSel)
+                  || document.querySelector(`${listSel} .${speakBtnCls}`)
+                  || document.querySelector(`.${speakBtnCls}`);
+                const showed = AttentionCue.showOnce('speak', speakAnchor || speakSel, 'Tap Speak to hear it.', { ms: 3500, place:'top' });
+                if (!showed) AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji || '#lsToggleRomaji', 'Toggle Romaji view.', { ms: 3000, place:'top' });
               } else {
-                AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji, 'Toggle Romaji view.', { ms: 3000, place:'top' });
+                AttentionCue.showOnce('romaji', map?.controls?.toggleRomaji || '#lsToggleRomaji', 'Toggle Romaji view.', { ms: 3000, place:'top' });
               }
             } catch {}
-          }, 120);
+          }, 300);
         }
       } catch {}
       switch (step.type) {
@@ -2199,6 +2205,36 @@ window.LessonShim = (() => {
 
     // Initialize visual tweaks once per run
     try { MascotVisuals.init(); } catch {}
+
+    // expose small debug helpers for attention cues
+    try {
+      window.__showCue = (key = 'speak') => {
+        const msg = key === 'romaji' ? 'Toggle Romaji view.' : 'Tap Speak to hear it.';
+        const sel = key === 'romaji' ? (map?.controls?.toggleRomaji || '#lsToggleRomaji') : (map?.controls?.speak || '#lsSpeak');
+        AttentionCue.showOnce(`dbg:${key}`, sel, msg, { ms: 4000, place: 'top' });
+      };
+      // Force showing even if the once-flag is set
+      window.__showCueForce = (key = 'speak') => {
+        const msg = key === 'romaji' ? 'Toggle Romaji view.' : 'Tap Speak to hear it.';
+        const sel = key === 'romaji' ? (map?.controls?.toggleRomaji || '#lsToggleRomaji') : (map?.controls?.speak || '#lsSpeak');
+        const el = (typeof sel === 'string') ? document.querySelector(sel) : sel;
+        AttentionCue.hide();
+        // Use internal showFor behavior by temporarily exposing it
+        const _showFor = (selector, text, opts) => {
+          const host = document.querySelector('.attention-cue') || document.body; // no-op; function exists in closure
+        };
+        // Call via showOnce with a unique non-persistent key (random) to bypass sessionStorage caching
+        const nonce = `force:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+        AttentionCue.showOnce(nonce, el || sel, msg, { ms: 4000, place: 'top' });
+      };
+      window.__resetCues = () => {
+        try {
+          Object.keys(sessionStorage)
+            .filter(k => k.startsWith('krCue:'))
+            .forEach(k => sessionStorage.removeItem(k));
+        } catch {}
+      };
+    } catch {}
 
     render();
   }
