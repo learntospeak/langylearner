@@ -586,6 +586,8 @@
 
     <!-- Libraries / App scripts -->
 <script src="https://cdn.jsdelivr.net/npm/wanakana/wanakana.min.js"></script>
+<!-- Local fallback (defines window.wanakana if CDN blocked) -->
+<script type="module" src="./modules/wanakana-lite.js"></script>
 
 <script type="module" src="./lesson-shim.js?v=11"></script>
 
