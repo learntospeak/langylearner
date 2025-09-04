@@ -1428,7 +1428,7 @@ window.LessonShim = (() => {
         line.innerHTML = `
         <div class="text-xs text-gray-500">${(v.tags || []).join(' • ') || 'general'}</div>
         <div class="font-medium">${stripStops(v.jp)}</div>
-        <div class="text-gray-500">${stripStops(v.romaji || '')}</div>
+        ${map?.flags?.showRomaji && (v.romaji || '').trim() ? '<div class="text-gray-500">' + stripStops(v.romaji) + '</div>' : ''}
         <div class="text-gray-600">${v.en || ''}</div>
         <div class="mt-1">
           <button class="btn btn-amber" data-jp="${v.jp}">🔊 Listen</button>
@@ -1472,7 +1472,7 @@ window.LessonShim = (() => {
   ${options.map((o, i) => `
     <button class="btn btn-ghost text-left w-full min-h-12" data-i="${i}">
       • ${stripStops(o.jp)}
-    <span class="block text-xs text-gray-500">${stripStops(o.romaji || '')}</span>
+    ${map?.flags?.showRomaji && (o.romaji || '').trim() ? '<span class="block text-xs text-gray-500">' + stripStops(o.romaji) + '</span>' : ''}
     </button>
   `).join('')}
 </div>
@@ -2524,10 +2524,19 @@ window.LessonShim = (() => {
         });
         feedback(map, "Answers revealed.", true);
       }
+      if (step.type !== "cloze" && step.type !== "translate_to_jp") {
+        // Clarify when Reveal doesn't apply to this step
+        feedback(map, "Nothing to reveal on this step.", false);
+      }
     };
     const onToggleRomaji = () => {
       map.flags = map.flags || {};
       map.flags.showRomaji = !map.flags.showRomaji;
+      // Update toggle button label for clarity
+      try {
+        const btn = q(map?.controls?.toggleRomaji || '#lsToggleRomaji');
+        if (btn) btn.textContent = map.flags.showRomaji ? 'Hide Romaji' : 'Show Romaji';
+      } catch {}
       render();
     };
     const onSpeak = async () => {
@@ -2585,6 +2594,11 @@ window.LessonShim = (() => {
     bindOnce(q(map?.controls?.showAnswer), "click", onReveal);
     bindOnce(q(map?.controls?.toggleRomaji), "click", onToggleRomaji);
     bindOnce(q(map?.controls?.speak), "click", onSpeak);
+    // Sync initial Romaji button label with current state
+    try {
+      const rb = q(map?.controls?.toggleRomaji || '#lsToggleRomaji');
+      if (rb) rb.textContent = map?.flags?.showRomaji ? 'Hide Romaji' : 'Show Romaji';
+    } catch {}
 
     // Initialize visual tweaks once per run
     try { MascotVisuals.init(); MascotArms.init?.(); } catch {}
