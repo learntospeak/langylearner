@@ -1715,13 +1715,12 @@ window.LessonShim = (() => {
           panel.style.backgroundImage = `url('${v.img}')`;
           if (v.bgPos || v.imagePosition) panel.style.backgroundPosition = String(v.bgPos || v.imagePosition);
         }
+        const hideBubble = !!(v.noBubble || v.img);
         panel.innerHTML = `
-          <div class="num">${i + 1}</div>
           ${v.narration ? `<div class=\"narration\">${v.narration}</div>` : ''}
           <div class="content">
             <div class="row ${i % 2 ? 'r' : ''}">
-              <div class="avatar" title="${who}">${who === 'Ami' ? 'A' : 'Y'}</div>
-              ${v.noBubble ? '' : `<div class=\"bubble ${i % 2 ? 'tail-right' : 'tail-left'} ${(v.bubble||'').toLowerCase()}\" data-jp=\"${v.jp || ''}\" data-en=\"${v.en || ''}\"><div class=\"jp\">${stripStops(v.jp || '')}</div>${(map?.flags?.showRomaji && (v.romaji || '').trim()) ? '<div class=\\\"romaji text-gray-500\\\">' + stripStops(v.romaji) + '</div>' : ''}<div class=\"en\">${v.en || ''}</div>${((v.bubble||'').toLowerCase()==='thought') ? '<div class=\\\"dots\\\"></div>' : ''}</div>`}
+              ${hideBubble ? '' : `<div class=\"bubble ${i % 2 ? 'tail-right' : 'tail-left'} ${(v.bubble||'').toLowerCase()}\" data-jp=\"${v.jp || ''}\" data-en=\"${v.en || ''}\"><div class=\"jp\">${stripStops(v.jp || '')}</div>${(map?.flags?.showRomaji && (v.romaji || '').trim()) ? '<div class=\\\"romaji text-gray-500\\\">' + stripStops(v.romaji) + '</div>' : ''}<div class=\"en\">${v.en || ''}</div>${((v.bubble||'').toLowerCase()==='thought') ? '<div class=\\\"dots\\\"></div>' : ''}</div>`}
             </div>
             ${v.sfx ? `<div class=\"sfx\">${v.sfx}</div>` : ''}
           </div>
