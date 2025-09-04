@@ -35,12 +35,12 @@
         {
           "type": "variations",
           "variations": [
-            { "tags": ["polite", "morning"], "en": "Good morning (polite).", "jp": "おはようございます", "romaji": "ohayou gozaimasu" },
-            { "tags": ["casual", "morning"], "en": "Morning! (casual).", "jp": "おはよう", "romaji": "ohayou" },
-            { "tags": ["evening"], "en": "Good evening.", "jp": "こんばんは", "romaji": "konbanwa" },
-            { "tags": ["first_meeting", "polite"], "en": "Nice to meet you (first time).", "jp": "はじめまして", "romaji": "hajimemashite" },
-            { "tags": ["first_meeting", "polite", "work"], "en": "Please treat me well. (set phrase)", "jp": "よろしくお願いします", "romaji": "yoroshiku onegaishimasu" },
-            { "tags": ["phone"], "en": "Hello? (on the phone).", "jp": "もしもし", "romaji": "moshimoshi" },
+            { "tags": ["polite", "morning"], "en": "Good morning (polite).", "jp": "おはようございます", "romaji": "ohayou gozaimasu", "img": "images/phase/ohayou goziamasu good morning image.png", "fit": "contain" },
+            { "tags": ["casual", "morning"], "en": "Morning! (casual).", "jp": "おはよう", "romaji": "ohayou", "img": "images/phase/konnichiha.png", "fit": "contain" },
+            { "tags": ["evening"], "en": "Good evening.", "jp": "こんばんは", "romaji": "konbanwa", "img": "images/phase/kondanha.png", "fit": "contain" },
+            { "tags": ["first_meeting", "polite"], "en": "Nice to meet you (first time).", "jp": "はじめまして", "romaji": "hajimemashite", "img": "images/phase/haji.png", "fit": "contain" },
+            { "tags": ["first_meeting", "polite", "work"], "en": "Please treat me well. (set phrase)", "jp": "よろしくお願いします", "romaji": "yoroshiku onegaishimasu", "img": "images/phase/yoroshiku onegaishimasu.png", "fit": "contain" },
+            { "tags": ["phone"], "en": "Hello? (on the phone).", "jp": "もしもし", "romaji": "moshimoshi", "img": "images/phase/moshi.png", "fit": "contain" },
             { "tags": ["work", "polite"], "en": "Hello (workplace greeting).", "jp": "お疲れ様です", "romaji": "otsukaresama desu" },
             { "tags": ["casual"], "en": "Hey / thanks (very casual).", "jp": "どうも", "romaji": "doumo" }
           ],
