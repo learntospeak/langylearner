@@ -1591,7 +1591,7 @@ window.LessonShim = (() => {
 
     setStatus(map, 'Browse the mini-scene. Use footer Speak to play.');
     feedback(map, '', true);
-    padFooter();
+    try { if (window.__padFooter) window.__padFooter(); } catch {}
   }
 
 
@@ -1721,7 +1721,7 @@ window.LessonShim = (() => {
           <div class="content">
             <div class="row ${i % 2 ? 'r' : ''}">
               <div class="avatar" title="${who}">${who === 'Ami' ? 'A' : 'Y'}</div>
-              ${v.noBubble ? '' : `<div class=\"bubble ${i % 2 ? 'tail-right' : 'tail-left'} ${(v.bubble||'').toLowerCase()}\" data-jp=\"${v.jp || ''}\" data-en=\"${v.en || ''}\"><div class=\"jp\">${stripStops(v.jp || '')}</div><div class=\"en\">${v.en || ''}</div>${((v.bubble||'').toLowerCase()==='thought') ? '<div class=\\\"dots\\\"></div>' : ''}</div>`}
+              ${v.noBubble ? '' : `<div class=\"bubble ${i % 2 ? 'tail-right' : 'tail-left'} ${(v.bubble||'').toLowerCase()}\" data-jp=\"${v.jp || ''}\" data-en=\"${v.en || ''}\"><div class=\"jp\">${stripStops(v.jp || '')}</div>${(map?.flags?.showRomaji && (v.romaji || '').trim()) ? '<div class=\\\"romaji text-gray-500\\\">' + stripStops(v.romaji) + '</div>' : ''}<div class=\"en\">${v.en || ''}</div>${((v.bubble||'').toLowerCase()==='thought') ? '<div class=\\\"dots\\\"></div>' : ''}</div>`}
             </div>
             ${v.sfx ? `<div class=\"sfx\">${v.sfx}</div>` : ''}
           </div>
@@ -1768,12 +1768,12 @@ window.LessonShim = (() => {
     renderPage(0);
 
     // build reference list
-    refList.innerHTML = items.map(v => `
-      <div class="p-2 border rounded">
-        <div class="font-medium">${stripStops(v.jp || '')}</div>
-        ${v.romaji ? `<div class="text-gray-500">${stripStops(v.romaji)}</div>` : ''}
-        <div class="text-gray-600">${v.en || ''}</div>
-      </div>`).join('');
+      refList.innerHTML = items.map(v => `
+        <div class="p-2 border rounded">
+          <div class="font-medium">${stripStops(v.jp || '')}</div>
+        ${map?.flags?.showRomaji && (v.romaji || '').trim() ? `<div class="text-gray-500">${stripStops(v.romaji)}</div>` : ''}
+          <div class="text-gray-600">${v.en || ''}</div>
+        </div>`).join('');
 
     const onPlayAll = async () => {
       const rate = map?.speech?.rate ?? 1;

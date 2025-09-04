@@ -18,6 +18,10 @@
           "item_refs": ["S1", "S2", "S3", "S4", "S5", "S6"]
         },
         {
+          "type": "translate_to_jp",
+          "item_refs": ["S1", "S2", "S3"]
+        },
+        {
           "type": "cloze",
           "items": [
             { "ref": "S2", "blanks": ["こんにちは"] },
