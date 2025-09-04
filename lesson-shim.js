@@ -1640,6 +1640,9 @@ window.LessonShim = (() => {
           repeating-linear-gradient(45deg, rgba(0,0,0,.14) 0 2px, transparent 2px 8px),
           repeating-linear-gradient(-45deg, rgba(0,0,0,.14) 0 2px, transparent 2px 8px);
         }
+        /* Hover panel controls (zoom/speak) */
+        .panel .pc{ position:absolute; top:8px; right:8px; display:flex; gap:6px; opacity:0; transition:opacity .2s; z-index:3 }
+        .panel:hover .pc{ opacity:1 }
         /* Bubble variants */
         .bubble.shout{ border-width:2px; box-shadow:none; background:#fff; clip-path: polygon(5% 0, 15% 6%, 25% 1%, 35% 7%, 45% 0, 55% 6%, 65% 1%, 75% 8%, 85% 2%, 95% 6%, 95% 94%, 85% 88%, 75% 94%, 65% 88%, 55% 95%, 45% 89%, 35% 95%, 25% 90%, 15% 96%, 5% 90%);
         }
@@ -1684,6 +1687,13 @@ window.LessonShim = (() => {
           <div id="refList" class="space-y-2"></div>
         </div>
       </div>
+      <div id="imgZoom" class="hidden fixed inset-0 z-[1300]">
+        <div class="absolute inset-0 bg-black/60"></div>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <img id="zoomImg" class="max-w-[95vw] max-h-[90vh] rounded-xl shadow-2xl" src="" alt="Zoom" />
+          <div class="text-center mt-2"><button class="btn btn-ghost" data-act="closeZoom">Close</button></div>
+        </div>
+      </div>
     `;
     root.appendChild(box);
 
@@ -1691,6 +1701,8 @@ window.LessonShim = (() => {
     const pagebar = box.querySelector('.pagebar');
     const ref = box.querySelector('#comicRef');
     const refList = box.querySelector('#refList');
+    const imgZoom = box.querySelector('#imgZoom');
+    const zoomImg = box.querySelector('#zoomImg');
 
     const confPageSize = Math.max(1, Number((step.manga && step.manga.pageSize) || 6));
     const confMinH = Number((step.manga && step.manga.minH) || 0);
@@ -1710,10 +1722,13 @@ window.LessonShim = (() => {
         const fitContain = (String(v.fit || '').toLowerCase() === 'contain') || !!v.noBubble; // default contain for art with baked-in bubble
         const cls = ['wide','tall','big','tone','bg'].filter(k => (size && size.includes(k)) || (k==='tone' && v.tone) || (k==='bg' && (v.img || v.video))).join(' ');
         panel.className = `panel ${cls} ${fitContain ? 'bg-contain' : ''}`;
+        panel.dataset.jp = v.jp || '';
         if (v.minH) { const mh = (typeof v.minH === 'number') ? `${v.minH}px` : String(v.minH); panel.style.minHeight = mh; }
         if (v.img) {
           panel.style.backgroundImage = `url('${v.img}')`;
           if (v.bgPos || v.imagePosition) panel.style.backgroundPosition = String(v.bgPos || v.imagePosition);
+          if (v.bgSize) panel.style.backgroundSize = String(v.bgSize);
+          if (v.bgColor) panel.style.backgroundColor = String(v.bgColor);
         }
         const hideBubble = !!(v.noBubble || v.img);
         panel.innerHTML = `
@@ -1724,6 +1739,7 @@ window.LessonShim = (() => {
             </div>
             ${v.sfx ? `<div class=\"sfx\">${v.sfx}</div>` : ''}
           </div>
+          ${v.img ? '<div class=\\"pc\\"><button class=\\"btn btn-ghost\\" data-act=\\"zoom\\">🔍</button><button class=\\"btn btn-amber\\" data-act=\\"say\\">🔊</button></div>' : ''}
         `;
         // panel background video support
         if (v.video) {
@@ -1754,11 +1770,25 @@ window.LessonShim = (() => {
           });
           panel.appendChild(ov);
         }
-        const speakTarget = panel.querySelector('.bubble') || panel;
-        speakTarget.addEventListener('click', () => {
-          const txt = v.jp || '';
-          if (txt) TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
-        });
+        if (v.img) {
+          panel.style.cursor = 'zoom-in';
+          panel.addEventListener('click', () => {
+            if (!imgZoom || !zoomImg) return;
+            zoomImg.src = v.img;
+            imgZoom.classList.remove('hidden');
+            try { document.body.classList.add('overflow-hidden'); } catch {}
+          });
+          const bZoom = panel.querySelector('[data-act="zoom"]');
+          const bSay  = panel.querySelector('[data-act="say"]');
+          bZoom?.addEventListener('click', (e) => { e.stopPropagation(); if (imgZoom && zoomImg) { zoomImg.src = v.img; imgZoom.classList.remove('hidden'); try { document.body.classList.add('overflow-hidden'); } catch {} } });
+          bSay?.addEventListener('click', (e) => { e.stopPropagation(); const txt = v.jp || ''; if (txt) { if (TTS && typeof TTS.cancel === 'function') TTS.cancel(); TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 }); } });
+        } else {
+          const speakTarget = panel.querySelector('.bubble') || panel;
+          speakTarget.addEventListener('click', () => {
+            const txt = v.jp || '';
+            if (txt) TTS.speak({ text: txt, lang: 'ja', rate: map?.speech?.rate ?? 1 });
+          });
+        }
         list.appendChild(panel);
       });
       const pos = pagebar?.querySelector('.pos'); if (pos) pos.textContent = `Page ${pageIndex + 1} / ${Math.ceil(items.length / confPageSize)}`;
@@ -1788,6 +1818,10 @@ window.LessonShim = (() => {
     const showRef = () => { ref.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); };
     const hideRef = () => { ref.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); };
     ref.addEventListener('click', (e) => { if (e.target === ref) hideRef(); });
+    // Image zoom overlay handlers
+    const hideZoom = () => { if (!imgZoom) return; imgZoom.classList.add('hidden'); try { document.body.classList.remove('overflow-hidden'); } catch {} };
+    imgZoom?.addEventListener('click', (e) => { if (e.target === imgZoom) hideZoom(); });
+    box.querySelector('[data-act="closeZoom"]')?.addEventListener('click', hideZoom);
     box.querySelector('[data-act="closeRef"]').addEventListener('click', hideRef);
     box.querySelector('[data-act="ref"]').addEventListener('click', showRef);
     box.querySelector('[data-act="play"]').addEventListener('click', onPlayAll);
@@ -2566,10 +2600,10 @@ window.LessonShim = (() => {
             .map(id => (lesson.sentences || []).find(s => s.sid === id)?.jp)
             .filter(Boolean);
         } else if (step.type === 'variations') {
-          // Speak visible bubbles in the comic renderer
-          const bubbles = Array.from(document.querySelectorAll('#comicList .bubble[data-jp]'))
+          // Speak visible items in the comic renderer: bubbles or panels with data-jp
+          const nodes = Array.from(document.querySelectorAll('#comicList .bubble[data-jp], #comicList .panel[data-jp]'))
             .filter(el => !!(el && el.closest('#comicList') && el.offsetParent !== null));
-          texts = bubbles.map(b => b.dataset.jp).filter(Boolean);
+          texts = nodes.map(n => n.dataset.jp).filter(Boolean);
         } else if (step.type === 'phrase_drill') {
           texts = (step.pairs || []).map(p => p?.jp).filter(Boolean);
         } else if (step.type === 'roleplay') {
