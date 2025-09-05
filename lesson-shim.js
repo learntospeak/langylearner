@@ -847,6 +847,17 @@ window.LessonShim = (() => {
     el.classList.toggle(badCls, ok === false);
   }
 
+  // --- Gamification utils ---
+  function starsFor(best){ return best >= 8 ? '★★★' : best >= 5 ? '★★☆' : '★☆☆'; }
+  function reportStepStars(map, best, label='Step'){
+    const s = starsFor(best);
+    setStatus(map, `${label} — ${s}`);
+    feedback(map, `Best streak: ${best}`, true);
+    if (typeof mascotPulse === 'function') {
+      mascotPulse(s === '★★★' ? 'mascot-celebrate' : 'mascot-talk', s === '★★★' ? 1200 : 800);
+    }
+  }
+
   // ---------- speech (Web Speech API) ----------
   const Speech = (() => {
     function pickVoice() {
@@ -1544,7 +1555,8 @@ window.LessonShim = (() => {
         : "";
       return {
         speaker: seg.speaker || 'Speaker',
-        lang, text, jp, en, romaji
+        lang, text, jp, en, romaji,
+        choices: Array.isArray(seg.choices) ? seg.choices : undefined
       };
     }).filter(x => x.text);
 
@@ -1560,6 +1572,7 @@ window.LessonShim = (() => {
     const list = box.querySelector('#sceneList');
     
     // Render lines
+    if (false) {
     segs.forEach((g, i) => {
       const line = document.createElement('div');
       line.className = `${map?.classes?.item || 'lesson-item'} p-3 rounded border border-gray-200`;
@@ -1582,16 +1595,173 @@ window.LessonShim = (() => {
     .forEach(i => i.closest('label')?.remove());
 })();
     });
+    
+    // Helper to highlight/advance lines
+    function highlight(idx) {
+      const el = list?.querySelector(`[data-idx="${idx}"]`);
+      if (el) {
+        try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch {}
+        el.classList.add('ring', 'ring-amber-300');
+        setTimeout(() => el.classList.remove('ring', 'ring-amber-300'), 600);
+      }
+    }
+
+    // Render lines (support choice segments)
+    let score = 0;
+    segs.forEach((g, i) => {
+      const line = document.createElement('div');
+      line.className = `${map?.classes?.item || 'lesson-item'} p-3 rounded border border-gray-200`;
+      line.dataset.idx = String(i);
+
+      if (Array.isArray(g.choices) && g.choices.length) {
+        line.innerHTML = `
+          <div class="text-xs text-gray-500">${g.speaker || 'You'} • Choose a reply</div>
+          <div class="space-y-1" data-choices></div>
+        `;
+        const box = line.querySelector('[data-choices]');
+        g.choices.forEach((c) => {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-ghost w-full text-left';
+          btn.textContent = (c.jp || '').replace(/[。．]/g, '');
+          btn.dataset.jp = c.jp || '';
+          btn.dataset.score = String(Number.isFinite(c.score) ? c.score : 1);
+          btn.addEventListener('click', async () => {
+            try { await TTS.speak({ text: c.jp || '', lang: 'ja', rate: (map?.speech?.rate ?? 1) }); } catch {}
+            const delta = parseInt(btn.dataset.score || '1', 10);
+            score += isNaN(delta) ? 1 : delta;
+            feedback(map, delta > 0 ? '✓ Nice choice!' : 'Hmm, try another next time.', delta > 0);
+            if (delta > 0 && Math.random() < 0.10) {
+              const k = `kr_stickers_${lesson.id || 'default'}`;
+              const bag = JSON.parse(localStorage.getItem(k) || '[]');
+              bag.push('🌸'); localStorage.setItem(k, JSON.stringify(bag));
+              setStatus(map, 'Sticker unlocked! 🌸');
+            }
+            const nextIdx = i + 1;
+            if (nextIdx < segs.length) highlight(nextIdx);
+          });
+          box.appendChild(btn);
+        });
+      } else {
+        line.innerHTML = `
+          <div class="text-xs text-gray-500">${g.speaker} • ${g.lang === 'ja' ? 'Japanese' : 'English'}</div>
+          <div class="font-medium ${map?.classes?.jp || 'jp'}">${g.lang === 'ja' ? (g.jp || g.text) : g.en}</div>
+          ${g.lang === 'ja' && map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || 'romaji'} text-gray-500">${g.romaji || ''}</div>` : ''}
+          ${g.lang === 'ja' ? `<div class="${map?.classes?.en || 'en'} text-gray-600">${g.en || ''}</div>` : (g.jp ? `<div class="${map?.classes?.jp || 'jp'} text-gray-600">${g.jp}</div>` : '')}
+        `;
+      }
+      list.appendChild(line);
+    });
 
     // Inline controls removed; use footer Speak to play the full scene.
 
    
     // expose scene for footer Speak
     try { window.__KR_CURRENT_SCENE__ = { lines: segs.map(s => ({ jp: s.jp, en: s.en, romaji: s.romaji, lang: s.lang })) }; } catch {}
-
+    // Show running scene score (updates after each choice)
+    setStatus(map, `Mini-scene — Score: ${score}`);
     setStatus(map, 'Browse the mini-scene. Use footer Speak to play.');
     feedback(map, '', true);
     try { if (window.__padFooter) window.__padFooter(); } catch {}
+  }
+
+  // ---------- speed round (60s blitz) ----------
+  function renderSpeedRound(lesson, step, map) {
+    const root = q(map?.containers?.list); if (!root) return;
+    root.innerHTML = '';
+
+    // pool of items: from step.item_refs or all lesson sentences
+    const pool = (step.item_refs || [])
+      .map(id => (lesson.sentences || []).find(s => s.sid === id))
+      .filter(Boolean);
+    const items = (pool.length ? pool : (lesson.sentences || [])).slice();
+    if (!items.length) { setStatus(map, 'No items for speed round.'); return; }
+
+    // shuffle utility
+    const shuf = (a) => { const x=[...a]; for (let i=x.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [x[i],x[j]]=[x[j],x[i]];} return x; };
+    let bag = shuf(items);
+    let idx = 0, timeLeft = Math.max(20, step.seconds || 60), score = 0, streak = 0, best = 0;
+
+    const card = document.createElement('div');
+    card.className = map?.classes?.item || 'lesson-item';
+    card.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm text-gray-600">Speed Round</div>
+        <div class="text-sm"><span id="srTime">${timeLeft}</span>s • Score <span id="srScore">0</span> • Streak <span id="srStreak">0</span></div>
+      </div>
+      <div class="${map?.classes?.prompt || 'prompt'} mb-1" id="srPrompt"></div>
+      <input class="${map?.classes?.input || 'jp-input'}" id="srInput" placeholder="Type in Japanese…" />
+      <div class="${map?.classes?.hint || 'hint'} text-sm text-amber-700 mt-2" id="srHint"></div>
+    `;
+    root.appendChild(card);
+
+    const elPrompt = card.querySelector('#srPrompt');
+    const elInput  = card.querySelector('#srInput');
+    const elHint   = card.querySelector('#srHint');
+    const elTime   = card.querySelector('#srTime');
+    const elScore  = card.querySelector('#srScore');
+    const elStreak = card.querySelector('#srStreak');
+
+    ensureKanaBindings(elInput);
+
+    function nextItem() {
+      if (idx >= bag.length) { bag = shuf(items); idx = 0; }
+      const s = bag[idx++];
+      elPrompt.textContent = s.en || '';
+      elInput.value = '';
+      elInput.dataset.jp = s.jp || '';
+      elHint.textContent = '';
+      elInput.focus();
+    }
+
+    function submit() {
+      const want = elInput.dataset.jp || '';
+      const got = elInput.value || '';
+
+      const wantC = canonJP(want);
+      const gotC  = canonJP(got);
+      const readC = canonJP(sentenceReadingHira({ jp: want }));
+      const ok = (gotC === wantC) || (gotC === readC);
+
+      if (ok) {
+        score += 1 + Math.min(2, Math.floor(streak / 3)); // small streak bonus
+        streak++; best = Math.max(best, streak);
+        feedback(map, '✓', true);
+        try { TTS.speak({ text: want, lang: 'ja', rate: (map?.speech?.rate ?? 1) }); } catch {}
+        nextItem();
+      } else {
+        streak = 0;
+        feedback(map, 'Try again!', false);
+        elHint.textContent = `Hint: starts 「${(wantC || '').slice(0,2)}」`;
+      }
+
+      elScore.textContent = String(score);
+      elStreak.textContent = String(streak);
+    }
+
+    elInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+
+    const timer = setInterval(() => {
+      timeLeft--;
+      elTime.textContent = String(timeLeft);
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        // End screen
+        root.innerHTML = `
+          <div class="${map?.classes?.item || 'lesson-item'} p-4 rounded border">
+            <div class="text-lg font-medium mb-1">Time!</div>
+            <div class="mb-2">Score: ${score} • Best streak: ${best}</div>
+            <div class="mb-2">Rank: ${starsFor(best)}</div>
+            <button class="btn btn-primary" id="srAgain">↻ Play again</button>
+          </div>`;
+        document.getElementById('srAgain')?.addEventListener('click', () => renderSpeedRound(lesson, step, map));
+        setStatus(map, `Speed Round — ${starsFor(best)}`);
+        feedback(map, 'Nice run!', true);
+      }
+    }, 1000);
+
+    nextItem();
+    setStatus(map, 'Speed Round — clear as many as you can!');
+    feedback(map, '', true);
   }
 
 
@@ -1608,6 +1778,7 @@ window.LessonShim = (() => {
       }
       return v;
     });
+    }
 
     const box = document.createElement('div');
     box.className = map?.classes?.item || 'lesson-item';
@@ -2312,6 +2483,7 @@ window.LessonShim = (() => {
   }
   function checkCloze(map) {
     const blocks = qa(`${map?.containers?.list} .${map?.classes?.item || "lesson-item"}`);
+    let combo = 0, best = 0;
     let allOk = true;
     let bubbleTip = "";
     blocks.forEach(block => {
@@ -2325,6 +2497,7 @@ window.LessonShim = (() => {
         // Accept kana reading for 願 if typed as おねがいします
         const acceptAlt = /願/.test(expected) && H.toHira(got) === "おねがいします";
         const correct = acceptAlt || (norm(expected) === norm(got));
+        if (correct) { combo++; best = Math.max(best, combo); } else { combo = 0; }
         inp.classList.toggle(map?.classes?.ok || "ok", correct);
         inp.classList.toggle(map?.classes?.bad || "bad", !correct);
         if (!correct) {
@@ -2339,6 +2512,7 @@ window.LessonShim = (() => {
     if (allOk) mascotPulse && mascotPulse("mascot-celebrate", 1200);
     else mascotPulse && mascotPulse("mascot-confused", 800);
     if (!allOk && bubbleTip) MascotTip.show(bubbleTip, { tone:'warn' }); else MascotTip.hide();
+    reportStepStars(map, best, 'Cloze');
     return allOk;
   }
 
@@ -2351,6 +2525,7 @@ window.LessonShim = (() => {
       return ok;
     }
     const cards = qa(`${map?.containers?.list} [data-sid]`);
+    let combo = 0, best = 0;
     let allOk = true;
     let firstTip = "";
     cards.forEach(card => {
@@ -2369,7 +2544,7 @@ window.LessonShim = (() => {
         norm(s.jp || "") === norm(got) ||  // also strips punctuation/spaces
         gotKana === jpKana ||
         (romajiKana && gotKana === romajiKana);
-
+      if (correct) { combo++; best = Math.max(best, combo); } else { combo = 0; }
 
       if (inp) {
         inp.classList.toggle(map?.classes?.ok || "ok", correct);
@@ -2383,6 +2558,7 @@ window.LessonShim = (() => {
     if (allOk) mascotPulse && mascotPulse("mascot-celebrate", 1200);
     else mascotPulse && mascotPulse("mascot-confused", 800);
     if (!allOk && firstTip) MascotTip.show(firstTip, { tone:'warn' }); else MascotTip.hide();
+    reportStepStars(map, best, 'Translate');
     return allOk;
   }
 
@@ -2501,6 +2677,7 @@ window.LessonShim = (() => {
         case "cloze": renderCloze(lesson, step, map); break;
         case "translate_to_jp": map?.flags?.syllableMode ? renderTranslateTiles(lesson, step, map)
           : renderTranslate(lesson, step, map); break;
+        case "speed_round": renderSpeedRound(lesson, step, map); break;
         case "roleplay": renderRoleplay(lesson, step, map); break;
         // Replace mini-scene with interactive AI Tutor conversation
         case "dialogue": renderAiTutor(lesson, step, map); break;
