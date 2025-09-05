@@ -1682,7 +1682,11 @@ window.LessonShim = (() => {
         <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[min(92vw,720px)] max-h-[80vh] overflow-auto p-4">
           <div class="flex items-center justify-between mb-2">
             <div class="font-semibold">Phrase Reference</div>
-            <button class="btn btn-ghost" data-act="closeRef">✖</button>
+            <div class="flex items-center gap-2">
+              <button class="btn btn-ghost" data-act="refRomaji">Show Romaji</button>
+              <button class="btn btn-amber" data-act="refSpeak">🔊 Speak</button>
+              <button class="btn btn-ghost" data-act="closeRef">✖</button>
+            </div>
           </div>
           <div id="refList" class="space-y-2"></div>
         </div>
@@ -1739,7 +1743,7 @@ window.LessonShim = (() => {
             </div>
             ${v.sfx ? `<div class=\"sfx\">${v.sfx}</div>` : ''}
           </div>
-          ${v.img ? '<div class=\\"pc\\"><button class=\\"btn btn-ghost\\" data-act=\\"zoom\\">🔍</button><button class=\\"btn btn-amber\\" data-act=\\"say\\">🔊</button></div>' : ''}
+          ${v.img ? `<div class="pc"><button class="btn btn-ghost" data-act="zoom">🔍</button><button class="btn btn-amber" data-act="say">🔊</button></div>` : ''}
         `;
         // panel background video support
         if (v.video) {
@@ -1797,12 +1801,18 @@ window.LessonShim = (() => {
     renderPage(0);
 
     // build reference list
+    const renderRefList = () => {
       refList.innerHTML = items.map(v => `
         <div class="p-2 border rounded">
           <div class="font-medium">${stripStops(v.jp || '')}</div>
-        ${map?.flags?.showRomaji && (v.romaji || '').trim() ? `<div class="text-gray-500">${stripStops(v.romaji)}</div>` : ''}
+          ${map?.flags?.showRomaji && (v.romaji || '').trim() ? `<div class="text-gray-500">${stripStops(v.romaji)}</div>` : ''}
           <div class="text-gray-600">${v.en || ''}</div>
         </div>`).join('');
+      // update button label
+      const b = box.querySelector('[data-act="refRomaji"]');
+      if (b) b.textContent = map?.flags?.showRomaji ? 'Hide Romaji' : 'Show Romaji';
+    };
+    renderRefList();
 
     const onPlayAll = async () => {
       const rate = map?.speech?.rate ?? 1;
@@ -1824,6 +1834,16 @@ window.LessonShim = (() => {
     box.querySelector('[data-act="closeZoom"]')?.addEventListener('click', hideZoom);
     box.querySelector('[data-act="closeRef"]').addEventListener('click', hideRef);
     box.querySelector('[data-act="ref"]').addEventListener('click', showRef);
+    // Reference controls
+    const onRefSpeak = async () => {
+      const rate = map?.speech?.rate ?? 1;
+      const start = pageIndex * confPageSize;
+      const page = items.slice(start, start + confPageSize);
+      for (const v of page) { const t = v.jp || ''; if (t) await TTS.speak({ text: t, lang: 'ja', rate }).catch(() => {}); }
+    };
+    const onRefRomaji = () => { map.flags.showRomaji = !map.flags.showRomaji; renderRefList(); };
+    box.querySelector('[data-act="refSpeak"]').addEventListener('click', onRefSpeak);
+    box.querySelector('[data-act="refRomaji"]').addEventListener('click', onRefRomaji);
     box.querySelector('[data-act="play"]').addEventListener('click', onPlayAll);
     pagebar?.querySelector('[data-act="prev"]').addEventListener('click', () => renderPage(pageIndex - 1));
     pagebar?.querySelector('[data-act="next"]').addEventListener('click', () => renderPage(pageIndex + 1));
