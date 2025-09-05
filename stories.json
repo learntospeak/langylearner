@@ -35,8 +35,8 @@
             { "tags": ["first_meeting", "polite"], "en": "Nice to meet you (first time).", "jp": "はじめまして", "romaji": "hajimemashite", "img": "images/phase/haji.png", "fit": "contain", "noBubble": true },
             { "tags": ["first_meeting", "polite", "work"], "en": "Please treat me well. (set phrase)", "jp": "よろしくお願いします", "romaji": "yoroshiku onegaishimasu", "img": "images/phase/yoroshiku onegaishimasu.png", "fit": "contain", "noBubble": true, "bgSize": "contain", "bgPos": "center top" },
             { "tags": ["phone"], "en": "Hello? (on the phone).", "jp": "もしもし", "romaji": "moshimoshi", "img": "images/phase/moshi.png", "fit": "contain", "noBubble": true, "bgPos": "center 18px", "bgColor": "#ffffff" },
-            { "tags": ["work", "polite"], "en": "Hello (workplace greeting).", "jp": "お疲れ様です", "romaji": "otsukaresama desu" },
-            { "tags": ["casual"], "en": "Hey / thanks (very casual).", "jp": "どうも", "romaji": "doumo" }
+            { "tags": ["work", "polite"], "en": "Hello (workplace greeting).", "jp": "お疲れ様です", "romaji": "otsukaresama desu", "img": "images/phase/otsukaremsama desu.png", "fit": "contain", "noBubble": true },
+            { "tags": ["casual"], "en": "Hey / thanks (very casual).", "jp": "どうも", "romaji": "doumo", "img": "images/phase/duomo.png", "fit": "contain", "noBubble": true }
           ],
           "manga": { "minH": 280, "pageSize": 6 }
         },
