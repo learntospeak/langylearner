@@ -1,18 +1,18 @@
-/[?]/ lesson-shim.js — with Pronounce + Romaji toggle
+// lesson-shim.js — with Pronounce + Romaji toggle
 window.LessonShim = (() => {
-  /[?]/ ---------- utils ----------
+  // ---------- utils ----------
   const norm = (s) => (s || "").replace(/[。．、，！？!\?()\[\]{}'"「」『』・…：:；;\-＿_〜~ー\s]/g, "").toLowerCase();
   const q = (sel) => (sel ? document.querySelector(sel) : null);
   const qa = (sel) => (sel ? Array.from(document.querySelectorAll(sel)) : []);
 
   function ensureKanaBindings(inp) {
     if (!inp) return;
-    /[?]/ WanaKana IME: bind once
+    // WanaKana IME: bind once
     if (window.wanakana && !inp.dataset.kanaBound) {
       wanakana.bind(inp, { IMEMode: true });
       inp.dataset.kanaBound = "1";
     }
-    /[?]/ Smart normalizer: bind once (it reads inp.dataset.expectedKana at runtime)
+    // Smart normalizer: bind once (it reads inp.dataset.expectedKana at runtime)
     if (!inp.dataset.smartBound) {
       attachSmartNormalizer(inp);
       inp.dataset.smartBound = "1";
@@ -20,7 +20,7 @@ window.LessonShim = (() => {
   }
 
 
-  /[?]/ --- HINT HELPERS ---
+  // --- HINT HELPERS ---
 
   const H = {
     toHira: (s) => (window.wanakana ? wanakana.toHiragana(s || "") : (s || "")),
@@ -32,12 +32,12 @@ window.LessonShim = (() => {
       if (!gotRaw || !gotRaw.trim())
         return `Type your answer. Hint: starts with 「${exp.slice(0, 2)}」`;
 
-      /[?]/ Common pitfalls
+      // Common pitfalls
       if (expectedJP.includes("こんにちは") && got.includes("こんにちわ"))
         return "Use 「は」 (ha) not 「わ」 in こんにちは.";
 
       if (/願/.test(expectedJP) && got === "おねがいします")
-        return ""; /[?]/ accept kana reading for 願
+        return ""; // accept kana reading for 願
 
       if (exp.includes("っ") && !got.includes("っ")) {
         const idx = exp.indexOf("っ"), next = exp[idx + 1] || "";
@@ -55,7 +55,7 @@ window.LessonShim = (() => {
       return "Check particles/spelling.";
     },
   };
-  /[?]/ --- MORA HELPERS ---
+  // --- MORA HELPERS ---
   const SMALL_KANA = "ゃゅょャュョぁぃぅぇぉァィゥェォゎヮ";
   function splitMora(str = "") {
     const a = [...str]; const out = [];
@@ -69,9 +69,9 @@ window.LessonShim = (() => {
   }
 
 
-  /[?]/ Show kana chips + next hint under an input, using a reading override if provided.
-  /[?]/ This version is IME-safe: it waits until the value is kana-only, so progress
-  /[?]/ doesn't "reset" between the first and second letters of a syllable.
+  // Show kana chips + next hint under an input, using a reading override if provided.
+  // This version is IME-safe: it waits until the value is kana-only, so progress
+  // doesn't "reset" between the first and second letters of a syllable.
   function attachKanaGuide(inp, targetJP, map, readingOverride = null) {
     const host = inp.closest(`.${map?.classes?.item || "lesson-item"}`) || inp.parentElement;
     if (!host) return;
@@ -83,7 +83,7 @@ window.LessonShim = (() => {
       foot = document.createElement('div'); foot.className = 'guide-foot'; host.appendChild(foot);
     }
 
-    /[?]/ persist state on the element
+    // persist state on the element
     inp._guideTarget = toHira(readingOverride || targetJP || "");
     inp._guideProgress = inp._guideProgress || 0;
     inp._guideComp = !!inp._guideComp;
@@ -123,26 +123,26 @@ window.LessonShim = (() => {
 
 
 
-  /[?]/ === Canonical readings + helpers (ONE copy only) ===
-  /[?]/ === Canonical readings + helpers (ONE copy only) ===
+  // === Canonical readings + helpers (ONE copy only) ===
+  // === Canonical readings + helpers (ONE copy only) ===
   const READINGS = {
     "お願いします": "おねがいします",
     "お疲れ様です": "おつかれさまです",
     "お疲れ様": "おつかれさま",
     "疲れ様": "つかれさま"
-    /[?]/ add more as needed…
+    // add more as needed…
   };
 
 
   function kanjiToReading(jp = "") {
     let out = jp || "";
     for (const k in READINGS) out = out.split(k).join(READINGS[k]);
-    return toHira(out); /[?]/ normalize to hiragana
+    return toHira(out); // normalize to hiragana
   }
 
   function sentenceReadingHira(sentence) {
     if (!sentence) return "";
-    /[?]/ Prefer provided romaji if available, then convert to hira
+    // Prefer provided romaji if available, then convert to hira
     if (sentence.romaji_full && window.wanakana) {
       return wanakana.toHiragana(sentence.romaji_full);
     }
@@ -150,7 +150,7 @@ window.LessonShim = (() => {
   }
 
 
-  /[?]/ ---- Voice roleplay helpers ----
+  // ---- Voice roleplay helpers ----
   function hasRecognition() {
     return ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
   }
@@ -162,7 +162,7 @@ window.LessonShim = (() => {
     r.maxAlternatives = 1;
     return r;
   }
-  /[?]/ simple normalized similarity: 1 - (levenshtein / maxLen)
+  // simple normalized similarity: 1 - (levenshtein / maxLen)
   function levenshtein(a, b) {
     const m = a.length, n = b.length;
     const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
@@ -187,10 +187,10 @@ window.LessonShim = (() => {
 
 
 
-  /[?]/ --- SMART NORMALIZER ---
-  /[?]/ Split to mora (you already have splitMora/toHira above)
+  // --- SMART NORMALIZER ---
+  // Split to mora (you already have splitMora/toHira above)
   function normalizeKanaToExpected(typedRaw, expectedRaw) {
-    /[?]/ strip spaces/punct and compare on kana
+    // strip spaces/punct and compare on kana
     const clean = s => toHira((s || "").replace(/[^\p{sc=Hiragana}\p{sc=Katakana}ー]+/gu, ""));
     const t = splitMora(clean(typedRaw));
     const e = splitMora(clean(expectedRaw));
@@ -205,18 +205,18 @@ window.LessonShim = (() => {
 
       if (tm === em) { out.push(tm); i++; j++; continue; }
 
-      /[?]/ Particles: は/へ/を typed as わ/え/お
+      // Particles: は/へ/を typed as わ/え/お
       if ((em === "は" && tm === "わ") || (em === "へ" && tm === "え") || (em === "を" && tm === "お")) {
         out.push(em); i++; j++; continue;
       }
 
-      /[?]/ Small ya/yu/yo: き + や → きゃ (when expected has small)
+      // Small ya/yu/yo: き + や → きゃ (when expected has small)
       const m = em.match(/^([きぎしじちぢにひびぴみり])([ゃゅょ])$/);
       if (m && tm === m[1] && t[j + 1] === bigOf[m[2]]) {
         out.push(em); i++; j += 2; continue;
       }
 
-      /[?]/ N-ambiguity: ん + い → に ; ん + (や/ゆ/よ) → にゃ/にゅ/にょ
+      // N-ambiguity: ん + い → に ; ん + (や/ゆ/よ) → にゃ/にゅ/にょ
       if (em === "に" && tm === "ん" && t[j + 1] === "い") {
         out.push("に"); i++; j += 2; continue;
       }
@@ -225,34 +225,34 @@ window.LessonShim = (() => {
         if (t[j + 1] === want) { out.push(em); i++; j += 2; continue; }
       }
 
-      /[?]/ Small っ missing: if expected has っ and next typed mora matches next expected
+      // Small っ missing: if expected has っ and next typed mora matches next expected
       if (em === "っ" && t[j] === e[i + 1]) {
         out.push("っ"); i++; continue;
       }
 
-      /[?]/ Long vowel normalization: おお vs おう (follow expected)
+      // Long vowel normalization: おお vs おう (follow expected)
       if (em === "う" && out[out.length - 1] === "お" && tm === "お") {
         out.push("う"); i++; j++; continue;
       }
 
-      /[?]/ Default: keep typed and advance to avoid locking
+      // Default: keep typed and advance to avoid locking
       out.push(tm); i++; j++;
     }
 
-    /[?]/ Append any remaining exactly-matching tail (keeps smooth typing)
+    // Append any remaining exactly-matching tail (keeps smooth typing)
     while (i < e.length && j < t.length && t[j] === e[i]) { out.push(t[j]); i++; j++; }
 
     return out.join("");
   }
 
-  /[?]/ Let WanaKana IME convert first; then, once the value is kana-only,
-  /[?]/ normalize toward the expected reading. Runs after the current input frame.
+  // Let WanaKana IME convert first; then, once the value is kana-only,
+  // normalize toward the expected reading. Runs after the current input frame.
   function attachSmartNormalizer(inp) {
     const kanaOnly = s => /^[\p{sc=Hiragana}\p{sc=Katakana}ー]+$/u.test(s || "");
     const run = () => {
       const target = toHira(inp.dataset.expectedKana || "");
       const val = inp.value || "";
-      if (!target || !kanaOnly(val)) return;          /[?]/ wait until kana is committed
+      if (!target || !kanaOnly(val)) return;          // wait until kana is committed
       const after = normalizeKanaToExpected(val, target);
       if (after !== val) {
         inp.value = after;
@@ -270,20 +270,20 @@ window.LessonShim = (() => {
 
 
   function toHira(s) { return (window.wanakana ? wanakana.toHiragana(s || "") : (s || "")); }
-  /[?]/ Convert romaji -> ひらがな and fix greeting edge cases on each keystroke
-  /[?]/ Convert romaji -> ひらがな and fix greeting edge cases per keystroke
+  // Convert romaji -> ひらがな and fix greeting edge cases on each keystroke
+  // Convert romaji -> ひらがな and fix greeting edge cases per keystroke
 
-  /[?]/ After WanaKana converts, gently fix greeting edge cases only.
+  // After WanaKana converts, gently fix greeting edge cases only.
   function attachGreetingNormalizer(inp, expectedJP = "") {
     inp.addEventListener("input", () => {
       const before = inp.value;
       let after = before;
 
-      /[?]/ safe global fixes
+      // safe global fixes
       after = after.replace(/こんいちわ/g, "こんにちは");
       after = after.replace(/こんばんわ/g, "こんばんは");
 
-      /[?]/ enforce は only when that phrase is expected
+      // enforce は only when that phrase is expected
       if (expectedJP.includes("こんにちは")) after = after.replace(/こんにちわ/g, "こんにちは");
       if (expectedJP.includes("こんばんは")) after = after.replace(/こんばんわ/g, "こんばんは");
 
@@ -298,9 +298,9 @@ window.LessonShim = (() => {
 
 
 
-  /[?]/ Insert a disambiguating space after a single romaji "n" before a vowel/ya/yu/yo
+  // Insert a disambiguating space after a single romaji "n" before a vowel/ya/yu/yo
   function bindNDisambiguator(inp, expectedJP) {
-    /[?]/ Only enable where it matters (prevents breaking words like "nani")
+    // Only enable where it matters (prevents breaking words like "nani")
     const active = /こんにちは|こんばんは/.test(expectedJP || "");
     if (!active) return;
 
@@ -312,16 +312,16 @@ window.LessonShim = (() => {
       const pos = inp.selectionStart || 0;
       const val = inp.value || "";
 
-      /[?]/ Convert the prefix (which may already be kana) back to romaji to inspect the last char
+      // Convert the prefix (which may already be kana) back to romaji to inspect the last char
       const romanPrefix = (window.wanakana ? wanakana.toRomaji(val.slice(0, pos)) : val.slice(0, pos));
 
-      /[?]/ If prefix ends with a single "n" (not "nn" or "n'"), insert a space before the incoming vowel
+      // If prefix ends with a single "n" (not "nn" or "n'"), insert a space before the incoming vowel
       if (/n$/.test(romanPrefix) && !/(nn|n')$/.test(romanPrefix)) {
         e.preventDefault();
         const newVal = val.slice(0, pos) + " " + ch + val.slice(pos);
         inp.value = newVal;
-        inp.selectionStart = inp.selectionEnd = pos + 2; /[?]/ after space + inserted char
-        /[?]/ Trigger downstream input handlers (e.g., WanaKana conversion)
+        inp.selectionStart = inp.selectionEnd = pos + 2; // after space + inserted char
+        // Trigger downstream input handlers (e.g., WanaKana conversion)
         inp.dispatchEvent(new Event("input", { bubbles: true }));
       }
     });
@@ -372,7 +372,7 @@ window.LessonShim = (() => {
     el.classList.toggle(badCls, ok === false);
   }
 
-  /[?]/ ---------- speech (Web Speech API) ----------
+  // ---------- speech (Web Speech API) ----------
   const Speech = (() => {
     function pickVoice() {
       if (!("speechSynthesis" in window)) return null;
@@ -409,7 +409,7 @@ window.LessonShim = (() => {
       next();
       return true;
     }
-    /[?]/ preload voices on some browsers
+    // preload voices on some browsers
     if ("speechSynthesis" in window) speechSynthesis.getVoices();
     return { speak, speakList };
 
@@ -439,7 +439,7 @@ window.LessonShim = (() => {
 
   })();
 
-  /[?]/ ---------- renderers ----------
+  // ---------- renderers ----------
   function renderReadListen(lesson, step, map) {
     const listEl = q(map?.containers?.list);
     if (!listEl) return;
@@ -461,7 +461,7 @@ window.LessonShim = (() => {
       `;
       listEl.appendChild(row);
     });
-    /[?]/ wire per-line speak buttons
+    // wire per-line speak buttons
     qa(`${map?.containers?.list} .${map?.classes?.speakBtn || "speak-btn"}`)
       .forEach(btn => btn.addEventListener("click", () => Speech.speak(btn.dataset.jp || "", map?.speech || {})));
     setStatus(map, "Read, listen, and repeat. Use 🔊 or Speak.");
@@ -493,24 +493,24 @@ window.LessonShim = (() => {
     `;
       listEl.appendChild(block);
 
-      /[?]/ after: listEl.appendChild(block);
+      // after: listEl.appendChild(block);
       const blanks = block.querySelectorAll('input[data-answer]');
 
       blanks.forEach(inp => {
-        /[?]/ expected answer for this blank
+        // expected answer for this blank
         const exp = inp.dataset.expected || inp.dataset.answer || "";
 
-        /[?]/ 1) make WanaKana + smart normalizer bind ONCE for this input
+        // 1) make WanaKana + smart normalizer bind ONCE for this input
         ensureKanaBindings(inp);
 
-        /[?]/ 2) set the expected kana target for the normalizer
-        const reading = kanjiToReading(exp);            /[?]/ "お願いします" -> "おねがいします"
+        // 2) set the expected kana target for the normalizer
+        const reading = kanjiToReading(exp);            // "お願いします" -> "おねがいします"
         inp.dataset.expectedKana = reading;
 
-        /[?]/ 3) show kana chips + next-hint using the kana reading
+        // 3) show kana chips + next-hint using the kana reading
         attachKanaGuide(inp, exp, map, reading);
 
-        /[?]/ 3) gentle greeting fixes (こんにちは / こんばんは), if you added it
+        // 3) gentle greeting fixes (こんにちは / こんばんは), if you added it
         try { inp.placeholder = `Type: ${wanakana.toRomaji(reading)}`; } catch { }
         if (typeof attachGreetingNormalizer === "function") attachGreetingNormalizer(inp, exp);
       });
@@ -544,7 +544,7 @@ window.LessonShim = (() => {
       `;
         listEl.appendChild(card);
 
-        /[?]/ bind to the actual input we just created
+        // bind to the actual input we just created
         const inp = card.querySelector("input");
         const exp = s.jp || "";
         const reading = sentenceReadingHira(s);
@@ -554,13 +554,13 @@ window.LessonShim = (() => {
 
 
 
-        ensureKanaBindings(inp);          /[?]/ once
+        ensureKanaBindings(inp);          // once
         inp.dataset.expectedKana = reading;
         attachKanaGuide(inp, exp, map, reading);
 
 
 
-        /[?]/ Optional: romaji prompt in the placeholder
+        // Optional: romaji prompt in the placeholder
 
       });
 
@@ -577,7 +577,7 @@ window.LessonShim = (() => {
       .map(id => (lesson.sentences || []).find(x => x.sid === id))
       .filter(Boolean)
       .forEach(s => {
-        /[?]/ Use the sentence reading so kanji like 願 become おねがい…
+        // Use the sentence reading so kanji like 願 become おねがい…
         const reading = sentenceReadingHira(s);
         const moras = splitMora(reading);
 
@@ -625,7 +625,7 @@ window.LessonShim = (() => {
             }
           });
 
-          /[?]/ Backspace on empty → reopen previous box
+          // Backspace on empty → reopen previous box
           inp.addEventListener("keydown", (e) => {
             if (e.key === "Backspace" && !inp.value) {
               const prev = inputs[idx - 1];
@@ -649,17 +649,17 @@ window.LessonShim = (() => {
     const listEl = q(map?.containers?.list); if (!listEl) return;
     listEl.innerHTML = '';
 
-    /[?]/ Build turns from item_refs: Sensei prompts EN, learner speaks JP
+    // Build turns from item_refs: Sensei prompts EN, learner speaks JP
     const turns = (step.item_refs || [])
       .map(id => (lesson.sentences || []).find(s => s.sid === id))
       .filter(Boolean)
       .map(s => ({
         promptEN: s.en || '',
         expectJP: s.jp || '',
-        reading: sentenceReadingHira(s) /[?]/ e.g., おねがいします
+        reading: sentenceReadingHira(s) // e.g., おねがいします
       }));
 
-    /[?]/ UI
+    // UI
     const box = document.createElement('div');
     box.className = map?.classes?.item || 'lesson-item';
     box.innerHTML = `
@@ -715,7 +715,7 @@ window.LessonShim = (() => {
         const heard = (evt.results[0][0].transcript || '').trim();
         elHeard.textContent = `You said: ${heard}`;
         const t = turns[idx];
-        const score = kanaSim(heard, t.reading); /[?]/ compare to reading
+        const score = kanaSim(heard, t.reading); // compare to reading
         const ok = score >= (step.threshold || 0.82);
         feedback(map, ok ? 'Great pronunciation!' : 'Close—try again.', ok);
         mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
@@ -728,7 +728,7 @@ window.LessonShim = (() => {
             showTurn();
           }
         } else {
-          /[?]/ hint: show next kana to aim for
+          // hint: show next kana to aim for
           const want = splitMora(t.reading);
           const got = splitMora(toHira(heard));
           let p = 0; while (p < want.length && p < got.length && want[p] === got[p]) p++;
@@ -743,7 +743,7 @@ window.LessonShim = (() => {
       rec.start();
     }
 
-    /[?]/ wire buttons
+    // wire buttons
     box.querySelector('[data-act="speak"]').addEventListener('click', speakPrompt);
     box.querySelector('[data-act="rec"]').addEventListener('click', startRec);
     box.querySelector('[data-act="skip"]').addEventListener('click', () => {
@@ -755,12 +755,12 @@ window.LessonShim = (() => {
     feedback(map, '', true);
   }
 
-  /[?]/ ---------- phrase drill (type + alternates) ----------
+  // ---------- phrase drill (type + alternates) ----------
   function renderPhraseDrill(lesson, step, map) {
     const listEl = q(map?.containers?.list); if (!listEl) return;
     listEl.innerHTML = "";
 
-    /[?]/ step.pairs: [{en, jp, alts?:[{jp,en?}]}]
+    // step.pairs: [{en, jp, alts?:[{jp,en?}]}]
     const pairs = (step.pairs || []).map(p => {
       const reading = kanjiToReading(p.jp || "");
       const romaji = window.wanakana ? wanakana.toRomaji(reading) : "";
@@ -792,8 +792,8 @@ window.LessonShim = (() => {
     const elHint = card.querySelector(`.${map?.classes?.hint || "hint"}`);
     const altBox = card.querySelector('#altBox');
 
-    /[?]/ bind input (reuse your tools)
-    ensureKanaBindings(elInput); /[?]/ once
+    // bind input (reuse your tools)
+    ensureKanaBindings(elInput); // once
 
     function show() {
       const P = pairs[i];
@@ -804,9 +804,9 @@ window.LessonShim = (() => {
       const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji });
       elRoma.textContent = splitMora(reading).map(k => wanakana.toRomaji(k)).join(' ');
 
-      /[?]/ set dynamic targets for the existing handlers
-      elInput.dataset.expectedKana = reading;          /[?]/ <-- for attachSmartNormalizer
-      attachKanaGuide(elInput, P.jp, map, reading);    /[?]/ <-- bind-once version; safe to call again
+      // set dynamic targets for the existing handlers
+      elInput.dataset.expectedKana = reading;          // <-- for attachSmartNormalizer
+      attachKanaGuide(elInput, P.jp, map, reading);    // <-- bind-once version; safe to call again
 
       elHint.textContent = "";
       elInput.focus();
@@ -843,7 +843,7 @@ window.LessonShim = (() => {
         </button>`).join('');
         [...altBox.querySelectorAll('[data-jp]')].forEach(b => {
           b.addEventListener('click', () => {
-            /[?]/ swap target to this alternate
+            // swap target to this alternate
             const newJP = b.dataset.jp || "";
             pairs[i].jp = newJP;
             show();
@@ -853,7 +853,7 @@ window.LessonShim = (() => {
       }
     }
 
-    /[?]/ wire buttons
+    // wire buttons
     card.querySelector('[data-act="check"]').addEventListener('click', doCheck);
     card.querySelector('[data-act="speak"]').addEventListener('click', speakCurrent);
     card.querySelector('[data-act="alt"]').addEventListener('click', toggleAlts);
@@ -867,14 +867,14 @@ window.LessonShim = (() => {
   }
 
 
-  /[?]/ ---------- variations (browse + quick quiz) ----------
+  // ---------- variations (browse + quick quiz) ----------
   function renderVariations(lesson, step, map) {
     const root = q(map?.containers?.list); if (!root) return;
     root.innerHTML = "";
 
-    /[?]/ step.variations: [{jp,en,romaji?,tags?:["casual","phone",...]}]
+    // step.variations: [{jp,en,romaji?,tags?:["casual","phone",...]}]
     const items = (step.variations || []).map(v => {
-      /[?]/ prefer a provided romaji; otherwise compute from the kana reading
+      // prefer a provided romaji; otherwise compute from the kana reading
       if (!v.romaji && v.jp && window.wanakana) {
         const reading = sentenceReadingHira({ jp: v.jp, romaji_full: v.romaji });
         v.romaji = wanakana.toRomaji(reading);
@@ -933,7 +933,7 @@ window.LessonShim = (() => {
       quiz.classList.remove('hidden');
       list.classList.add('hidden');
 
-      /[?]/ choose a context that exists
+      // choose a context that exists
       const tagPool = [...new Set(items.flatMap(v => v.tags || []))];
       const targetTag = (tagPool.length ? tagPool[Math.floor(Math.random() * tagPool.length)] : null);
       const correctPool = targetTag ? items.filter(v => v.tags?.includes(targetTag)) : items;
@@ -964,7 +964,7 @@ window.LessonShim = (() => {
       });
     }
 
-    /[?]/ controls
+    // controls
     box.querySelector('[data-act="shuffle"]').addEventListener('click', () => {
       renderList(pick(items, Math.min(6, items.length)));
       quiz.classList.add('hidden'); list.classList.remove('hidden');
@@ -981,15 +981,15 @@ window.LessonShim = (() => {
   }
 
 
-  /[?]/ ---------- bilingual mini-scene (EN+JA) ----------
+  // ---------- bilingual mini-scene (EN+JA) ----------
   function pickVoiceByLang(langCode) {
     if (!('speechSynthesis' in window)) return null;
     const want = (langCode || '').toLowerCase().slice(0, 2);
     const voices = speechSynthesis.getVoices();
-    /[?]/ strong match (lang starts with ja/en)
+    // strong match (lang starts with ja/en)
     let v = voices.find(v => v.lang?.toLowerCase().startsWith(want));
     if (v) return v;
-    /[?]/ soft match by name
+    // soft match by name
     v = voices.find(v => new RegExp(`\\b${want}\\b`, 'i').test(v.name || ''));
     return v || voices[0] || null;
   }
@@ -998,9 +998,9 @@ window.LessonShim = (() => {
     const root = q(map?.containers?.list); if (!root) return;
     root.innerHTML = "";
 
-    /[?]/ Build segment list
-    /[?]/ Supports either sentence refs (sid) or inline lines
-    /[?]/ Each segment becomes: {speaker, lang:'ja'|'en', text, jp, en, romaji}
+    // Build segment list
+    // Supports either sentence refs (sid) or inline lines
+    // Each segment becomes: {speaker, lang:'ja'|'en', text, jp, en, romaji}
     const segs = (step.segments || []).map(seg => {
       let s = {};
       if (seg.ref) {
@@ -1020,7 +1020,7 @@ window.LessonShim = (() => {
       };
     }).filter(x => x.text);
 
-    /[?]/ UI
+    // UI
     const box = document.createElement('div');
     box.className = map?.classes?.item || 'lesson-item';
     box.innerHTML = `
@@ -1047,7 +1047,7 @@ window.LessonShim = (() => {
     const auto = box.querySelector('#sceneAuto');
     const showR = box.querySelector('#sceneShowRomaji');
 
-    /[?]/ Render lines
+    // Render lines
     segs.forEach((g, i) => {
       const line = document.createElement('div');
       line.className = "p-3 rounded border border-gray-200";
@@ -1065,7 +1065,7 @@ window.LessonShim = (() => {
       list.appendChild(line);
     });
 
-    /[?]/ Highlight helper
+    // Highlight helper
     function highlight(idx) {
       list.querySelectorAll('[data-idx]').forEach(el => {
         const on = Number(el.dataset.idx) === idx;
@@ -1073,12 +1073,12 @@ window.LessonShim = (() => {
         el.classList.toggle('ring-amber-400', on);
         el.classList.toggle('bg-amber-50', on);
       });
-      /[?]/ keep current line in view
+      // keep current line in view
       const el = list.querySelector(`[data-idx="${idx}"]`);
       if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
-    /[?]/ Speech sequence
+    // Speech sequence
     let i = 0, playing = false, currentUtt = null;
 
     function speakIndex(k) {
@@ -1091,7 +1091,7 @@ window.LessonShim = (() => {
       u.lang = lang;
       const v = pickVoiceByLang(seg.lang);
       if (v) u.voice = v;
-      u.rate = seg.lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0; /[?]/ keep EN natural
+      u.rate = seg.lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0; // keep EN natural
       u.onstart = () => { playing = true; currentUtt = u; mascotSet && mascotSet('mascot-talk'); highlight(i); };
       u.onend = () => {
         playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
@@ -1101,7 +1101,7 @@ window.LessonShim = (() => {
       speechSynthesis.speak(u);
     }
 
-    /[?]/ Controls
+    // Controls
     box.querySelector('[data-act="play"]').addEventListener('click', () => {
       if (playing) { /* already playing current */ return; }
       speakIndex(i);
@@ -1119,22 +1119,22 @@ window.LessonShim = (() => {
       speakIndex(i);
     });
 
-    /[?]/ React to Romaji toggle
+    // React to Romaji toggle
     showR.addEventListener('change', () => {
       map.flags = map.flags || {};
       map.flags.showRomaji = showR.checked;
-      /[?]/ re-render lines to show/hide romaji
+      // re-render lines to show/hide romaji
       renderBilingualScene(lesson, step, map);
     });
 
-    /[?]/ preload voices (Chrome sometimes async)
+    // preload voices (Chrome sometimes async)
     if ('speechSynthesis' in window) speechSynthesis.getVoices();
 
     setStatus(map, 'Listen through the mini-scene. Use ▶ or Autoplay.');
     feedback(map, '', true);
   }
 
-  /[?]/ ---------- checks ----------
+  // ---------- checks ----------
   function collectClozeAnswers(containerSel) {
     return qa(`${containerSel} input[data-answer]`).map((inp) => ({
       expected: inp.dataset.answer || "", got: inp.value || "", el: inp
@@ -1151,7 +1151,7 @@ window.LessonShim = (() => {
       inputs.forEach(inp => {
         const expected = inp.dataset.answer || "";
         const got = inp.value || "";
-        /[?]/ Accept kana reading for 願 if typed as おねがいします
+        // Accept kana reading for 願 if typed as おねがいします
         const acceptAlt = /願/.test(expected) && H.toHira(got) === "おねがいします";
         const correct = acceptAlt || (norm(expected) === norm(got));
         inp.classList.toggle(map?.classes?.ok || "ok", correct);
@@ -1188,8 +1188,8 @@ window.LessonShim = (() => {
       const hintEl = ensureHintEl(card, map);
       const got = (inp?.value || "").trim();
 
-      /[?]/ Accept: exact JP OR same reading as sentence romaji
-      const readingKana = sentenceReadingHira(s); /[?]/ e.g., おねがいします
+      // Accept: exact JP OR same reading as sentence romaji
+      const readingKana = sentenceReadingHira(s); // e.g., おねがいします
       const correct =
         norm(s.jp || "") === norm(got) ||
         H.toHira(got) === readingKana ||
@@ -1210,7 +1210,7 @@ window.LessonShim = (() => {
   }
 
 
-  /[?]/ ---------- runtime ----------
+  // ---------- runtime ----------
   function bindOnce(el, type, handler, key = "lsBound") {
     if (!el) return;
     const tag = `${key}:${type}`;
@@ -1253,9 +1253,9 @@ window.LessonShim = (() => {
 
     const onNext = () => { state.stepIndex = Math.min(state.stepIndex + 1, steps.length - 1); render(); };
     const onPrev = () => { state.stepIndex = Math.max(state.stepIndex - 1, 0); render(); };
-    /[?]/ --- add below your other handlers inside run() ---
+    // --- add below your other handlers inside run() ---
 
-    /[?]/ NEW: initialize slider UI to current rate
+    // NEW: initialize slider UI to current rate
     const initSpeedUI = () => {
       const el = q(map?.controls?.speed);
       const label = q(map?.controls?.speedVal);
@@ -1264,7 +1264,7 @@ window.LessonShim = (() => {
       if (label) label.textContent = `${rate.toFixed(1)}×`;
     };
 
-    /[?]/ NEW: handle slider input
+    // NEW: handle slider input
     const onSpeed = (e) => {
       const v = parseFloat(e?.target?.value);
       const rate = Number.isFinite(v) ? v : 1;
@@ -1273,10 +1273,10 @@ window.LessonShim = (() => {
       if (label) label.textContent = `${rate.toFixed(1)}×`;
     };
 
-    /[?]/ NEW: bind slider
+    // NEW: bind slider
     bindOnce(q(map?.controls?.speed), "input", onSpeed);
 
-    /[?]/ call once so UI reflects current rate
+    // call once so UI reflects current rate
     initSpeedUI();
 
     render();
@@ -1335,4 +1335,3 @@ window.LessonShim = (() => {
 
   return { start: run };
 })();
-
