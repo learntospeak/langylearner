@@ -1,0 +1,668 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#111111">
+    <title>KanaReader ΓÇö Lesson</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
+    <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
+    <style type="text/tailwindcss">
+        .btn { @apply px-3 py-2 rounded font-medium transition focus:outline-none focus:ring; }
+  .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-300; }
+  .btn-amber   { @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-300; }
+  .btn-dark    { @apply bg-gray-900 text-white hover:bg-black focus:ring-gray-400; }
+  .btn-ghost   { @apply bg-gray-200 hover:bg-gray-300 text-gray-900 focus:ring-gray-300; }
+</style>
+    <style type="text/tailwindcss">
+        .field {
+    @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner
+           focus:outline-none focus:ring-2 focus:ring-blue-400;
+  }
+  .field.ok  { @apply border-green-400 ring-green-300; }
+  .field.bad { @apply border-red-400   ring-red-300; }
+</style>
+    <!--blah-->
+    <style>
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+        }
+    </style>
+
+    <style>
+        .guide-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .guide-row .chip {
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            font-size: 0.95rem;
+        }
+
+        .guide-row .done {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        .guide-row .next {
+            background: #fff7ed;
+            border-color: #fdba74;
+        }
+
+        .guide-row .todo {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .guide-foot {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+    </style>
+
+    <style>
+        /* If your three containers are wrapped in #lesson-wrap, use that. */
+        /* If not, set the parent you want to anchor to as position:relative. */
+        #lesson-wrap {
+            position: relative;
+        }
+
+              /* OR overlay top-right inside #lesson-wrap (uncomment these 3 lines and place #mascot inside #lesson-wrap)
+  #lesson-wrap #mascot { position:absolute; top:8px; right:8px; width:56px; height:72px; }
+  */
+
+        /* Animations (mouth talks when class mascot-talk is set by JS) */
+        #mascot .mouth {
+            transform-origin: 50% 60%;
+        }
+
+        #mascot.mascot-idle {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        #mascot.mascot-talk .mouth {
+            animation: talk 0.25s ease-in-out infinite;
+        }
+
+        #mascot.mascot-celebrate {
+            animation: celebrate 0.6s ease-in-out 0s 2;
+        }
+
+        #mascot.mascot-confused {
+            animation: shake 0.4s ease-in-out 0s 2;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-4px)
+            }
+
+            100% {
+                transform: translateY(0)
+            }
+        }
+
+        @keyframes talk {
+
+            0%,
+            100% {
+                transform: scaleY(0.6)
+            }
+
+            50% {
+                transform: scaleY(1.2)
+            }
+        }
+
+        @keyframes celebrate {
+            0% {
+                transform: translateY(0) scale(1)
+            }
+
+            50% {
+                transform: translateY(-8px) scale(1.05)
+            }
+
+            100% {
+                transform: translateY(0) scale(1)
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0)
+            }
+
+            25% {
+                transform: translateX(-3px)
+            }
+
+            75% {
+                transform: translateX(3px)
+            }
+        }
+    </style>
+    <style>
+        .mora-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        input.mora {
+            width: 2.2rem;
+            text-align: center;
+        }
+    </style>
+
+
+</head>
+
+<body class="bg-white">
+    <div id="page" class="container mx-auto p-6">
+        <nav class="mb-4">
+            <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">≡ƒôû Kana Reference</a>
+        </nav>
+
+
+        <h1 id="pageTitle" class="text-3xl font-bold mb-6">KanaReader ΓÇö Lesson</h1>
+
+        <!-- wrapper that positions the mascot beside the lesson -->
+        <div id="lesson-wrap">
+            <div id="jp-text" class="space-y-3"></div>
+            <div id="en-text" class="text-gray-700 mt-2"></div>
+            <div id="full-romaji" class="text-gray-500 mt-1"></div>
+
+            <!-- mascot lives INSIDE the wrapper -->
+            <!-- Mascot (drop-in, no inline <style> here) -->
+            <div id="mascot" class="w-16 h-20">
+                <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
+                    <!-- BODY -->
+                    <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700"
+                        stroke-width="2" />
+                    <!-- Arms -->
+                    <path d="M28 72 q-10 6 -12 0" fill="none" stroke="#E0A700" stroke-width="3"
+                        stroke-linecap="round" />
+                    <path d="M72 72 q10 6 12 0" fill="none" stroke="#E0A700" stroke-width="3" stroke-linecap="round" />
+                    <!-- Feet -->
+                    <rect x="40" y="98" width="8" height="8" rx="3" fill="#333" />
+                    <rect x="52" y="98" width="8" height="8" rx="3" fill="#333" />
+
+                    <!-- HEAD -->
+                    <circle cx="50" cy="50" r="24" fill="#FFD166" stroke="#E0A700" stroke-width="2" />
+                    <!-- Eyes -->
+                    <circle cx="42" cy="46" r="3" fill="#333" />
+                    <circle cx="58" cy="46" r="3" fill="#333" />
+                    <!-- Cheeks -->
+                    <circle cx="37" cy="54" r="3" fill="#FFB4B4" opacity="0.9" />
+                    <circle cx="63" cy="54" r="3" fill="#FFB4B4" opacity="0.9" />
+                    <!-- Smile (animated mouth group) -->
+                    <g class="mouth">
+                        <path d="M38 58 Q50 66 62 58" fill="none" stroke="#333" stroke-width="3.5"
+                            stroke-linecap="round" />
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+
+
+       
+
+        <style>
+            /* Let users start a vertical scroll on the bar itself */
+            #footer-controls {
+                touch-action: pan-y;
+            }
+
+            /* Fallback padding in case JS doesnΓÇÖt run */
+            #page {
+                padding-bottom: 7rem;
+            }
+        </style>
+
+
+        <style>
+            /* Make wrapper the positioning context */
+            #lesson-wrap {
+                position: relative;
+            }
+
+            /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
+            #lesson-wrap #mascot {
+
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 120px;
+                height: 120px;
+                z-index: 50;
+                pointer-events: auto;
+                user-select: none;
+                cursor: move;
+                touch-action: none;
+            }
+
+
+
+            /* SVG sizing + animations (unchanged) */
+            #lesson-wrap #mascot svg {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+            #lesson-wrap #mascot .mouth {
+                transform-origin: 50% 64%;
+            }
+
+            #lesson-wrap #mascot.mascot-idle {
+                animation: float 3s ease-in-out infinite;
+            }
+
+            #lesson-wrap #mascot.mascot-talk .mouth {
+                animation: talk 0.25s ease-in-out infinite;
+            }
+
+            #lesson-wrap #mascot.mascot-celebrate {
+                animation: celebrate 0.6s ease-in-out 0s 2;
+            }
+
+            #lesson-wrap #mascot.mascot-confused {
+                animation: shake 0.4s ease-in-out 0s 2;
+            }
+        </style>
+    </div>
+     <!-- Bottom toolbar (fixed, wraps on small screens) -->
+        <div id="footer-controls" class="fixed bottom-0 inset-x-0 z-50
+            flex flex-wrap justify-center gap-2
+            px-3 py-2
+            bg-white/95 backdrop-blur border-t
+            pb-[max(0px,env(safe-area-inset-bottom))]">
+
+            <button id="lsPrev" class="btn btn-ghost   flex-1 basis-[120px] max-w-[240px] min-h-10">Γ¼à Prev</button>
+            <button id="lsCheck" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Check</button>
+            <button id="lsReveal" class="btn btn-amber   flex-1 basis-[120px] max-w-[240px] min-h-10">Reveal</button>
+            <button id="lsNext" class="btn btn-dark    flex-1 basis-[120px] max-w-[240px] min-h-10">Next Γ₧í</button>
+
+            <button id="lsToggleRomaji"
+                class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
+            <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">≡ƒöè
+                Speak</button>
+
+            <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
+                w-full sm:w-auto justify-center">
+                Speed
+                <input id="lsSpeed" type="range" min="0.6" max="1.4" step="0.1" value="1" class="w-32" />
+                <span id="lsSpeedVal">1.0├ù</span>
+            </label>
+        </div>
+    <!-- Kana Reference Modal -->
+    <div id="kanaModal" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50"></div>
+
+        <!-- Dialog -->
+        <div role="dialog" aria-modal="true" aria-labelledby="kanaTitle"
+            class="relative mx-auto my-8 w-[min(95vw,1000px)] max-h-[85vh] overflow-hidden rounded-xl bg-white shadow-xl">
+            <header class="flex items-center justify-between px-4 py-3 border-b">
+                <h2 id="kanaTitle" class="text-lg font-semibold">Kana Reference</h2>
+                <button id="closeKanaModal" class="btn btn-ghost" aria-label="Close">Γ£ò</button>
+            </header>
+
+            <!-- Tabs -->
+            <div class="px-4 pt-3">
+                <div class="inline-flex rounded bg-gray-100 p-1">
+                    <button data-tab="hira" class="tab-btn px-3 py-1 rounded bg-white shadow text-sm">Hiragana</button>
+                    <button data-tab="kata" class="tab-btn px-3 py-1 rounded text-sm">Katakana</button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-4 overflow-auto max-h-[70vh]">
+                <!-- Hiragana -->
+                <div id="tab-hira">
+                    <table class="w-full table-fixed text-center text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="p-2 border"></th>
+                                <th class="p-2 border">a</th>
+                                <th class="p-2 border">i</th>
+                                <th class="p-2 border">u</th>
+                                <th class="p-2 border">e</th>
+                                <th class="p-2 border">o</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th class="p-2 border">-</th>
+                                <td class="p-2 border">πüé</td>
+                                <td class="p-2 border">πüä</td>
+                                <td class="p-2 border">πüå</td>
+                                <td class="p-2 border">πüê</td>
+                                <td class="p-2 border">πüè</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">k</th>
+                                <td class="p-2 border">πüï</td>
+                                <td class="p-2 border">πüì</td>
+                                <td class="p-2 border">πüÅ</td>
+                                <td class="p-2 border">πüæ</td>
+                                <td class="p-2 border">πüô</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">s</th>
+                                <td class="p-2 border">πüò</td>
+                                <td class="p-2 border">πüù</td>
+                                <td class="p-2 border">πüÖ</td>
+                                <td class="p-2 border">πü¢</td>
+                                <td class="p-2 border">πü¥</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">t</th>
+                                <td class="p-2 border">πüƒ</td>
+                                <td class="p-2 border">πüí</td>
+                                <td class="p-2 border">πüñ</td>
+                                <td class="p-2 border">πüª</td>
+                                <td class="p-2 border">πü¿</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td class="p-2 border">πü¬</td>
+                                <td class="p-2 border">πü½</td>
+                                <td class="p-2 border">πü¼</td>
+                                <td class="p-2 border">πü¡</td>
+                                <td class="p-2 border">πü«</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">h</th>
+                                <td class="p-2 border">πü»</td>
+                                <td class="p-2 border">πü▓</td>
+                                <td class="p-2 border">πü╡</td>
+                                <td class="p-2 border">πü╕</td>
+                                <td class="p-2 border">πü╗</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">m</th>
+                                <td class="p-2 border">πü╛</td>
+                                <td class="p-2 border">πü┐</td>
+                                <td class="p-2 border">πéÇ</td>
+                                <td class="p-2 border">πéü</td>
+                                <td class="p-2 border">πéé</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">y</th>
+                                <td class="p-2 border">πéä</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border">πéå</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border">πéê</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">r</th>
+                                <td class="p-2 border">πéë</td>
+                                <td class="p-2 border">πéè</td>
+                                <td class="p-2 border">πéï</td>
+                                <td class="p-2 border">πéî</td>
+                                <td class="p-2 border">πéì</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">w</th>
+                                <td class="p-2 border">πéÅ</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border">πéÆ</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td colspan="5" class="p-2 border">πéô</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Katakana -->
+                <div id="tab-kata" class="hidden">
+                    <table class="w-full table-fixed text-center text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="p-2 border"></th>
+                                <th class="p-2 border">a</th>
+                                <th class="p-2 border">i</th>
+                                <th class="p-2 border">u</th>
+                                <th class="p-2 border">e</th>
+                                <th class="p-2 border">o</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th class="p-2 border">-</th>
+                                <td class="p-2 border">πéó</td>
+                                <td class="p-2 border">πéñ</td>
+                                <td class="p-2 border">πéª</td>
+                                <td class="p-2 border">πé¿</td>
+                                <td class="p-2 border">πé¬</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">k</th>
+                                <td class="p-2 border">πé½</td>
+                                <td class="p-2 border">πé¡</td>
+                                <td class="p-2 border">πé»</td>
+                                <td class="p-2 border">πé▒</td>
+                                <td class="p-2 border">πé│</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">s</th>
+                                <td class="p-2 border">πé╡</td>
+                                <td class="p-2 border">πé╖</td>
+                                <td class="p-2 border">πé╣</td>
+                                <td class="p-2 border">πé╗</td>
+                                <td class="p-2 border">πé╜</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">t</th>
+                                <td class="p-2 border">πé┐</td>
+                                <td class="p-2 border">πâü</td>
+                                <td class="p-2 border">πâä</td>
+                                <td class="p-2 border">πâå</td>
+                                <td class="p-2 border">πâê</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td class="p-2 border">πâè</td>
+                                <td class="p-2 border">πâï</td>
+                                <td class="p-2 border">πâî</td>
+                                <td class="p-2 border">πâì</td>
+                                <td class="p-2 border">πâÄ</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">h</th>
+                                <td class="p-2 border">πâÅ</td>
+                                <td class="p-2 border">πâÆ</td>
+                                <td class="p-2 border">πâò</td>
+                                <td class="p-2 border">πâÿ</td>
+                                <td class="p-2 border">πâ¢</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">m</th>
+                                <td class="p-2 border">πâ₧</td>
+                                <td class="p-2 border">πâƒ</td>
+                                <td class="p-2 border">πâá</td>
+                                <td class="p-2 border">πâí</td>
+                                <td class="p-2 border">πâó</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">y</th>
+                                <td class="p-2 border">πâñ</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border">πâª</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border">πâ¿</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">r</th>
+                                <td class="p-2 border">πâ⌐</td>
+                                <td class="p-2 border">πâ¬</td>
+                                <td class="p-2 border">πâ½</td>
+                                <td class="p-2 border">πâ¼</td>
+                                <td class="p-2 border">πâ¡</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">w</th>
+                                <td class="p-2 border">πâ»</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border text-gray-300">ΓÇó</td>
+                                <td class="p-2 border">πâ▓</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td colspan="5" class="p-2 border">πâ│</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const modal = document.getElementById('kanaModal');
+            const open = document.getElementById('openKanaModal');
+            const close = document.getElementById('closeKanaModal');
+            const tabs = Array.from(document.querySelectorAll('.tab-btn'));
+            const hira = document.getElementById('tab-hira');
+            const kata = document.getElementById('tab-kata');
+
+            function showModal(e) {
+                // allow Cmd/Ctrl-click to open reference.html in a new tab
+                if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) return;
+                if (e) e.preventDefault();
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+            function hideModal() {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+            function switchTab(which) {
+                tabs.forEach(b => b.classList.toggle('bg-white', b.dataset.tab === which));
+                hira.classList.toggle('hidden', which !== 'hira');
+                kata.classList.toggle('hidden', which !== 'kata');
+            }
+
+            open?.addEventListener('click', showModal);
+            close?.addEventListener('click', hideModal);
+            modal?.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideModal(); });
+            tabs.forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+            switchTab('hira'); // default tab
+        })();
+    </script>
+
+
+
+    <!-- Libraries / App scripts -->
+<!-- Local Wanakana (vendor) -->
+<script src="./modules/wanakana.min.js"></script>
+<!-- Fallback shim (noop if wanakana already loaded) -->
+<script type="module" src="./modules/wanakana-lite.js"></script>
+
+<script type="module" src="./lesson-shim.js?v=12"></script>
+
+<!-- Your module that renders/boots the lesson -->
+<script type="module" src="./lesson-loader.js?v=8"></script>
+
+<!-- Optional mascot controller (if you actually use it) -->
+<script type="module" src="./modules/mascot-controller.js?v=2"></script>
+
+<script>
+(function () {
+  // If the footer sits inside #page, hoist it to <body> so transforms/overflow on
+  // containers can't affect its fixed positioning.
+  const f = document.getElementById('footer-controls');
+  if (f && f.parentElement !== document.body) {
+    document.body.appendChild(f);
+  }
+})();
+</script>
+
+
+<!-- Page helpers (keep this last) -->
+<script>
+(function () {
+  addEventListener('pageshow', () => document.body.classList.remove('overflow-hidden'));
+
+  const page = document.getElementById('page');
+  const footer = document.getElementById('footer-controls');
+  if (!page || !footer) return;
+
+  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-area-inset-bottom)');
+  const apply = () => {
+    const h = footer.offsetHeight || 0;
+    page.style.paddingBottom = supportsEnv
+      ? `calc(${h}px + env(safe-area-inset-bottom))`
+      : `${h + 16}px`;
+  };
+
+  // Γ£à expose to lesson-shim.js
+  window.__padFooter = apply;
+
+  apply();
+  addEventListener('load', apply, { once: true });
+  addEventListener('resize', apply);
+  // Γ£à fix rotation not applying
+  window.addEventListener('orientationchange', () => setTimeout(apply, 60));
+
+  if ('ResizeObserver' in window) new ResizeObserver(apply).observe(footer);
+  footer.style.touchAction = 'pan-y';
+})();
+</script>
+
+<script>
+  (function killSceneToggles(){
+    const zap = () => {
+      document.querySelectorAll('#sceneAuto, #sceneShowRomaji')
+        .forEach(i => i.closest('label')?.remove());
+    };
+    // run now and after scene render
+    zap();
+    document.addEventListener('lesson:rendered', zap, { once:true });
+    // or poll briefly if you don't dispatch events
+    let t = setInterval(() => { zap(); if (!document.querySelector('#sceneAuto')) clearInterval(t); }, 150);
+  })();
+</script>
+
+
+<style>
+  body[data-step="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
+</style>
+<style>
+  body[data-step="dialogue"] #page { scroll-padding-bottom: 7rem; }
+</style>
+
+
+</body>
+</html>
