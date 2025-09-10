@@ -180,7 +180,8 @@
                 "casual"
               ]
             }
-          ]
+          ],
+          "manga": { "minH": 280, "pageSize": 9 }
         },
         {
           "type": "phrase_drill",
