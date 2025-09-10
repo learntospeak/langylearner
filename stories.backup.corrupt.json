@@ -1,70 +1,69 @@
-﻿{
+{
   "lessons": [
     {
       "id": "greetings-001",
       "title": "First Greetings",
       "est_minutes": 8,
       "sentences": [
-        { "sid": "S1", "jp": "ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™ã€‚", "romaji_full": "ohayou gozaimasu.", "en": "Good morning." },
-        { "sid": "S2", "jp": "ã“ã‚“ã«ã¡ã¯ã€‚", "romaji_full": "konnichiwa.", "en": "Hello." },
-        { "sid": "S3", "jp": "ã“ã‚“ã°ã‚“ã¯ã€‚", "romaji_full": "konbanwa.", "en": "Good evening." },
-        { "sid": "S4", "jp": "ã¯ã˜ã‚ã¾ã—ã¦ã€‚", "romaji_full": "hajimemashite.", "en": "Nice to meet you." },
-        { "sid": "S5", "jp": "ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™ã€‚", "romaji_full": "yoroshiku onegaishimasu.", "en": "Please treat me well." },
-        { "sid": "S6", "jp": "ã•ã‚ˆã†ãªã‚‰ã€‚", "romaji_full": "sayounara.", "en": "Goodbye." }
+        { "sid": "S1", "jp": "おはようございます。", "romaji_full": "ohayou gozaimasu.", "en": "Good morning." },
+        { "sid": "S2", "jp": "こんにちは。", "romaji_full": "konnichiwa.", "en": "Hello." },
+        { "sid": "S3", "jp": "こんばんは。", "romaji_full": "konbanwa.", "en": "Good evening." },
+        { "sid": "S4", "jp": "はじめまして。", "romaji_full": "hajimemashite.", "en": "Nice to meet you." },
+        { "sid": "S5", "jp": "よろしくお願いします。", "romaji_full": "yoroshiku onegaishimasu.", "en": "Please treat me well." },
+        { "sid": "S6", "jp": "さようなら。", "romaji_full": "sayounara.", "en": "Goodbye." }
       ],
       "steps": [
         { "type": "read_listen", "item_refs": ["S1", "S2", "S3", "S4", "S5", "S6"] },
-        { "type": "translate_to_jp", "item_refs": ["S1", "S2", "S3"] },
+        { "type": "translate_to_jp", "item_refs": ["S1", "S2", "S3", "S4", "S5", "S6"] },
         {
           "type": "cloze",
           "items": [
-            { "ref": "S2", "blanks": ["ã“ã‚“ã«ã¡ã¯"] },
-            { "ref": "S4", "blanks": ["ã¯ã˜ã‚ã¾ã—ã¦"] },
-            { "ref": "S5", "blanks": ["ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™"] },
-            { "ref": "S1", "blanks": ["ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™"] },
-            { "ref": "S3", "blanks": ["ã“ã‚“ã°ã‚“ã¯"] },
-            { "ref": "S6", "blanks": ["ã•ã‚ˆã†ãªã‚‰"] }
+            { "ref": "S2", "blanks": ["こんにちは"] },
+            { "ref": "S4", "blanks": ["はじめまして"] },
+            { "ref": "S5", "blanks": ["よろしく", "お願いします"] },
+            { "ref": "S1", "blanks": ["おはようございます"] },
+            { "ref": "S3", "blanks": ["こんばんは"] },
+            { "ref": "S6", "blanks": ["さようなら"] }
           ]
         },
         {
           "type": "variations",
           "variations": [
-            { "tags": ["polite", "morning"], "en": "Good morning (polite).", "jp": "ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™", "romaji": "ohayou gozaimasu", "img": "images/phase/ohayou goziamasu good morning image.png", "fit": "contain", "noBubble": true },
-            { "tags": ["casual", "morning"], "en": "Morning! (casual).", "jp": "ãŠã¯ã‚ˆã†", "romaji": "ohayou", "img": "images/phase/konnichiha.png", "fit": "contain", "noBubble": true },
-            { "tags": ["evening"], "en": "Good evening.", "jp": "ã“ã‚“ã°ã‚“ã¯", "romaji": "konbanwa", "img": "images/phase/kondanha.png", "fit": "contain", "noBubble": true },
-            { "tags": ["first_meeting", "polite"], "en": "Nice to meet you (first time).", "jp": "ã¯ã˜ã‚ã¾ã—ã¦", "romaji": "hajimemashite", "img": "images/phase/haji.png", "fit": "contain", "noBubble": true },
-            { "tags": ["first_meeting", "polite", "work"], "en": "Please treat me well. (set phrase)", "jp": "ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™", "romaji": "yoroshiku onegaishimasu", "img": "images/phase/yoroshiku onegaishimasu.png", "fit": "contain", "noBubble": true, "bgSize": "contain", "bgPos": "center top" },
-            { "tags": ["phone"], "en": "Hello? (on the phone).", "jp": "ã‚‚ã—ã‚‚ã—", "romaji": "moshimoshi", "img": "images/phase/moshi.png", "fit": "contain", "noBubble": true, "bgPos": "center 18px", "bgColor": "#ffffff" },
-            { "tags": ["work", "polite"], "en": "Hello (workplace greeting).", "jp": "ãŠç–²ã‚Œæ§˜ã§ã™", "romaji": "otsukaresama desu", "img": "images/phase/otsukaremsama desu.png", "fit": "contain", "noBubble": true },
-            { "tags": ["casual"], "en": "Hey / thanks (very casual).", "jp": "ã©ã†ã‚‚", "romaji": "doumo", "img": "images/phase/duomo.png", "fit": "contain", "noBubble": true }
+            { "tags": ["polite", "morning"], "en": "Good morning (polite).", "jp": "おはようございます。", "romaji": "ohayou gozaimasu" },
+            { "tags": ["casual", "morning"], "en": "Morning! (casual).", "jp": "おはよう。", "romaji": "ohayou" },
+            { "tags": ["evening"], "en": "Good evening.", "jp": "こんばんは。", "romaji": "konbanwa" },
+            { "tags": ["first_meeting", "polite"], "en": "Nice to meet you (first time).", "jp": "はじめまして。", "romaji": "hajimemashite" },
+            { "tags": ["first_meeting", "polite", "work"], "en": "Please treat me well. (set phrase)", "jp": "よろしくお願いします。", "romaji": "yoroshiku onegaishimasu" },
+            { "tags": ["phone"], "en": "Hello? (on the phone).", "jp": "もしもし。", "romaji": "moshimoshi" },
+            { "tags": ["work", "polite"], "en": "Hello (workplace greeting).", "jp": "お疲れ様です。", "romaji": "otsukaresama desu" },
+            { "tags": ["casual"], "en": "Hey / thanks (very casual).", "jp": "どうも。", "romaji": "doumo" }
           ],
-          "manga": { "minH": 280, "pageSize": 6 }
+          "manga": { "minH": 280, "pageSize": 9 }
         },
         {
           "type": "phrase_drill",
           "pairs": [
             {
               "alts": [
-                { "jp": "ã©ã†ã‚‚", "en": "Hey. (very casual)", "romaji": "doumo" },
-                { "jp": "ãŠç–²ã‚Œæ§˜ã§ã™", "en": "Hello. (workplace)", "romaji": "otsukaresama desu" }
+                { "jp": "どうも。", "en": "Hey. (very casual)", "romaji": "doumo" },
+                { "jp": "お疲れ様です。", "en": "Hello. (workplace)", "romaji": "otsukaresama desu" }
               ],
               "en": "Hello (daytime).",
-              "jp": "ã“ã‚“ã«ã¡ã¯",
+              "jp": "こんにちは。",
               "romaji": "konnichiwa"
             },
             {
-              "alts": [ { "jp": "ã¯ã˜ã‚ã¾ã—ã¦ï¼", "en": "Nice to meet you! (casual)", "romaji": "hajimemashite!" } ],
+              "alts": [ { "jp": "はじめまして！", "en": "Nice to meet you! (casual)", "romaji": "hajimemashite!" } ],
               "en": "Nice to meet you.",
-              "jp": "ã¯ã˜ã‚ã¾ã—ã¦",
+              "jp": "はじめまして。",
               "romaji": "hajimemashite"
             },
             {
-              "alts": [ { "jp": "ã‚ˆã‚ã—ãï¼", "en": "Please be kind! (casual)", "romaji": "yoroshiku!" } ],
               "en": "Please treat me well. (set phrase)",
-              "jp": "ã‚ˆã‚ã—ããŠé¡˜ã„ã—ã¾ã™",
+              "jp": "よろしくお願いします。",
               "romaji": "yoroshiku onegaishimasu"
             },
-            { "jp": "ã‚‚ã—ã‚‚ã—", "en": "Hello? (on the phone)", "romaji": "moshimoshi" }
+            { "jp": "もしもし。", "en": "Hello? (on the phone)", "romaji": "moshimoshi" }
           ]
         },
         { "type": "guided_convo", "topic": "greetings", "seed": "konnichiwa", "level": "A1" },
@@ -74,4 +73,3 @@
     }
   ]
 }
-

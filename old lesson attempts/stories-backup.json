@@ -23,7 +23,7 @@
     ],
     "kanji_notes": [],
     "grammar_notes": [
-      "‘Ohayou’ is casual. Adding ‘gozaimasu’ makes it polite, suitable for workplaces or formal settings."
+      "'Ohayou' is casual. Adding 'gozaimasu' makes it polite, suitable for workplaces or formal settings."
     ]
   },
   {
@@ -36,7 +36,7 @@
     ],
     "kanji_notes": [],
     "grammar_notes": [
-      "Used in the evening, similar to ‘good evening’ in English."
+      "Used in the evening, similar to 'good evening' in English."
     ]
   },
   {
@@ -49,7 +49,7 @@
     ],
     "kanji_notes": [],
     "grammar_notes": [
-      "A formal or final parting. For everyday casual goodbyes, Japanese people often say ‘じゃあね’ or ‘バイバイ’."
+      "A formal or final parting. For everyday casual goodbyes, people often say 'じゃあね' or 'またね'."
     ]
   },
   {
@@ -62,7 +62,7 @@
     ],
     "kanji_notes": [],
     "grammar_notes": [
-      "Used only the first time you meet someone. Literally means ‘(we are) beginning’."
+      "Used only the first time you meet someone."
     ]
   },
   {
@@ -75,16 +75,15 @@
       { "jp": "よろしく", "romaji": "yoroshiku", "en": "Kindly / favorably" },
       { "jp": "お願いします", "romaji": "onegaishimasu", "en": "I humbly request" }
     ],
-    "kanji_notes": [
-      { "kanji": "願", "meaning": "wish/request", "onyomi": "ガン", "kunyomi": "ねが(う)" }
-    ],
+    "kanji_notes": [],
     "grammar_notes": [
-      "A common phrase used after ‘hajimemashite’ when meeting someone new or starting cooperation. It shows respect and humility."
+      "Common after 'hajimemashite' when meeting someone new or starting cooperation."
     ]
   },
   {
     "title": "Greetings - 07",
     "jp": "おやすみなさい。",
     "romaji_full": "Oyasuminasai.",
-    "en": "Good night.",
+    "en": "Good night."
   }
+]
