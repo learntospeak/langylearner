@@ -1,7 +1,7 @@
-// lesson-shim.js — with Pronounce + Romaji toggle
+// lesson-shim.js ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â with Pronounce + Romaji toggle
 window.LessonShim = (() => {
   // ---------- utils ----------
-  const norm = (s) => (s || "").replace(/[。．、，！？!\?()\[\]{}'"「」『』・…：:；;\-＿_〜~ー\s]/g, "").toLowerCase();
+  const norm = (s) => (s || "").replace(/[ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼Ãƒâ€¦Ã‚Â¸!\?()\[\]{}'"ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â»ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼Ãƒâ€¦Ã‚Â¡:ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âº;\-ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼Ãƒâ€šÃ‚Â¿_ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“~ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â¼\s]/g, "").toLowerCase();
   const q = (sel) => (sel ? document.querySelector(sel) : null);
   const qa = (sel) => (sel ? Array.from(document.querySelectorAll(sel)) : []);
 
@@ -30,18 +30,18 @@ window.LessonShim = (() => {
       const exp = sentence?.romaji_full ? H.toHira(sentence.romaji_full) : H.toHira(expectedJP);
 
       if (!gotRaw || !gotRaw.trim())
-        return `Type your answer. Hint: starts with 「${exp.slice(0, 2)}」`;
+        return `Type your answer. Hint: starts with ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢${exp.slice(0, 2)}ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â`;
 
       // Common pitfalls
-      if (expectedJP.includes("こんにちは") && got.includes("こんにちわ"))
-        return "Use 「は」 (ha) not 「わ」 in こんにちは.";
+      if (expectedJP.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯") && got.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â"))
+        return "Use ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â (ha) not ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â in ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯.";
 
-      if (/願/.test(expectedJP) && got === "おねがいします")
-        return ""; // accept kana reading for 願
+      if (/ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œ/.test(expectedJP) && got === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢")
+        return ""; // accept kana reading for ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œ
 
-      if (exp.includes("っ") && !got.includes("っ")) {
-        const idx = exp.indexOf("っ"), next = exp[idx + 1] || "";
-        return `Add a small 「っ」 before 「${next}」.`;
+      if (exp.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£") && !got.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£")) {
+        const idx = exp.indexOf("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£"), next = exp[idx + 1] || "";
+        return `Add a small ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â before ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢${next}ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â.`;
       }
 
       if (got.length !== exp.length)
@@ -50,18 +50,18 @@ window.LessonShim = (() => {
           : `You have ${got.length - exp.length} extra character(s).`;
 
       const i = H.firstDiff(got, exp);
-      if (i >= 0) return `Check character ${i + 1}: should be 「${exp[i]}」.`;
+      if (i >= 0) return `Check character ${i + 1}: should be ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢${exp[i]}ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â.`;
 
       return "Check particles/spelling.";
     },
   };
   // --- MORA HELPERS ---
-  const SMALL_KANA = "ゃゅょャュョぁぃぅぇぉァィゥェォゎヮ";
+  const SMALL_KANA = "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â¥ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¥ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â©ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â®";
   function splitMora(str = "") {
     const a = [...str]; const out = [];
     for (let i = 0; i < a.length; i++) {
       const c = a[i], n = a[i + 1];
-      if (c === "っ" || c === "ッ" || c === "ー") { out.push(c); continue; }
+      if (c === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£" || c === "ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€ Ã¢â‚¬â„¢" || c === "ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â¼") { out.push(c); continue; }
       if (n && SMALL_KANA.includes(n)) { out.push(c + n); i++; continue; }
       out.push(c);
     }
@@ -88,7 +88,7 @@ window.LessonShim = (() => {
     inp._guideProgress = inp._guideProgress || 0;
     inp._guideComp = !!inp._guideComp;
 
-    const kanaOnly = s => /^[\p{sc=Hiragana}\p{sc=Katakana}ー]+$/u.test(s || "");
+    const kanaOnly = s => /^[\p{sc=Hiragana}\p{sc=Katakana}ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â¼]+$/u.test(s || "");
 
     const draw = (p) => {
       const moras = splitMora(inp._guideTarget);
@@ -98,7 +98,7 @@ window.LessonShim = (() => {
       }).join('');
       const next = splitMora(inp._guideTarget)[p] || '';
       const r = next ? (window.wanakana ? wanakana.toRomaji(next) : '') : '';
-      foot.textContent = next ? `Next: ${next} (${r})` : '✓ Complete';
+      foot.textContent = next ? `Next: ${next} (${r})` : 'ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Complete';
     };
 
     const render = () => {
@@ -126,11 +126,11 @@ window.LessonShim = (() => {
   // === Canonical readings + helpers (ONE copy only) ===
   // === Canonical readings + helpers (ONE copy only) ===
   const READINGS = {
-    "お願いします": "おねがいします",
-    "お疲れ様です": "おつかれさまです",
-    "お疲れ様": "おつかれさま",
-    "疲れ様": "つかれさま"
-    // add more as needed…
+    "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢": "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢",
+    "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â§ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â²ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¦Ãƒâ€šÃ‚Â§Ãƒâ€¹Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â§ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢": "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¤ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â§ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢",
+    "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â§ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â²ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¦Ãƒâ€šÃ‚Â§Ãƒâ€¹Ã…â€œ": "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¤ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾",
+    "ÃƒÆ’Ã‚Â§ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â²ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¦Ãƒâ€šÃ‚Â§Ãƒâ€¹Ã…â€œ": "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¤ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾"
+    // add more as neededÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
   };
 
 
@@ -191,48 +191,48 @@ window.LessonShim = (() => {
   // Split to mora (you already have splitMora/toHira above)
   function normalizeKanaToExpected(typedRaw, expectedRaw) {
     // strip spaces/punct and compare on kana
-    const clean = s => toHira((s || "").replace(/[^\p{sc=Hiragana}\p{sc=Katakana}ー]+/gu, ""));
+    const clean = s => toHira((s || "").replace(/[^\p{sc=Hiragana}\p{sc=Katakana}ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â¼]+/gu, ""));
     const t = splitMora(clean(typedRaw));
     const e = splitMora(clean(expectedRaw));
 
     const out = [];
     let i = 0, j = 0;
 
-    const bigOf = { "ゃ": "や", "ゅ": "ゆ", "ょ": "よ" };
+    const bigOf = { "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢": "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾", "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦": "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ", "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡": "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¹Ã¢â‚¬Â " };
 
     while (i < e.length && j < t.length) {
       const em = e[i], tm = t[j];
 
       if (tm === em) { out.push(tm); i++; j++; continue; }
 
-      // Particles: は/へ/を typed as わ/え/お
-      if ((em === "は" && tm === "わ") || (em === "へ" && tm === "え") || (em === "を" && tm === "お")) {
+      // Particles: ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¸/ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ typed as ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¹Ã¢â‚¬Â /ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â 
+      if ((em === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯" && tm === "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â") || (em === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¸" && tm === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¹Ã¢â‚¬Â ") || (em === "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢" && tm === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ")) {
         out.push(em); i++; j++; continue;
       }
 
-      // Small ya/yu/yo: き + や → きゃ (when expected has small)
-      const m = em.match(/^([きぎしじちぢにひびぴみり])([ゃゅょ])$/);
+      // Small ya/yu/yo: ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â + ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚ÂÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢ (when expected has small)
+      const m = em.match(/^([ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â½ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¹Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â²ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â³ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â´ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¿ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¦Ã‚Â ])([ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡])$/);
       if (m && tm === m[1] && t[j + 1] === bigOf[m[2]]) {
         out.push(em); i++; j += 2; continue;
       }
 
-      // N-ambiguity: ん + い → に ; ん + (や/ゆ/よ) → にゃ/にゅ/にょ
-      if (em === "に" && tm === "ん" && t[j + 1] === "い") {
-        out.push("に"); i++; j += 2; continue;
+      // N-ambiguity: ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ + ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â« ; ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ + (ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾/ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â /ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¹Ã¢â‚¬Â ) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡
+      if (em === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«" && tm === "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ" && t[j + 1] === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾") {
+        out.push("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«"); i++; j += 2; continue;
       }
-      if (["にゃ", "にゅ", "にょ"].includes(em) && tm === "ん" && ["や", "ゆ", "よ"].includes(t[j + 1])) {
-        const want = { "にゃ": "や", "にゅ": "ゆ", "にょ": "よ" }[em];
+      if (["ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢", "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦", "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡"].includes(em) && tm === "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ" && ["ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾", "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ", "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¹Ã¢â‚¬Â "].includes(t[j + 1])) {
+        const want = { "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€ Ã¢â‚¬â„¢": "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾", "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦": "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ", "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡": "ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€¹Ã¢â‚¬Â " }[em];
         if (t[j + 1] === want) { out.push(em); i++; j += 2; continue; }
       }
 
-      // Small っ missing: if expected has っ and next typed mora matches next expected
-      if (em === "っ" && t[j] === e[i + 1]) {
-        out.push("っ"); i++; continue;
+      // Small ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£ missing: if expected has ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£ and next typed mora matches next expected
+      if (em === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£" && t[j] === e[i + 1]) {
+        out.push("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â£"); i++; continue;
       }
 
-      // Long vowel normalization: おお vs おう (follow expected)
-      if (em === "う" && out[out.length - 1] === "お" && tm === "お") {
-        out.push("う"); i++; j++; continue;
+      // Long vowel normalization: ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â  vs ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  (follow expected)
+      if (em === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â " && out[out.length - 1] === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â " && tm === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ") {
+        out.push("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â "); i++; j++; continue;
       }
 
       // Default: keep typed and advance to avoid locking
@@ -248,7 +248,7 @@ window.LessonShim = (() => {
   // Let WanaKana IME convert first; then, once the value is kana-only,
   // normalize toward the expected reading. Runs after the current input frame.
   function attachSmartNormalizer(inp) {
-    const kanaOnly = s => /^[\p{sc=Hiragana}\p{sc=Katakana}ー]+$/u.test(s || "");
+    const kanaOnly = s => /^[\p{sc=Hiragana}\p{sc=Katakana}ÃƒÆ’Ã‚Â£Ãƒâ€ Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â¼]+$/u.test(s || "");
     const run = () => {
       const target = toHira(inp.dataset.expectedKana || "");
       const val = inp.value || "";
@@ -270,8 +270,8 @@ window.LessonShim = (() => {
 
 
   function toHira(s) { return (window.wanakana ? wanakana.toHiragana(s || "") : (s || "")); }
-  // Convert romaji -> ひらがな and fix greeting edge cases on each keystroke
-  // Convert romaji -> ひらがな and fix greeting edge cases per keystroke
+  // Convert romaji -> ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â²ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Âª and fix greeting edge cases on each keystroke
+  // Convert romaji -> ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â²ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Âª and fix greeting edge cases per keystroke
 
   // After WanaKana converts, gently fix greeting edge cases only.
   function attachGreetingNormalizer(inp, expectedJP = "") {
@@ -280,12 +280,12 @@ window.LessonShim = (() => {
       let after = before;
 
       // safe global fixes
-      after = after.replace(/こんいちわ/g, "こんにちは");
-      after = after.replace(/こんばんわ/g, "こんばんは");
+      after = after.replace(/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/g, "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯");
+      after = after.replace(/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/g, "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯");
 
-      // enforce は only when that phrase is expected
-      if (expectedJP.includes("こんにちは")) after = after.replace(/こんにちわ/g, "こんにちは");
-      if (expectedJP.includes("こんばんは")) after = after.replace(/こんばんわ/g, "こんばんは");
+      // enforce ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯ only when that phrase is expected
+      if (expectedJP.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯")) after = after.replace(/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/g, "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯");
+      if (expectedJP.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯")) after = after.replace(/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/g, "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯");
 
       if (after !== before) {
         inp.value = after;
@@ -301,7 +301,7 @@ window.LessonShim = (() => {
   // Insert a disambiguating space after a single romaji "n" before a vowel/ya/yu/yo
   function bindNDisambiguator(inp, expectedJP) {
     // Only enable where it matters (prevents breaking words like "nani")
-    const active = /こんにちは|こんばんは/.test(expectedJP || "");
+    const active = /ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯|ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯/.test(expectedJP || "");
     if (!active) return;
 
     inp.addEventListener('beforeinput', (e) => {
@@ -331,8 +331,8 @@ window.LessonShim = (() => {
   function normalizeToExpected(el, expectedJP) {
     if (!expectedJP) return;
     let v = el.value || "";
-    if (expectedJP.includes("こんにちは")) v = v.replace(/こんいちわ|こんにちわ/g, "こんにちは");
-    if (expectedJP.includes("こんばんは")) v = v.replace(/こんばんわ/g, "こんばんは");
+    if (expectedJP.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯")) v = v.replace(/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â|ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/g, "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯");
+    if (expectedJP.includes("ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯")) v = v.replace(/ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â/g, "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯");
     el.value = v;
   }
 
@@ -451,7 +451,7 @@ window.LessonShim = (() => {
       row.className = map?.classes?.item || "lesson-item";
       row.innerHTML = `
         <div class="flex items-start gap-2">
-          <button type="button" class="${map?.classes?.speakBtn || "speak-btn"}" data-jp="${s.jp}">🔊</button>
+          <button type="button" class="${map?.classes?.speakBtn || "speak-btn"}" data-jp="${s.jp}">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â </button>
           <div>
             <div class="${map?.classes?.jp || "jp"}">${s.jp || ""}</div>
             ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${s.romaji_full || ""}</div>` : ""}
@@ -460,11 +460,12 @@ window.LessonShim = (() => {
         </div>
       `;
       listEl.appendChild(row);
+      try { const cls = map?.classes?.speakBtn || "speak-btn"; const btn = row.querySelector('.' + cls); if (btn) btn.textContent = 'Speak'; } catch {}
     });
     // wire per-line speak buttons
     qa(`${map?.containers?.list} .${map?.classes?.speakBtn || "speak-btn"}`)
       .forEach(btn => btn.addEventListener("click", () => Speech.speak(btn.dataset.jp || "", map?.speech || {})));
-    setStatus(map, "Read, listen, and repeat. Use 🔊 or Speak.");
+    setStatus(map, "Read, listen, and repeat. Use Speak.");
     feedback(map, "", true);
   }
 
@@ -504,13 +505,13 @@ window.LessonShim = (() => {
         ensureKanaBindings(inp);
 
         // 2) set the expected kana target for the normalizer
-        const reading = kanjiToReading(exp);            // "お願いします" -> "おねがいします"
+        const reading = kanjiToReading(exp);            // "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢" -> "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢"
         inp.dataset.expectedKana = reading;
 
         // 3) show kana chips + next-hint using the kana reading
         attachKanaGuide(inp, exp, map, reading);
 
-        // 3) gentle greeting fixes (こんにちは / こんばんは), if you added it
+        // 3) gentle greeting fixes (ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â«ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯ / ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â°ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¯), if you added it
         try { inp.placeholder = `Type: ${wanakana.toRomaji(reading)}`; } catch { }
         if (typeof attachGreetingNormalizer === "function") attachGreetingNormalizer(inp, exp);
       });
@@ -538,7 +539,7 @@ window.LessonShim = (() => {
         <div class="${map?.classes?.prompt || "prompt"}">${s.en || ""}</div>
         <input class="${map?.classes?.input || "jp-input"}"
                data-expected="${s.jp || ""}"
-               placeholder="Type in Japanese…" />
+               placeholder="Type in JapaneseÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" />
         ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${s.romaji_full || ""}</div>` : ""}
         <div class="${map?.classes?.hint || "hint"} text-sm text-amber-700 mt-1"></div>
       `;
@@ -577,7 +578,7 @@ window.LessonShim = (() => {
       .map(id => (lesson.sentences || []).find(x => x.sid === id))
       .filter(Boolean)
       .forEach(s => {
-        // Use the sentence reading so kanji like 願 become おねがい…
+        // Use the sentence reading so kanji like ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œ become ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
         const reading = sentenceReadingHira(s);
         const moras = splitMora(reading);
 
@@ -621,11 +622,11 @@ window.LessonShim = (() => {
               inp.classList.remove(map?.classes?.ok || "ok");
               inp.classList.add(map?.classes?.bad || "bad");
               const romaji = window.wanakana ? wanakana.toRomaji(exp) : "";
-              hintEl.textContent = `This syllable is 「${exp}」 (${romaji}).`;
+              hintEl.textContent = `This syllable is ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢${exp}ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â (${romaji}).`;
             }
           });
 
-          // Backspace on empty → reopen previous box
+          // Backspace on empty ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ reopen previous box
           inp.addEventListener("keydown", (e) => {
             if (e.key === "Backspace" && !inp.value) {
               const prev = inputs[idx - 1];
@@ -656,7 +657,7 @@ window.LessonShim = (() => {
       .map(s => ({
         promptEN: s.en || '',
         expectJP: s.jp || '',
-        reading: sentenceReadingHira(s) // e.g., おねがいします
+        reading: sentenceReadingHira(s) // e.g., ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
       }));
 
     // UI
@@ -664,17 +665,18 @@ window.LessonShim = (() => {
     box.className = map?.classes?.item || 'lesson-item';
     box.innerHTML = `
     <div class="${map?.classes?.prompt || 'prompt'} mb-2"></div>
-    <div class="text-sm text-gray-600 mb-2">Say it in Japanese. Click 🎤 and speak.</div>
+    <div class="text-sm text-gray-600 mb-2">Say it in Japanese. Click ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¤ and speak.</div>
     <div class="flex items-center gap-2 mb-2">
-      <button class="btn btn-primary" data-act="speak">🔊 Play Prompt</button>
-      <button class="btn btn-amber"   data-act="rec">🎤 Start</button>
-      <button class="btn btn-ghost"   data-act="skip">⏭ Skip</button>
+      <button class="btn btn-primary" data-act="speak">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â  Play Prompt</button>
+      <button class="btn btn-amber"   data-act="rec">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½Ãƒâ€šÃ‚Â¤ Start</button>
+      <button class="btn btn-ghost"   data-act="skip">ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ Skip</button>
     </div>
     <div class="${map?.classes?.romaji || 'romaji'} text-gray-500 mb-1"></div>
     <div class="${map?.classes?.hint || 'hint'} text-sm text-amber-700 mb-2"></div>
     <div class="${map?.classes?.jp || 'jp'} font-medium"></div>
   `;
     listEl.appendChild(box);
+    try { const s=box.querySelector('[data-act="shuffle"]'); if (s) s.textContent='Shuffle'; const q=box.querySelector('[data-act="quiz"]'); if (q) q.textContent='Quiz me'; const a=box.querySelector('[data-act="showall"]'); if (a) a.textContent='Show all'; } catch {}
 
     const elPrompt = box.querySelector(`.${map?.classes?.prompt || 'prompt'}`);
     const elRomaji = box.querySelector(`.${map?.classes?.romaji || 'romaji'}`);
@@ -702,12 +704,12 @@ window.LessonShim = (() => {
     async function startRec() {
       if (!hasRecognition() || busy) {
         elHint.textContent = hasRecognition()
-          ? 'Recording in progress…'
+          ? 'Recording in progressÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦'
           : 'Speech recognition is not supported in this browser.';
         return;
       }
       busy = true;
-      elHint.textContent = 'Listening…';
+      elHint.textContent = 'ListeningÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦';
       elHeard.textContent = '';
 
       rec = makeRecognition();
@@ -717,7 +719,7 @@ window.LessonShim = (() => {
         const t = turns[idx];
         const score = kanaSim(heard, t.reading); // compare to reading
         const ok = score >= (step.threshold || 0.82);
-        feedback(map, ok ? 'Great pronunciation!' : 'Close—try again.', ok);
+        feedback(map, ok ? 'Great pronunciation!' : 'CloseÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âtry again.', ok);
         mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
         if (ok) {
           idx = Math.min(idx + 1, turns.length);
@@ -738,7 +740,7 @@ window.LessonShim = (() => {
         }
         busy = false;
       };
-      rec.onerror = () => { elHint.textContent = 'Didn’t catch that. Try again.'; busy = false; };
+      rec.onerror = () => { elHint.textContent = 'DidnÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢t catch that. Try again.'; busy = false; };
       rec.onend = () => { if (busy) busy = false; };
       rec.start();
     }
@@ -773,18 +775,19 @@ window.LessonShim = (() => {
     card.className = map?.classes?.item || "lesson-item";
     card.innerHTML = `
     <div class="${map?.classes?.prompt || "prompt"} mb-1"></div>
-    <input class="${map?.classes?.input || "jp-input"}" placeholder="Type in Japanese…" />
+    <input class="${map?.classes?.input || "jp-input"}" placeholder="Type in JapaneseÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦" />
     <div class="${map?.classes?.romaji || "romaji"} text-gray-500 mb-1"></div>
     <div class="mt-2 flex items-center gap-2">
       <button class="btn btn-primary" data-act="check">Check</button>
-      <button class="btn btn-amber"   data-act="speak">🔊 Speak</button>
-      <button class="btn btn-ghost"   data-act="alt">↔ Variations</button>
-      <button class="btn btn-dark"    data-act="next">Next ➡</button>
+      <button class="btn btn-amber"   data-act="speak">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â  Speak</button>
+      <button class="btn btn-ghost"   data-act="alt">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Variations</button>
+      <button class="btn btn-dark"    data-act="next">Next ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¾Ãƒâ€šÃ‚Â¡</button>
     </div>
     <div class="${map?.classes?.hint || "hint"} text-sm text-amber-700 mt-2"></div>
     <div id="altBox" class="hidden mt-3 p-2 border rounded"></div>
   `;
     listEl.appendChild(card);
+    try { const s=card.querySelector('[data-act="speak"]'); if (s) s.textContent='Speak'; const v=card.querySelector('[data-act="alt"]'); if (v) v.textContent='Variations'; const n=card.querySelector('[data-act="next"]'); if (n) n.textContent='Next >'; } catch {}
 
     const elPrompt = card.querySelector(`.${map?.classes?.prompt || "prompt"}`);
     const elInput = card.querySelector("input");
@@ -821,7 +824,7 @@ window.LessonShim = (() => {
         toHira(got) === sentenceReadingHira({ jp: want });
       elInput.classList.toggle(map?.classes?.ok || "ok", ok);
       elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
-      elHint.textContent = ok ? "" : `Hint: starts with 「${toHira(want).slice(0, 2)}」`;
+      elHint.textContent = ok ? "" : `Hint: starts with ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬â„¢${toHira(want).slice(0, 2)}ÃƒÆ’Ã‚Â£ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â`;
       feedback(map, ok ? "Good!" : "Try again.", ok);
       mascotPulse && mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
     }
@@ -891,9 +894,9 @@ window.LessonShim = (() => {
       Explore common ways to say it. Shuffle, listen, then try the context quiz.
     </div>
     <div class="flex items-center gap-2 mb-3">
-      <button class="btn btn-primary" data-act="shuffle">🔀 Shuffle</button>
-      <button class="btn btn-ghost"   data-act="quiz">🧪 Quiz me</button>
-      <button class="btn btn-ghost"   data-act="showall">📚 Show all</button>
+      <button class="btn btn-primary" data-act="shuffle">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ Shuffle</button>
+      <button class="btn btn-ghost"   data-act="quiz">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Âª Quiz me</button>
+      <button class="btn btn-ghost"   data-act="showall">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€¦Ã‚Â¡ Show all</button>
     </div>
     <div id="varList" class="space-y-2"></div>
     <div id="varQuiz" class="hidden mt-4 p-3 border rounded"></div>
@@ -909,12 +912,12 @@ window.LessonShim = (() => {
         const line = document.createElement('div');
         line.className = "p-3 rounded border border-gray-200";
         line.innerHTML = `
-        <div class="text-xs text-gray-500">${(v.tags || []).join(' • ') || 'general'}</div>
+        <div class="text-xs text-gray-500">${(v.tags || []).join(' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ') || 'general'}</div>
         <div class="font-medium">${v.jp}</div>
         <div class="text-gray-500">${v.romaji || ''}</div>
         <div class="text-gray-600">${v.en || ''}</div>
         <div class="mt-1">
-          <button class="btn btn-amber" data-jp="${v.jp}">🔊 Listen</button>
+          <button class="btn btn-amber" data-jp="${v.jp}">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã‚Â  Listen</button>
         </div>
       `;
         line.querySelector('[data-jp]')
@@ -945,7 +948,7 @@ window.LessonShim = (() => {
       <div class="font-medium mb-2">Pick the best phrase for: <em>${targetTag || 'this situation'}</em></div>
       <div class="grid gap-2">
         ${options.map((o, i) => `
-          <button class="btn btn-ghost text-left" data-i="${i}">• ${o.jp}
+          <button class="btn btn-ghost text-left" data-i="${i}">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ${o.jp}
             <span class="block text-xs text-gray-500">${o.romaji || ''}</span>
           </button>`).join('')}
       </div>
@@ -957,7 +960,7 @@ window.LessonShim = (() => {
           const idx = Number(btn.dataset.i);
           const chosen = options[idx];
           const ok = chosen === correct;
-          feedback(map, ok ? 'Nice choice!' : 'Not quite—listen again and try another.', ok);
+          feedback(map, ok ? 'Nice choice!' : 'Not quiteÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âlisten again and try another.', ok);
           mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
           if (ok) setTimeout(startQuiz, 600);
         });
@@ -1026,10 +1029,10 @@ window.LessonShim = (() => {
     box.innerHTML = `
     <div class="mb-2 text-sm text-gray-600">Mini-scene: listen to a short dialogue that mixes English and Japanese.</div>
     <div class="flex items-center gap-2 mb-3">
-      <button class="btn btn-primary" data-act="play">▶ Play</button>
-      <button class="btn btn-ghost"   data-act="pause">⏸ Pause</button>
-      <button class="btn btn-ghost"   data-act="prev">⬅ Prev</button>
-      <button class="btn btn-dark"    data-act="next">Next ➡</button>
+      <button class="btn btn-primary" data-act="play">ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â¶ Play</button>
+      <button class="btn btn-ghost"   data-act="pause">ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¸ Pause</button>
+      <button class="btn btn-ghost"   data-act="prev">ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Prev</button>
+      <button class="btn btn-dark"    data-act="next">Next ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¾Ãƒâ€šÃ‚Â¡</button>
       <label class="ml-2 text-sm flex items-center gap-2">
         <input type="checkbox" id="sceneAuto" class="accent-amber-500" checked />
         Autoplay
@@ -1053,7 +1056,7 @@ window.LessonShim = (() => {
       line.className = "p-3 rounded border border-gray-200";
       line.dataset.idx = String(i);
       line.innerHTML = `
-      <div class="text-xs text-gray-500">${g.speaker} • ${g.lang === 'ja' ? 'Japanese' : 'English'}</div>
+      <div class="text-xs text-gray-500">${g.speaker} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ${g.lang === 'ja' ? 'Japanese' : 'English'}</div>
       <div class="font-medium ${map?.classes?.jp || 'jp'}">${g.lang === 'ja' ? (g.jp || g.text) : g.en}</div>
       ${g.lang === 'ja' && (map?.flags?.showRomaji || showR.checked)
           ? `<div class="${map?.classes?.romaji || 'romaji'} text-gray-500">${g.romaji || ''}</div>` : ''}
@@ -1130,7 +1133,7 @@ window.LessonShim = (() => {
     // preload voices (Chrome sometimes async)
     if ('speechSynthesis' in window) speechSynthesis.getVoices();
 
-    setStatus(map, 'Listen through the mini-scene. Use ▶ or Autoplay.');
+    setStatus(map, 'Listen through the mini-scene. Use ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“Ãƒâ€šÃ‚Â¶ or Autoplay.');
     feedback(map, '', true);
   }
 
@@ -1151,8 +1154,8 @@ window.LessonShim = (() => {
       inputs.forEach(inp => {
         const expected = inp.dataset.answer || "";
         const got = inp.value || "";
-        // Accept kana reading for 願 if typed as おねがいします
-        const acceptAlt = /願/.test(expected) && H.toHira(got) === "おねがいします";
+        // Accept kana reading for ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œ if typed as ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
+        const acceptAlt = /ÃƒÆ’Ã‚Â©Ãƒâ€šÃ‚Â¡Ãƒâ€¹Ã…â€œ/.test(expected) && H.toHira(got) === "ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢";
         const correct = acceptAlt || (norm(expected) === norm(got));
         inp.classList.toggle(map?.classes?.ok || "ok", correct);
         inp.classList.toggle(map?.classes?.bad || "bad", !correct);
@@ -1189,7 +1192,7 @@ window.LessonShim = (() => {
       const got = (inp?.value || "").trim();
 
       // Accept: exact JP OR same reading as sentence romaji
-      const readingKana = sentenceReadingHira(s); // e.g., おねがいします
+      const readingKana = sentenceReadingHira(s); // e.g., ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â­ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ÂÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â¾ÃƒÆ’Ã‚Â£Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢
       const correct =
         norm(s.jp || "") === norm(got) ||
         H.toHira(got) === readingKana ||
@@ -1203,7 +1206,7 @@ window.LessonShim = (() => {
       hintEl.textContent = correct ? "" : H.makeHint(s.jp || "", got, s);
       if (!correct) allOk = false;
     });
-    feedback(map, allOk ? "Nice—perfect translations!" : "Check the highlighted answers.", allOk);
+    feedback(map, allOk ? "NiceÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âperfect translations!" : "Check the highlighted answers.", allOk);
     if (allOk) mascotPulse && mascotPulse("mascot-celebrate", 1200);
     else mascotPulse && mascotPulse("mascot-confused", 800);
     return allOk;
@@ -1261,7 +1264,7 @@ window.LessonShim = (() => {
       const label = q(map?.controls?.speedVal);
       const rate = Number(map?.speech?.rate ?? 1);
       if (el) el.value = String(rate);
-      if (label) label.textContent = `${rate.toFixed(1)}×`;
+      if (label) label.textContent = `${rate.toFixed(1)}x`;
     };
 
     // NEW: handle slider input
@@ -1270,7 +1273,7 @@ window.LessonShim = (() => {
       const rate = Number.isFinite(v) ? v : 1;
       map.speech = Object.assign({}, map.speech, { rate });
       const label = q(map?.controls?.speedVal);
-      if (label) label.textContent = `${rate.toFixed(1)}×`;
+      if (label) label.textContent = `${rate.toFixed(1)}x`;
     };
 
     // NEW: bind slider

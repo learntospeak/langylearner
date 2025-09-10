@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#111111">
-    <title>KanaReader — Lesson</title>
+    <title>KanaReader - Lesson</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
@@ -163,7 +163,7 @@
         }
     </style>
     <style>
-        .mora-row {
+        .morxrow {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
@@ -181,11 +181,11 @@
 <body class="bg-white">
     <div id="page" class="container mx-auto p-6">
         <nav class="mb-4">
-            <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">📖 Kana Reference</a>
+            <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">Kana Reference</a>
         </nav>
 
 
-        <h1 id="pageTitle" class="text-3xl font-bold mb-6">KanaReader — Lesson</h1>
+        <h1 id="pageTitle" class="text-3xl font-bold mb-6">KanaReader - Lesson</h1>
 
         <!-- wrapper that positions the mascot beside the lesson -->
         <div id="lesson-wrap">
@@ -196,7 +196,7 @@
             <!-- mascot lives INSIDE the wrapper -->
             <!-- Mascot (drop-in, no inline <style> here) -->
             <div id="mascot" class="w-16 h-20">
-                <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
+                <svg viewBox="0 0 100 120" class="w-full h-full" arixhidden="true">
                     <!-- BODY -->
                     <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700"
                         stroke-width="2" />
@@ -298,17 +298,16 @@
             flex flex-wrap justify-center gap-2
             px-3 py-2
             bg-white/95 backdrop-blur border-t
-            pb-[max(0px,env(safe-area-inset-bottom))]">
+            pb-[max(0px,env(safe-arexinset-bottom))]">
 
-            <button id="lsPrev" class="btn btn-ghost   flex-1 basis-[120px] max-w-[240px] min-h-10">⬅ Prev</button>
+            <button id="lsPrev" class="btn btn-ghost   flex-1 basis-[120px] max-w-[240px] min-h-10">< Prev</button>
             <button id="lsCheck" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Check</button>
             <button id="lsReveal" class="btn btn-amber   flex-1 basis-[120px] max-w-[240px] min-h-10">Reveal</button>
-            <button id="lsNext" class="btn btn-dark    flex-1 basis-[120px] max-w-[240px] min-h-10">Next ➡</button>
+            <button id="lsNext" class="btn btn-dark    flex-1 basis-[120px] max-w-[240px] min-h-10">Next ></button>
 
             <button id="lsToggleRomaji"
                 class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
-            <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">🔊
-                Speak</button>
+            <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">Speak</button>
 
             <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
                 w-full sm:w-auto justify-center">
@@ -323,18 +322,18 @@
         <div class="absolute inset-0 bg-black/50"></div>
 
         <!-- Dialog -->
-        <div role="dialog" aria-modal="true" aria-labelledby="kanaTitle"
+        <div role="dialog" arixmodal="true" arixlabelledby="kanaTitle"
             class="relative mx-auto my-8 w-[min(95vw,1000px)] max-h-[85vh] overflow-hidden rounded-xl bg-white shadow-xl">
             <header class="flex items-center justify-between px-4 py-3 border-b">
                 <h2 id="kanaTitle" class="text-lg font-semibold">Kana Reference</h2>
-                <button id="closeKanaModal" class="btn btn-ghost" aria-label="Close">✕</button>
+                <button id="closeKanaModal" class="btn btn-ghost" arixlabel="Close">✕</button>
             </header>
 
             <!-- Tabs -->
             <div class="px-4 pt-3">
                 <div class="inline-flex rounded bg-gray-100 p-1">
-                    <button data-tab="hira" class="tab-btn px-3 py-1 rounded bg-white shadow text-sm">Hiragana</button>
-                    <button data-tab="kata" class="tab-btn px-3 py-1 rounded text-sm">Katakana</button>
+                    <button datxtab="hira" class="tab-btn px-3 py-1 rounded bg-white shadow text-sm">Hiragana</button>
+                    <button datxtab="kata" class="tab-btn px-3 py-1 rounded text-sm">Katakana</button>
                 </div>
             </div>
 
@@ -588,7 +587,7 @@
 <!-- Local Wanakana (vendor) -->
 <script src="./modules/wanakana.min.js"></script>
 <!-- Fallback shim (noop if wanakana already loaded) -->
-<script type="module" src="./modules/wanakana-lite.js"></script>
+<script type="module" src="./modules/wanakanxlite.js"></script>
 
 <script type="module" src="./lesson-shim.js?v=12"></script>
 
@@ -619,11 +618,11 @@
   const footer = document.getElementById('footer-controls');
   if (!page || !footer) return;
 
-  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-area-inset-bottom)');
+  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-arexinset-bottom)');
   const apply = () => {
     const h = footer.offsetHeight || 0;
     page.style.paddingBottom = supportsEnv
-      ? `calc(${h}px + env(safe-area-inset-bottom))`
+      ? `calc(${h}px + env(safe-arexinset-bottom))`
       : `${h + 16}px`;
   };
 
@@ -657,10 +656,10 @@
 
 
 <style>
-  body[data-step="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
+  body[datxstep="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
 </style>
 <style>
-  body[data-step="dialogue"] #page { scroll-padding-bottom: 7rem; }
+  body[datxstep="dialogue"] #page { scroll-padding-bottom: 7rem; }
 </style>
 
 
