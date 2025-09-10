@@ -968,8 +968,9 @@ window.LessonShim = (() => {
     }
 
     // controls
+    const pageSize = Math.max(1, Math.floor(step?.manga?.pageSize ?? 6));
     box.querySelector('[data-act="shuffle"]').addEventListener('click', () => {
-      renderList(pick(items, Math.min(6, items.length)));
+      renderList(pick(items, Math.min(pageSize, items.length)));
       quiz.classList.add('hidden'); list.classList.remove('hidden');
     });
     box.querySelector('[data-act="showall"]').addEventListener('click', () => {
@@ -978,7 +979,7 @@ window.LessonShim = (() => {
     });
     box.querySelector('[data-act="quiz"]').addEventListener('click', startQuiz);
 
-    renderList(pick(items, Math.min(6, items.length)));
+    renderList(pick(items, Math.min(pageSize, items.length)));
     setStatus(map, 'Browse variations; try the quiz.');
     feedback(map, '', true);
   }
