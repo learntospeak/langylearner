@@ -1,7 +1,7 @@
-// lesson-loader.js v4 — waits for shim, then loads lessons from stories.json
+// lesson-loader.js v4 â€” waits for shim, then loads lessons from stories.json
 
 const ui = { list:"#jp-text", status:"#en-text", feedback:"#full-romaji", title:"#pageTitle" };
-// …leave the rest unchanged…
+// â€¦leave the rest unchangedâ€¦
 const map = {
   containers: { list:"#jp-text", status:"#en-text", feedback:"#full-romaji" },
   controls: {
@@ -13,10 +13,10 @@ const map = {
   // Turn off bubble-style attention cues; we'll use mascot nudges instead
   flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true, attentionCues: false, nudgeMs: 12000 },
   speech:{ rate:1, pitch:1, volume:1 },
-  mascot:"#mascot", // ← NEW
+  mascot:"#mascot", // â† NEW
   classes: {
     item:"lesson-item", jp:"jp", romaji:"romaji", en:"en",
-    input:"field",                     // ← use the styled class
+    input:"field",                     // â† use the styled class
     ok:"ok", bad:"bad", hint:"hint", prompt:"prompt", speakBtn:"speak-btn"
   }
 };
@@ -52,7 +52,7 @@ function pickLesson(lessons){
 }
 
 function updateTitle(lesson){
-  const t = `KanaReader — ${lesson.title || lesson.id}`;
+  const t =  `KanaReader - ${lesson.title || lesson.id}`; 
   document.title = t;
   const h1 = document.querySelector(ui.title);
   if (h1) h1.textContent = t;
@@ -60,9 +60,9 @@ function updateTitle(lesson){
 
 window.addEventListener("DOMContentLoaded", async () => {
   try {
-    show("Initializing…");
+    show("Initializingâ€¦");
     await waitForShim();
-    show("Loading lessons…");
+    show("Loading lessonsâ€¦");
     const lessons = await loadLessons();
     if(!lessons.length) throw new Error("No lessons found in stories.json.");
     const lesson = pickLesson(lessons);
