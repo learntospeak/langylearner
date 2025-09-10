@@ -1,4 +1,4 @@
-// lesson-loader.js v4 â€” waits for shim, then loads lessons from stories.json
+﻿// lesson-loader.js v4 â€” waits for shim, then loads lessons from stories.json
 
 const ui = { list:"#jp-text", status:"#en-text", feedback:"#full-romaji", title:"#pageTitle" };
 // â€¦leave the rest unchangedâ€¦
@@ -60,9 +60,9 @@ function updateTitle(lesson){
 
 window.addEventListener("DOMContentLoaded", async () => {
   try {
-    show("Initializingâ€¦");
+    show("Initializing...");
     await waitForShim();
-    show("Loading lessonsâ€¦");
+    show("Loading lessons...");
     const lessons = await loadLessons();
     if(!lessons.length) throw new Error("No lessons found in stories.json.");
     const lesson = pickLesson(lessons);
@@ -74,3 +74,4 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error(e);
   }
 });
+
