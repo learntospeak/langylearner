@@ -221,20 +221,74 @@ export function initNinjaSlice(config) {
       hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(40, ms||80));
     }catch{}
   }
-  function updateProgressUI(){
-    try {
-      if (progressEl) {
-        progressEl.textContent = `(${sliced.size}/${chars.length})`;
+
+  // particles (slice sparks / bomb shards)
+  const particles = [];
+  function spawnSliceSparks(x, y, count=12) {
+    for (let i=0;i<count;i++) {
+      const a = Math.random()*Math.PI*2;
+      const sp = 2 + Math.random()*2.5;
+      particles.push({
+        kind:'spark',
+        x, y,
+        vx: Math.cos(a)*sp,
+        vy: Math.sin(a)*sp - 0.5,
+        life: 320 + Math.random()*200,
+        size: 2 + Math.random()*2,
+        color: (Math.random()<0.5 ? '#f59e0b' : '#facc15') // amber/yellow
+      });
+    }
+  }
+  function spawnBombShards(x, y, count=36) {
+    for (let i=0;i<count;i++) {
+      const a = Math.random()*Math.PI*2;
+      const sp = 2.5 + Math.random()*3.5;
+      particles.push({
+        kind:'shard',
+        x, y,
+        vx: Math.cos(a)*sp,
+        vy: Math.sin(a)*sp - 1.0,
+        life: 600 + Math.random()*300,
+        size: 3 + Math.random()*3,
+        rot: Math.random()*Math.PI,
+        spin: (Math.random()*2-1)*0.2,
+        color: '#ef4444' // red
+      });
+    }
+  }
+  function drawParticles(dtMs){
+    for (let i=particles.length-1; i>=0; i--) {
+      const p = particles[i];
+      // integrate
+      p.x += p.vx * timeScale;
+      p.y += p.vy * timeScale;
+      p.vy += gravity * 0.6 * timeScale; // lighter gravity for fx
+      if (p.spin) p.rot += p.spin * timeScale;
+      p.life -= dtMs * timeScale;
+      // draw
+      const alpha = Math.max(0, Math.min(1, p.life / 400));
+      if (alpha <= 0) { particles.splice(i,1); continue; }
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(p.x, p.y);
+      if (p.kind === 'spark') {
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(0,0,p.size,0,Math.PI*2); ctx.fill();
+      } else { // shard
+        ctx.rotate(p.rot||0);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size, -p.size*0.6, p.size*2, p.size*1.2);
       }
-      if (progressBar) {
-        const pct = Math.max(0, Math.min(100, Math.round((sliced.size/Math.max(1,chars.length))*100)));
-        progressBar.style.width = pct + '%';
-      }
-    } catch {}
+      ctx.restore();
+    }
   }
 
   // draw loop
+  let _lastFrameAt = performance.now();
   function draw() {
+    const now = performance.now();
+    const dt = Math.min(32, now - _lastFrameAt); // clamp for stability
+    _lastFrameAt = now;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = '64px system-ui, sans-serif';
     ctx.textAlign = 'center';
@@ -264,6 +318,10 @@ export function initNinjaSlice(config) {
       }
       ctx.restore();
     }
+
+    // fx layer
+    drawParticles(dt);
+
     animateId = requestAnimationFrame(draw);
   }
 
@@ -285,6 +343,7 @@ export function initNinjaSlice(config) {
 
 
   // handle slicing
+  let pendingEndAt = 0; let pendingReason = null;
   function sliceKana(t) {
     if (t.type === 'kana') {
       const group = groupForIndex(t.index);
@@ -295,6 +354,9 @@ export function initNinjaSlice(config) {
       score += 100 * combo;
       scoreEl.textContent = `Score: ${score}  (x${combo})`;
       try { SFX('slice'); } catch {}
+      try { flashCombo(); } catch {}
+      // sparks at kana position
+      spawnSliceSparks(t.x, t.y, 10 + Math.min(20, combo*2));
       // highlight sliced kana(s) and show combined romaji bubble
       try { group.forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s) s.classList.add('text-emerald-600','font-semibold','underline'); }); } catch {}
       showRomaForGroup(group);
@@ -305,10 +367,15 @@ export function initNinjaSlice(config) {
       updateProgressUI();
       if (sliced.size === original.length) endGame('clear');
     } else if (t.type === 'bomb') {
-      // penalty: end game or big score drop
+      // bomb fx then end shortly after
       scoreEl.textContent = `BOOM!`;
       try { SFX('bomb'); } catch {}
-      endGame('bomb');
+      spawnBombShards(t.x, t.y, 42);
+      hitStop(120);
+      // stop further spawns quickly
+      try { clearTimeout(spawnHandle); } catch {}
+      pendingReason = 'bomb';
+      pendingEndAt = performance.now() + 420; // let shards show briefly
     }
   }
 
@@ -449,10 +516,21 @@ canvas.addEventListener('pointerup', () => {
   }
   closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); overlay.classList.add('hidden'); });
 
-  // show modal & kick off — ensure sizing runs after it becomes visible
+  // show modal & kick off - ensure sizing runs after it becomes visible
   overlay.classList.remove('hidden');
   requestAnimationFrame(() => { resize(); startRound(); });
+
+  // drive a finalize check alongside draw loop
+  (function checkFinalize(){
+    if (pendingEndAt && performance.now() >= pendingEndAt) {
+      pendingEndAt = 0;
+      endGame(pendingReason||'bomb');
+      return; // stop this checker; endGame cancels draw
+    }
+    requestAnimationFrame(checkFinalize);
+  })();
 }
+
 
 
 
