@@ -185,7 +185,8 @@
         </nav>
 
 
-        <h1 id="pageTitle" class="text-3xl font-bold mb-6">KanaReader - Lesson</h1>
+        <h1 id="pageTitle" class="text-3xl font-bold mb-2">KanaReader - Lesson</h1>
+        <div id="stepHeader" class="text-sm text-gray-500 mb-4"></div>
 
         <!-- wrapper that positions the mascot beside the lesson -->
         <div id="lesson-wrap">
@@ -196,7 +197,7 @@
             <!-- mascot lives INSIDE the wrapper -->
             <!-- Mascot (drop-in, no inline <style> here) -->
             <div id="mascot" class="w-16 h-20">
-                <svg viewBox="0 0 100 120" class="w-full h-full" arixhidden="true">
+                <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
                     <!-- BODY -->
                     <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700"
                         stroke-width="2" />
@@ -298,7 +299,7 @@
             flex flex-wrap justify-center gap-2
             px-3 py-2
             bg-white/95 backdrop-blur border-t
-            pb-[max(0px,env(safe-arexinset-bottom))]">
+            pb-[max(0px,env(safe-area-inset-bottom))]">
 
             <button id="lsPrev" class="btn btn-ghost   flex-1 basis-[120px] max-w-[240px] min-h-10">< Prev</button>
             <button id="lsCheck" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Check</button>
@@ -588,10 +589,10 @@
 <script src="./modules/wanakana.min.js"></script>
 <!-- Fallback shim removed to prevent stale 404s; local wanakana.min.js is present. -->
 
-<script type="module" src="./lesson-shim.js?v=12"></script>
+<script type="module" src="./lesson-shim.js?v=15"></script>
 
 <!-- Your module that renders/boots the lesson -->
-<script type="module" src="./lesson-loader.js?v=8"></script>
+<script type="module" src="./lesson-loader.js?v=10"></script>
 
 <!-- Optional mascot controller (if you actually use it) -->
 <script type="module" src="./modules/mascot-controller.js?v=2"></script>
@@ -617,11 +618,11 @@
   const footer = document.getElementById('footer-controls');
   if (!page || !footer) return;
 
-  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-arexinset-bottom)');
+  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-area-inset-bottom)');
   const apply = () => {
     const h = footer.offsetHeight || 0;
     page.style.paddingBottom = supportsEnv
-      ? `calc(${h}px + env(safe-arexinset-bottom))`
+      ? `calc(${h}px + env(safe-area-inset-bottom))`
       : `${h + 16}px`;
   };
 
