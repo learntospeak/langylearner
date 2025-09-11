@@ -52,7 +52,7 @@ export function initNinjaSlice(config) {
   function updateProgressUI(){
     try {
       if (progressEl) {
-        progressEl.textContent = (/);
+        progressEl.textContent = `(${sliced.size}/${chars.length})`;
       }
       if (progressBar) {
         const pct = Math.max(0, Math.min(100, Math.round((sliced.size/Math.max(1,chars.length))*100)));
@@ -66,7 +66,7 @@ export function initNinjaSlice(config) {
   let comboHideTimer = null;
   function flashCombo(){
     if (!comboBadge) return;
-    comboBadge.textContent = x;
+    comboBadge.textContent = `x${combo}`;
     comboBadge.style.opacity = '1';
     clearTimeout(comboHideTimer);
     comboHideTimer = setTimeout(()=>{ comboBadge.style.opacity = '0'; }, 500);
@@ -211,17 +211,17 @@ export function initNinjaSlice(config) {
   let timer = roundSeconds;
   let spawnHandle = null, animateId = null, timerInterval = null;
   let lastSliceAt = 0, combo = 0;
-  function updateProgressUI(){
-  // simple time scale for hit-stop
+  // simple time scale for hit-stop (scoped to game loop)
   let timeScale = 1;
   let hitStopTimer = null;
   function hitStop(ms){
     try{
-      timeScale = 0.2;
+      timeScale = 0.25;
       clearTimeout(hitStopTimer);
-      hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(60, ms||100));
+      hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(40, ms||80));
     }catch{}
   }
+  function updateProgressUI(){
     try {
       if (progressEl) {
         progressEl.textContent = `(${sliced.size}/${chars.length})`;
@@ -453,6 +453,7 @@ canvas.addEventListener('pointerup', () => {
   overlay.classList.remove('hidden');
   requestAnimationFrame(() => { resize(); startRound(); });
 }
+
 
 
 

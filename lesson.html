@@ -685,15 +685,17 @@
         <div id="slice-instructions" class="absolute inset-x-0 top-2 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
           Slice kana. Red circles are bombs — avoid them. Swipe for combos.
         </div>
-        <div id="slice-progress" class="mt-2 text-center text-sm text-gray-700"></div>`n        <div class="mt-2 h-2 bg-gray-200 rounded overflow-hidden">`n          <div id="slice-progressbar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>`n        </div>`n        <div id="slice-combo" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-6 text-2xl font-extrabold text-emerald-600 drop-shadow opacity-0 transition-opacity">x1</div>
+        <div id="slice-progress" class="mt-2 text-center text-sm text-gray-700"></div>
         <div class="mt-2 h-2 bg-gray-200 rounded overflow-hidden">
           <div id="slice-progressbar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
         </div>
+        <div id="slice-combo" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-6 text-2xl font-extrabold text-emerald-600 drop-shadow opacity-0 transition-opacity">x1</div>
         <!-- Game Over panel -->
         <div id="slice-gameover" class="hidden absolute inset-0 flex items-center justify-center">
           <div class="bg-white/95 backdrop-blur rounded shadow p-4 text-center max-w-sm w-full">
             <div id="slice-over-title" class="text-lg font-semibold mb-1">Game Over</div>
-            <div id="slice-over-reason" class="text-gray-700 mb-3">You hit a bomb.</div>`n            <div id="slice-over-stats" class="text-sm text-gray-600 mb-3"></div>
+            <div id="slice-over-reason" class="text-gray-700 mb-3">You hit a bomb.</div>
+            <div id="slice-over-stats" class="text-sm text-gray-600 mb-3"></div>
             <div class="flex items-center justify-center gap-2">
               <button id="slice-try" class="btn btn-primary">Try Again</button>
               <button id="slice-finish" class="btn btn-ghost">Finish</button>
