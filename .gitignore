@@ -6,3 +6,4 @@ dist/
 *.rej
 .env
 tmp_restore/
+backups/*.zip

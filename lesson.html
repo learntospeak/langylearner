@@ -656,6 +656,26 @@
 </script>
 
 
+<script>
+  // Sanitize stray control characters in Kana modal cells (e.g., BEL \u0007)
+  (function sanitizeKanaModal(){
+    try {
+      const root = document.getElementById('kanaModal');
+      if (!root) return;
+      const bad = /[\u0000-\u001F\u007F]/g;
+      root.querySelectorAll('td, th').forEach(el => {
+        const txt = el.textContent;
+        if (typeof txt === 'string' && bad.test(txt)) {
+          const cleaned = txt.replace(bad, '').trim();
+          // keep placeholder look for disabled cells
+          el.textContent = cleaned || (el.classList.contains('text-gray-300') ? '\u00A0' : '');
+        }
+      });
+    } catch {}
+  })();
+  </script>
+
+
 <style>
   body[datxstep="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
 </style>
@@ -716,7 +736,7 @@
 </div>
 
 <script type="module">
-  import { initNinjaSlice } from './modules/ninjaSlice.js';
+  import { initNinjaSlice } from './modules/ninjaSlice.js?v=3';
   const by = (sel, root=document) => root.querySelector(sel);
   const overlay = by('#slice-overlay');
   const btnOpen = by('#openSlice');
