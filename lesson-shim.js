@@ -1,7 +1,11 @@
-// lesson-shim.js ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â with Pronounce + Romaji toggle
+﻿// lesson-shim.js ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â with Pronounce + Romaji toggle
 window.LessonShim = (() => {
   // ---------- utils ----------
-  const norm = (s) => (s || "").replace(/[ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸!\?()\[\]{}'"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â»ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡:ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Âº;\-ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿_ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ~ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼\s]/g, "").toLowerCase();
+  // Normalize strings for loose comparisons (strip punctuation/space, NFKC normalize, lowercase)
+  const norm = (s) => (s || "")
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .toLowerCase();
   const q = (sel) => (sel ? document.querySelector(sel) : null);
   const qa = (sel) => (sel ? Array.from(document.querySelectorAll(sel)) : []);
 
@@ -26,34 +30,18 @@ window.LessonShim = (() => {
     toHira: (s) => (window.wanakana ? wanakana.toHiragana(s || "") : (s || "")),
     firstDiff(a, b) { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return i; return -1; },
     makeHint(expectedJP, gotRaw, sentence) {
-      const got = H.toHira(gotRaw);
-      const exp = sentence?.romaji_full ? H.toHira(sentence.romaji_full) : H.toHira(expectedJP);
-
-      if (!gotRaw || !gotRaw.trim())
-        return `Type your answer. Hint: starts with ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢${exp.slice(0, 2)}ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â`;
-
-      // Common pitfalls
-      if (expectedJP.includes("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â«ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯") && got.includes("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â«ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"))
-        return "Use ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â (ha) not ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â in ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â«ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯.";
-
-      if (/ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Â¹Ãƒâ€¦Ã¢â‚¬Å“/.test(expectedJP) && got === "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢")
-        return ""; // accept kana reading for ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Â¹Ãƒâ€¦Ã¢â‚¬Å“
-
-      if (exp.includes("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£") && !got.includes("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£")) {
-        const idx = exp.indexOf("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£"), next = exp[idx + 1] || "";
-        return `Add a small ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â before ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢${next}ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â.`;
+      const got = H.toHira(gotRaw || "");
+      const exp = sentence?.romaji_full ? H.toHira(sentence.romaji_full) : H.toHira(expectedJP || "");
+      if (!got) {
+        const start = exp.slice(0, 2);
+        return `Type your answer. Hint: starts with ${start}`;
       }
-
-      if (got.length !== exp.length)
-        return got.length < exp.length
-          ? `You're missing ${exp.length - got.length} character(s).`
-          : `You have ${got.length - exp.length} extra character(s).`;
-
       const i = H.firstDiff(got, exp);
-      if (i >= 0) return `Check character ${i + 1}: should be ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢${exp[i]}ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â.`;
-
-      return "Check particles/spelling.";
-    },
+      if (i === -1) return "";
+      const next = exp[i] || "";
+      const roma = (window.wanakana && next) ? wanakana.toRomaji(next) : "";
+      return next ? `Check this kana: ${next}${roma ? ` (${roma})` : ""}` : "";
+    }
   };
   // --- MORA HELPERS ---
   const SMALL_KANA = "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â®";
@@ -539,7 +527,7 @@ window.LessonShim = (() => {
         <div class="${map?.classes?.prompt || "prompt"}">${s.en || ""}</div>
         <input class="${map?.classes?.input || "jp-input"}"
                data-expected="${s.jp || ""}"
-               placeholder="Type in JapaneseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦" />
+               placeholder="Type in Japanese" />
         ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${s.romaji_full || ""}</div>` : ""}
         <div class="${map?.classes?.hint || "hint"} text-sm text-amber-700 mt-1"></div>
       `;
@@ -622,7 +610,7 @@ window.LessonShim = (() => {
               inp.classList.remove(map?.classes?.ok || "ok");
               inp.classList.add(map?.classes?.bad || "bad");
               const romaji = window.wanakana ? wanakana.toRomaji(exp) : "";
-              hintEl.textContent = `This syllable is ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢${exp}ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â (${romaji}).`;
+              hintEl.textContent = `This syllable is ${exp} (${romaji}).`;
             }
           });
 
@@ -665,7 +653,7 @@ window.LessonShim = (() => {
     box.className = map?.classes?.item || 'lesson-item';
     box.innerHTML = `
     <div class="${map?.classes?.prompt || 'prompt'} mb-2"></div>
-    <div class="text-sm text-gray-600 mb-2">Say it in Japanese. Click ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤ and speak.</div>
+    <div class="text-sm text-gray-600 mb-2">Say it in Japanese. Click Start and speak.</div>
     <div class="flex items-center gap-2 mb-2">
       <button class="btn btn-primary" data-act="speak">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â  Play Prompt</button>
       <button class="btn btn-amber"   data-act="rec">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤ Start</button>
@@ -676,74 +664,18 @@ window.LessonShim = (() => {
     <div class="${map?.classes?.jp || 'jp'} font-medium"></div>
   `;
     listEl.appendChild(box);
-    try { const s=box.querySelector('[data-act="shuffle"]'); if (s) s.textContent='Shuffle'; const q=box.querySelector('[data-act="quiz"]'); if (q) q.textContent='Quiz me'; const a=box.querySelector('[data-act="showall"]'); if (a) a.textContent='Show all'; } catch {}
-
-    const elPrompt = box.querySelector(`.${map?.classes?.prompt || 'prompt'}`);
-    const elRomaji = box.querySelector(`.${map?.classes?.romaji || 'romaji'}`);
-    const elHint = box.querySelector(`.${map?.classes?.hint || 'hint'}`);
-    const elHeard = box.querySelector(`.${map?.classes?.jp || 'jp'}`);
-
-    let idx = 0, rec = null, busy = false;
-
-    function showTurn() {
-      const t = turns[idx]; if (!t) return;
-      elPrompt.textContent = `Sensei: ${t.promptEN}`;
-      try {
-        const roma = splitMora(t.reading).map(k => wanakana.toRomaji(k)).join(' ');
-        elRomaji.textContent = `Target: ${roma}`;
-      } catch { elRomaji.textContent = ''; }
-      elHint.textContent = '';
-      elHeard.textContent = '';
-    }
-
-    function speakPrompt() {
-      const t = turns[idx]; if (!t) return;
-      Speech.speak(t.expectJP, map?.speech || {});
-    }
-
-    async function startRec() {
-      if (!hasRecognition() || busy) {
-        elHint.textContent = hasRecognition()
-          ? 'Recording in progressÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦'
-          : 'Speech recognition is not supported in this browser.';
-        return;
-      }
-      busy = true;
-      elHint.textContent = 'ListeningÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦';
-      elHeard.textContent = '';
-
-      rec = makeRecognition();
-      rec.onresult = (evt) => {
-        const heard = (evt.results[0][0].transcript || '').trim();
-        elHeard.textContent = `You said: ${heard}`;
-        const t = turns[idx];
-        const score = kanaSim(heard, t.reading); // compare to reading
-        const ok = score >= (step.threshold || 0.82);
-        feedback(map, ok ? 'Great pronunciation!' : 'CloseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Âtry again.', ok);
-        mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
-        if (ok) {
-          idx = Math.min(idx + 1, turns.length);
-          if (idx === turns.length) {
-            setStatus(map, 'Roleplay complete!');
-            elHint.textContent = 'Nice! You finished the scene.';
-          } else {
-            showTurn();
-          }
-        } else {
-          // hint: show next kana to aim for
-          const want = splitMora(t.reading);
-          const got = splitMora(toHira(heard));
-          let p = 0; while (p < want.length && p < got.length && want[p] === got[p]) p++;
-          const next = want[p] || '';
-          const r = next ? (wanakana ? wanakana.toRomaji(next) : '') : '';
-          elHint.textContent = next ? `Aim for: ${next} (${r})` : 'Try once more.';
-        }
-        busy = false;
-      };
-      rec.onerror = () => { elHint.textContent = 'DidnÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢t catch that. Try again.'; busy = false; };
+    // Sanitize button labels and helper text
+    try {
+      const set = (sel, txt) => { const el = box.querySelector(sel); if (el) el.textContent = txt; };
+      set('[data-act="speak"]', 'Play Prompt');
+      set('[data-act="rec"]', 'Start');
+      set('[data-act="skip"]', 'Skip');
+      const info = box.querySelector('.text-sm.text-gray-600.mb-2');
+      if (info) info.textContent = 'Say it in Japanese. Click Start and speak.';
+      rec.onerror = () => { elHint.textContent = "Didn't catch that. Try again."; busy = false; };
       rec.onend = () => { if (busy) busy = false; };
       rec.start();
-    }
+    } catch {}
 
     // wire buttons
     box.querySelector('[data-act="speak"]').addEventListener('click', speakPrompt);
@@ -775,7 +707,7 @@ window.LessonShim = (() => {
     card.className = map?.classes?.item || "lesson-item";
     card.innerHTML = `
     <div class="${map?.classes?.prompt || "prompt"} mb-1"></div>
-    <input class="${map?.classes?.input || "jp-input"}" placeholder="Type in JapaneseÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦" />
+    <input class="${map?.classes?.input || "jp-input"}" placeholder="Type in Japanese" />
     <div class="${map?.classes?.romaji || "romaji"} text-gray-500 mb-1"></div>
     <div class="mt-2 flex items-center gap-2">
       <button class="btn btn-primary" data-act="check">Check</button>
@@ -796,6 +728,7 @@ window.LessonShim = (() => {
     const altBox = card.querySelector('#altBox');
 
     // bind input (reuse your tools)
+    try { if (elInput) elInput.placeholder = 'Type in Japanese'; } catch {}
     ensureKanaBindings(elInput); // once
 
     function show() {
@@ -803,6 +736,8 @@ window.LessonShim = (() => {
       elPrompt.textContent = P.en || "";
       elInput.value = "";
       elInput.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
+      // Ensure placeholder stays clean each time
+      try { elInput.placeholder = 'Type in Japanese'; } catch {}
 
       const reading = sentenceReadingHira({ jp: P.jp, romaji_full: P.romaji });
       elRoma.textContent = splitMora(reading).map(k => wanakana.toRomaji(k)).join(' ');
@@ -824,7 +759,7 @@ window.LessonShim = (() => {
         toHira(got) === sentenceReadingHira({ jp: want });
       elInput.classList.toggle(map?.classes?.ok || "ok", ok);
       elInput.classList.toggle(map?.classes?.bad || "bad", !ok);
-      elHint.textContent = ok ? "" : `Hint: starts with ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢${toHira(want).slice(0, 2)}ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â`;
+      elHint.textContent = ok ? "" : `Hint: starts with ${toHira(want).slice(0, 2)}`;
       feedback(map, ok ? "Good!" : "Try again.", ok);
       mascotPulse && mascotPulse(ok ? "mascot-celebrate" : "mascot-confused", ok ? 1200 : 800);
     }
@@ -909,6 +844,14 @@ window.LessonShim = (() => {
     <div id="varQuiz" class="hidden mt-4 p-3 border rounded"></div>
   `;
     root.appendChild(box);
+    // Clean any stray encoding artifacts in control labels
+    try {
+      const setText = (sel, txt) => { const el = box.querySelector(sel); if (el) el.textContent = txt; };
+      setText('[data-act="play"]', 'Play');
+      setText('[data-act="pause"]', 'Pause');
+      setText('[data-act="prev"]', 'Prev');
+      setText('[data-act="next"]', 'Next');
+    } catch {}
     // Ensure toolbar labels are clean on initial render
     try {
       const s = box.querySelector('[data-act="shuffle"]'); if (s) s.textContent = 'Shuffle';
@@ -967,7 +910,6 @@ window.LessonShim = (() => {
       const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; }
       return a.slice(0, n);
     }
-
     function startQuiz() {
       if (!items.length) return;
       quiz.classList.remove('hidden');
@@ -1010,7 +952,7 @@ window.LessonShim = (() => {
           const idx = Number(btn.dataset.i);
           const chosen = options[idx];
           const ok = chosen === correct;
-          feedback(map, ok ? 'Nice choice!' : 'Not quiteÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Âlisten again and try another.', ok);
+          feedback(map, ok ? 'Nice choice!' : 'Not quite — listen again and try another.', ok);
           mascotPulse && mascotPulse(ok ? 'mascot-celebrate' : 'mascot-confused', ok ? 1200 : 800);
           if (ok) setTimeout(startQuiz, 600);
         });
@@ -1203,31 +1145,7 @@ window.LessonShim = (() => {
     // preload voices (Chrome sometimes async)
     if ('speechSynthesis' in window) speechSynthesis.getVoices();
 
-    setStatus(map, 'Listen through the mini-scene. Use ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶ or Autoplay.');
-    feedback(map, '', true);
-  }
-
-  // ---------- guided conversation (seeded prompt) ----------
-  function renderGuidedConvo(lesson, step, map) {
-    const root = q(map?.containers?.list); if (!root) return;
-    root.innerHTML = "";
-
-    const topic = step?.topic || "conversation";
-    const level = step?.level ? String(step.level).toUpperCase() : "";
-    const seedRomaji = step?.seed || "";
-    let seedJP = seedRomaji;
-    try { if (window.wanakana && seedRomaji) seedJP = wanakana.toHiragana(seedRomaji); } catch {}
-
-    // Lightweight suggestions from lesson sentences
-    const makeItem = (s) => {
-      const reading = sentenceReadingHira(s);
-      const rom = (window.wanakana && reading) ? wanakana.toRomaji(reading) : "";
-      return { jp: s?.jp || "", en: s?.en || "", romaji: rom };
-    };
-    const suggestions = (lesson?.sentences || []).slice(0, 3).map(makeItem);
-
-    const box = document.createElement('div');
-    box.className = map?.classes?.item || 'lesson-item';
+    setStatus(map, 'Guided conversation: try a short reply.');
     box.innerHTML = `
       <div class="mb-2 text-sm text-gray-600">Guided conversation: practice a short exchange.</div>
       <div class="text-sm text-gray-700 mb-2">${topic ? `Topic: ${topic}` : ''} ${level ? `(${level})` : ''}</div>
@@ -1293,6 +1211,238 @@ window.LessonShim = (() => {
     setStatus(map, 'Guided conversation: try a short reply.');
     feedback(map, '', true);
     document.dispatchEvent(new Event('lesson:rendered'));
+  }
+
+  // ---------- cloze as tile-drag game ----------
+  function renderClozeTiles(lesson, step, map) {
+    const listEl = q(map?.containers?.list);
+    if (!listEl) return;
+    listEl.innerHTML = "";
+
+    // Pool of possible tiles (for decoys)
+    const poolBlanks = Array.from(new Set((step.items || []).flatMap(x => x.blanks || [])));
+
+    (step.items || []).forEach((it) => {
+      const s = (lesson.sentences || []).find((x) => x.sid === it.ref);
+      if (!s) return;
+      let jp = s.jp || "";
+      (it.blanks || []).forEach((b) => {
+        const hole = `<span class="drop inline-flex items-center min-w-[4rem] px-2 py-1 border-2 border-dashed rounded align-middle mr-1" data-answer="${b}">
+  <input type="hidden" data-answer="${b}" />
+  <span class="placeholder opacity-50">____</span>
+</span>`;
+        jp = jp.replace(b, hole);
+      });
+
+      const block = document.createElement('div');
+      block.className = map?.classes?.item || 'lesson-item';
+      block.innerHTML = `
+        <div class="${map?.classes?.prompt || 'prompt'}">${s.en || ''}</div>
+        <div class="${map?.classes?.jp || 'jp'}">${jp}</div>
+        ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || 'romaji'}">${s.romaji_full || ''}</div>` : ''}
+        <div class="${map?.classes?.hint || 'hint'} text-sm text-amber-700 mt-1"></div>
+        <div class="mt-2 flex items-center gap-3 text-sm text-gray-600" data-ui="hud">
+          <span>Moves: <b data-ui="moves"></b></span>
+          <span>Score: <b data-ui="score"></b></span>
+          <span class="text-amber-600" data-ui="combo"></span>
+          <span class="ml-auto"></span>
+          <button class="btn btn-ghost btn-sm" data-act="shuffle">Shuffle</button>
+          <button class="btn btn-ghost btn-sm" data-act="hint">Hint</button>
+          <button class="btn btn-ghost btn-sm" data-act="reset">Reset</button>
+        </div>
+      `;
+      listEl.appendChild(block);
+
+      const drops = Array.from(block.querySelectorAll('.drop[data-answer]'));
+      const rack = document.createElement('div');
+      rack.className = 'mt-2 flex flex-wrap gap-2';
+      block.appendChild(rack);
+
+      // Make a tile set: all answers for this sentence plus a few decoys
+      const tileSet = new Set(drops.map(d => d.dataset.answer));
+      const decoys = poolBlanks.filter(x => !tileSet.has(x));
+      while (tileSet.size < Math.max(drops.length + 2, drops.length) && decoys.length) {
+        const j = Math.floor(Math.random() * decoys.length);
+        tileSet.add(decoys.splice(j,1)[0]);
+      }
+      const tiles = Array.from(tileSet);
+      for (let i = tiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
+
+      const toRoma = (txt) => { try { const r = sentenceReadingHira({ jp: txt }); return window.wanakana ? wanakana.toRomaji(r) : ''; } catch { return ''; } };
+      // Simple SFX helper
+      const SFX = (type) => { try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; const ctx = SFX._ctx || (SFX._ctx = new AC()); const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); g.gain.value = 0.05; o.type = 'sine'; o.frequency.value = type==='ok' ? 880 : 220; const now = ctx.currentTime; o.start(now); o.stop(now + 0.12); } catch {} };
+
+      // HUD state
+      let moves = Math.max(drops.length + 2, drops.length);
+      let score = 0;
+      let combo = 0;
+      const elMoves = block.querySelector('[data-ui="moves"]');
+      const elScore = block.querySelector('[data-ui="score"]');
+      const elCombo = block.querySelector('[data-ui="combo"]');
+      const hintEl = block.querySelector(`.${map?.classes?.hint || 'hint'}`);
+      const updateHud = () => {
+        if (elMoves) elMoves.textContent = String(moves);
+        if (elScore) elScore.textContent = String(score);
+        if (elCombo) elCombo.textContent = combo > 1 ? `Combo x${combo}` : '';
+      };
+      updateHud();
+
+      const allFilled = () => drops.every(d => d.classList.contains('filled'));
+
+      const place = (dz, text, sourceBtn) => {
+        const ans = dz.dataset.answer || '';
+        const ok = text === ans;
+        if (ok) {
+          dz.textContent = text;
+          dz.classList.add('border-green-400','filled');
+          const hidden = dz.querySelector('input[data-answer]'); if (hidden) hidden.value = text;
+          if (sourceBtn) sourceBtn.disabled = true;
+          combo += 1; score += 100 * (combo); SFX('ok'); updateHud();
+          feedback(map, 'Nice!', true);
+          if (allFilled()) {
+            feedback(map, 'Sentence complete!', true);
+          }
+        } else {
+          moves = Math.max(0, moves - 1); combo = 0; updateHud(); SFX('bad');
+          dz.classList.add('animate-pulse'); setTimeout(()=>dz.classList.remove('animate-pulse'), 400);
+          feedback(map, moves ? 'Not yet — try another tile.' : 'Out of moves! Press Reset or use Hint.', false);
+        }
+      };
+
+      tiles.forEach(txt => {
+        const b = document.createElement('button');
+        b.className = 'btn btn-ghost tile';
+        b.textContent = txt;
+        b.setAttribute('draggable','true');
+        b.dataset.jp = txt;
+        const roma = toRoma(txt); if (roma) b.title = roma; // hover shows romaji
+        b.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', txt); e.dataTransfer.effectAllowed='move'; b.classList.add('opacity-60'); });
+        b.addEventListener('dragend', () => b.classList.remove('opacity-60'));
+        b.addEventListener('click', () => { const dz = drops.find(d => !d.classList.contains('filled')); if (dz) place(dz, txt, b); });
+        rack.appendChild(b);
+      });
+
+      drops.forEach(dz => {
+        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('bg-amber-50'); });
+        dz.addEventListener('dragleave', () => dz.classList.remove('bg-amber-50'));
+        dz.addEventListener('drop', (e) => {
+          e.preventDefault(); dz.classList.remove('bg-amber-50');
+          const text = e.dataTransfer.getData('text/plain');
+          const btn = Array.from(rack.querySelectorAll('button.tile')).find(b => (b.dataset.jp||'')===text);
+          place(dz, text, btn);
+        });
+      });
+
+      // HUD actions
+      const reshuffle = () => {
+        const items = Array.from(rack.children);
+        for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); rack.insertBefore(items[j], items[i]); const tmp = items[i]; items[i] = items[j]; items[j] = tmp; }
+      };
+      const showHint = () => {
+        const dz = drops.find(d => !d.classList.contains('filled'));
+        if (!dz) return;
+        dz.classList.add('ring-2','ring-amber-400'); setTimeout(()=>dz.classList.remove('ring-2','ring-amber-400'), 800);
+        const k = dz.dataset.answer || '';
+        const roma = toRoma(k);
+        if (hintEl) hintEl.textContent = roma ? `Hint: ${k} (${roma})` : `Hint: ${k}`;
+      };
+      const resetBlock = () => {
+        drops.forEach(d => { d.textContent = '____'; d.classList.remove('filled','border-green-400'); const h=d.querySelector('input[data-answer]'); if (h) h.value=''; });
+        rack.querySelectorAll('button.tile').forEach(b => b.disabled = false);
+        moves = Math.max(drops.length + 2, drops.length); combo = 0; updateHud();
+        if (hintEl) hintEl.textContent='';
+      };
+      const btnShuffle = block.querySelector('[data-act="shuffle"]'); if (btnShuffle) btnShuffle.addEventListener('click', reshuffle);
+      const btnHint = block.querySelector('[data-act="hint"]'); if (btnHint) btnHint.addEventListener('click', showHint);
+      const btnReset = block.querySelector('[data-act="reset"]'); if (btnReset) btnReset.addEventListener('click', resetBlock);
+    });
+
+    setStatus(map, 'Drag tiles into the blanks. Hover a tile to see its romaji.');
+    feedback(map, '', true);
+  }
+
+  // ---------- guided conversation ----------
+  function renderGuidedConvo(lesson, step, map) {
+    const root = q(map?.containers?.list); if (!root) return;
+    root.innerHTML = "";
+
+    const topic = step?.topic || "";
+    const level = step?.level ? String(step.level).toUpperCase() : "";
+    const seed = step?.seed || "";
+    let seedJP = seed;
+    try { if (window.wanakana && seed && /^[\x20-\x7E]+$/.test(seed)) seedJP = wanakana.toHiragana(seed); } catch {}
+
+    const suggestions = (lesson?.sentences || []).slice(0, 3).map(s => {
+      const reading = sentenceReadingHira(s);
+      const romaji = (window.wanakana && reading) ? wanakana.toRomaji(reading) : "";
+      return { jp: s?.jp || "", en: s?.en || "", romaji };
+    });
+
+    const box = document.createElement('div');
+    box.className = map?.classes?.item || 'lesson-item';
+    box.innerHTML = `
+      <div class="mb-2 text-sm text-gray-600">Guided conversation</div>
+      <div class="text-sm text-gray-700 mb-2">${topic ? `Topic: ${topic}` : ''} ${level ? `(${level})` : ''}</div>
+      ${seedJP ? `
+      <div class="mb-3">
+        <div class="${map?.classes?.jp || 'jp'}">${seedJP}</div>
+        <div class="mt-2 flex items-center gap-2">
+          <button class="btn btn-ghost" data-act="speak-seed">Speak</button>
+          <button class="btn btn-ghost" data-act="use-seed">Use as my reply</button>
+        </div>
+      </div>` : ''}
+      <div class="mb-2">
+        <label class="block text-sm text-gray-600 mb-1">Your reply</label>
+        <textarea id="gcInput" class="field w-full min-h-[90px]" placeholder="Type a short reply in Japanese or English..."></textarea>
+      </div>
+      <div class="flex items-center gap-2 mb-3">
+        <button class="btn btn-primary" data-act="speak-mine">Speak my reply</button>
+        <button class="btn btn-ghost" data-act="clear">Clear</button>
+      </div>
+      ${suggestions.length ? `
+      <div class="mt-2">
+        <div class="text-sm text-gray-600 mb-1">Quick ideas</div>
+        <div id="gcIdeas" class="space-y-1">
+          ${suggestions.map(s => `
+          <button class="btn btn-ghost w-full text-left" data-jp="${s.jp}">
+            <div class="${map?.classes?.jp || 'jp'}">${s.jp}</div>
+            ${s.romaji ? `<div class="${map?.classes?.romaji || 'romaji'}">${s.romaji}</div>` : ``}
+            ${s.en ? `<div class="${map?.classes?.en || 'en'} text-gray-600">${s.en}</div>` : ``}
+          </button>`).join('')}
+        </div>
+      </div>` : ''}
+      <div class="${map?.classes?.hint || 'hint'} text-sm text-gray-600 mt-2">Write a short reply. Press Next when ready.</div>
+    `;
+    root.appendChild(box);
+
+    const input = box.querySelector('#gcInput');
+    const seedSpeakBtn = box.querySelector('[data-act="speak-seed"]');
+    const useSeedBtn = box.querySelector('[data-act="use-seed"]');
+    const speakMineBtn = box.querySelector('[data-act="speak-mine"]');
+    const clearBtn = box.querySelector('[data-act="clear"]');
+
+    if (seedSpeakBtn && seedJP) seedSpeakBtn.addEventListener('click', () => Speech.speak(seedJP, map?.speech || {}));
+    if (useSeedBtn && input) useSeedBtn.addEventListener('click', () => { input.value = seedJP || seed; input.focus(); });
+    if (speakMineBtn && input) speakMineBtn.addEventListener('click', () => {
+      const text = input.value || '';
+      if (!text.trim()) { feedback(map, 'Type a reply first.', false); return; }
+      let toSpeak = text;
+      try { if (window.wanakana && /^[\x20-\x7E]+$/.test(text)) toSpeak = wanakana.toHiragana(text); } catch {}
+      Speech.speak(toSpeak, map?.speech || {});
+      feedback(map, 'Speaking your reply…', true);
+    });
+    if (clearBtn && input) clearBtn.addEventListener('click', () => { input.value = ''; input.focus(); });
+
+    box.querySelectorAll('#gcIdeas [data-jp]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const jp = btn.getAttribute('data-jp') || '';
+        if (input) { input.value = jp; input.focus(); }
+        Speech.speak(jp, map?.speech || {});
+      });
+    });
+
+    setStatus(map, 'Guided conversation: try a short reply.');
+    feedback(map, '', true);
   }
 
   // ---------- checks ----------
@@ -1364,7 +1514,7 @@ window.LessonShim = (() => {
       hintEl.textContent = correct ? "" : H.makeHint(s.jp || "", got, s);
       if (!correct) allOk = false;
     });
-    feedback(map, allOk ? "NiceÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Âperfect translations!" : "Check the highlighted answers.", allOk);
+    feedback(map, allOk ? "Nice — perfect translations!" : "Check the highlighted answers.", allOk);
     if (allOk) mascotPulse && mascotPulse("mascot-celebrate", 1200);
     else mascotPulse && mascotPulse("mascot-confused", 800);
     return allOk;
@@ -1389,9 +1539,31 @@ window.LessonShim = (() => {
 
     const render = () => {
       const step = steps[state.stepIndex] || {};
+      // Update step header (page title per step)
+      try {
+        const header = q('#stepHeader');
+        if (header) {
+          const names = {
+            read_listen: 'Read & Listen',
+            cloze: 'Cloze',
+            translate_to_jp: 'Translate to Japanese',
+            variations: 'Variations',
+            variations_disabled: 'Variations',
+            phrase_drill: 'Phrase Drill',
+            dialogue: 'Mini-scene',
+            roleplay: 'Roleplay',
+            guided_convo: 'Guided Convo',
+            reflect: 'Reflect'
+          };
+          const key = step.type || '';
+          const title = (step.title || names[key] || key || 'Step');
+          const i = state.stepIndex + 1;
+          header.textContent = `Page ${i}/${steps.length} — ${title}`;
+        }
+      } catch {}
       switch (step.type) {
         case "read_listen": renderReadListen(lesson, step, map); break;
-        case "cloze": renderCloze(lesson, step, map); break;
+        case "cloze": renderClozeTiles(lesson, step, map); break;
         case "translate_to_jp": map?.flags?.syllableMode ? renderTranslateSyllables(lesson, step, map)
           : renderTranslate(lesson, step, map); break;
         case "roleplay": renderRoleplay(lesson, step, map); break;
@@ -1497,3 +1669,13 @@ window.LessonShim = (() => {
 
   return { start: run };
 })();
+
+
+
+
+
+
+
+
+
+

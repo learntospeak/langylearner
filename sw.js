@@ -1,5 +1,5 @@
 // service-worker.js
-const VERSION = 'v1.0.7';                      // bump when core changes
+const VERSION = 'v1.0.9';                      // bump when core changes
 const CACHE_NAME = `jp-lesson-${VERSION}`;
 
 const CORE = [
