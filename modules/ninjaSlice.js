@@ -47,6 +47,31 @@ export function initNinjaSlice(config) {
   const launchBoost = Number((config && config.launchBoost) ?? 1.0);
   const gravity = Number((config && config.gravity) ?? 0.02);
 
+
+  // Progress UI updater
+  function updateProgressUI(){
+    try {
+      if (progressEl) {
+        progressEl.textContent = (/);
+      }
+      if (progressBar) {
+        const pct = Math.max(0, Math.min(100, Math.round((sliced.size/Math.max(1,chars.length))*100)));
+        progressBar.style.width = pct + '%';
+      }
+    } catch {}
+  }
+
+  // Combo badge
+  const comboBadge = document.getElementById('slice-combo');
+  let comboHideTimer = null;
+  function flashCombo(){
+    if (!comboBadge) return;
+    comboBadge.textContent = x;
+    comboBadge.style.opacity = '1';
+    clearTimeout(comboHideTimer);
+    comboHideTimer = setTimeout(()=>{ comboBadge.style.opacity = '0'; }, 500);
+  }
+  function resetComboBadge(){ if (comboBadge) comboBadge.style.opacity = '0'; }
   if (!overlay || !container || !canvas || !ctx || !closeBtn
     || !scoreEl || !timerEl || !kanaEl || !romajiEl || !englishEl) {
     console.warn("initNinjaSlice: missing DOM nodes");
@@ -187,6 +212,16 @@ export function initNinjaSlice(config) {
   let spawnHandle = null, animateId = null, timerInterval = null;
   let lastSliceAt = 0, combo = 0;
   function updateProgressUI(){
+  // simple time scale for hit-stop
+  let timeScale = 1;
+  let hitStopTimer = null;
+  function hitStop(ms){
+    try{
+      timeScale = 0.2;
+      clearTimeout(hitStopTimer);
+      hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(60, ms||100));
+    }catch{}
+  }
     try {
       if (progressEl) {
         progressEl.textContent = `(${sliced.size}/${chars.length})`;
@@ -207,9 +242,9 @@ export function initNinjaSlice(config) {
 
     for (let t of tiles) {
       // integrate
-      t.x += t.vx;
-      t.y += t.vy;
-      t.vy += gravity; // gravity
+      t.x += t.vx * timeScale;
+      t.y += t.vy * timeScale;
+      t.vy += gravity * timeScale; // gravity
       if (t.spin) t.rot += t.spin;
 
       // bounce off walls slightly
@@ -418,6 +453,9 @@ canvas.addEventListener('pointerup', () => {
   overlay.classList.remove('hidden');
   requestAnimationFrame(() => { resize(); startRound(); });
 }
+
+
+
 
 
 
