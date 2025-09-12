@@ -311,6 +311,9 @@
                 class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
             <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">Speak</button>
 
+            <!-- Fallback Slice launcher (always visible on mobile) -->
+            <button id="openSliceFooter" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-purple-600 text-white">Slice</button>
+
             <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
                 w-full sm:w-auto justify-center">
                 Speed
@@ -740,6 +743,7 @@
   const by = (sel, root=document) => root.querySelector(sel);
   const overlay = by('#slice-overlay');
   const btnOpen = by('#openSlice');
+  const btnOpenFooter = by('#openSliceFooter');
   const btnClose = by('#slice-close');
   function currentPhraseFromPage(){
     try {
@@ -782,6 +786,7 @@
     });
   }
   btnOpen?.addEventListener('click', launchSlice);
+  btnOpenFooter?.addEventListener('click', launchSlice);
   btnClose?.addEventListener('click', () => overlay.classList.add('hidden'));
 </script>
 
