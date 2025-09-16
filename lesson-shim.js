@@ -1,4 +1,4 @@
-﻿// lesson-shim.js ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â with Pronounce + Romaji toggle
+// lesson-shim.js ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â with Pronounce + Romaji toggle
 window.LessonShim = (() => {
   // ---------- utils ----------
   // Normalize strings for loose comparisons (strip punctuation/space, NFKC normalize, lowercase)
@@ -1537,6 +1537,66 @@ window.LessonShim = (() => {
     const state = { stepIndex: 0 };
     const steps = lesson.steps;
 
+    const sentences = Array.isArray(lesson?.sentences) ? lesson.sentences : [];
+    const findSentence = (sid) => sentences.find((x) => x.sid === sid);
+    const toRomajiSafe = (text) => {
+      if (!text) return '';
+      try { return (window.wanakana && text) ? wanakana.toRomaji(text) : ''; } catch { return ''; }
+    };
+    const fromSentence = (entry) => entry ? {
+      phrase: entry.jp || '',
+      romaji: entry.romaji_full || toRomajiSafe(entry.jp || ''),
+      english: entry.en || ''
+    } : null;
+    const fromVariant = (entry = {}) => {
+      const phrase = entry.jp || entry.phrase || '';
+      if (!phrase) return null;
+      return {
+        phrase,
+        romaji: entry.romaji || toRomajiSafe(phrase),
+        english: entry.en || entry.english || ''
+      };
+    };
+    function updateSliceContext() {
+      let data = null;
+      const step = steps[state.stepIndex] || {};
+      if (Array.isArray(step.item_refs) && step.item_refs.length) {
+        data = fromSentence(findSentence(step.item_refs[0]));
+      } else if (Array.isArray(step.items) && step.items.length) {
+        const first = step.items[0];
+        data = fromSentence(findSentence(first && first.ref));
+      } else if (Array.isArray(step.pairs) && step.pairs.length) {
+        data = fromVariant(step.pairs[0]);
+      } else if (Array.isArray(step.variations) && step.variations.length) {
+        data = fromVariant(step.variations[0]);
+      } else if (step.seed) {
+        data = {
+          phrase: step.seed,
+          romaji: toRomajiSafe(step.seed),
+          english: step.topic || ''
+        };
+      }
+      if (!data || !data.phrase) {
+        data = fromSentence(sentences[0]) || data;
+      }
+      if ((!data || !data.phrase) && typeof document !== 'undefined') {
+        const fallback = document.querySelector('#jp-text .jp');
+        if (fallback) {
+          const phrase = fallback.textContent.trim();
+          const englishEl = document.querySelector('#jp-text .en');
+          const english = englishEl ? englishEl.textContent.trim() : '';
+          data = {
+            phrase,
+            romaji: toRomajiSafe(phrase),
+            english
+          };
+        }
+      }
+      const valid = (data && typeof data.phrase === 'string' && data.phrase.trim()) ? data : null;
+      try { window.__kanaSliceSource = valid; } catch { window.__kanaSliceSource = valid; }
+    }
+    try { window.__kanaSliceSource = null; } catch {}
+
     const render = () => {
       const step = steps[state.stepIndex] || {};
       // Update step header (page title per step)
@@ -1582,6 +1642,7 @@ window.LessonShim = (() => {
           feedback(map, "This step type is not supported.", false);
           break;
       }
+      updateSliceContext();
 
     };
 
