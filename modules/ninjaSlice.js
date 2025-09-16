@@ -1,4 +1,4 @@
-﻿// modules/ninjaSlice.js
+// modules/ninjaSlice.js
 
 export function initNinjaSlice(config) {
   const {
@@ -42,6 +42,7 @@ export function initNinjaSlice(config) {
   const bubblesToggle = config.bubblesToggleId ? document.getElementById(config.bubblesToggleId) : null;
   const progressEl = config.progressElId ? document.getElementById(config.progressElId) : null;
   const progressBar = config.progressBarId ? document.getElementById(config.progressBarId) : null;
+  const statsEl = config.statsElId ? document.getElementById(config.statsElId) : null;
 
   // Tunables (fallbacks)
   const launchBoost = Number((config && config.launchBoost) ?? 1.0);
@@ -210,7 +211,7 @@ export function initNinjaSlice(config) {
   let score = 0;
   let timer = roundSeconds;
   let spawnHandle = null, animateId = null, timerInterval = null;
-  let lastSliceAt = 0, combo = 0;
+  let lastSliceAt = 0, combo = 0, bestCombo = 0;
   // simple time scale for hit-stop (scoped to game loop)
   let timeScale = 1;
   let hitStopTimer = null;
@@ -350,6 +351,7 @@ export function initNinjaSlice(config) {
       group.forEach(i=>sliced.add(i));
       const now = performance.now();
       combo = (now - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
+      bestCombo = Math.max(bestCombo, combo);
       lastSliceAt = now;
       score += 100 * combo;
       scoreEl.textContent = `Score: ${score}  (x${combo})`;
@@ -379,6 +381,31 @@ export function initNinjaSlice(config) {
     }
   }
 
+  function renderStats(reason) {
+    if (!statsEl) return;
+    const total = original.length;
+    const slicedCount = sliced.size;
+    const remaining = Math.max(0, total - slicedCount);
+    const longest = bestCombo > 0 ? bestCombo : (combo > 0 ? combo : 0);
+    const timeLeft = Math.max(0, timer);
+    const timeSpent = Math.min(roundSeconds, Math.max(0, roundSeconds - timeLeft));
+    const lines = [
+      `<div><strong>Score:</strong> ${score}</div>`,
+      `<div><strong>Kana sliced:</strong> ${slicedCount}/${total}</div>`,
+      `<div><strong>Longest combo:</strong> x${longest}</div>`,
+      `<div><strong>Time left:</strong> ${timeLeft}s</div>`
+    ];
+    if (reason === 'timeout' && remaining > 0) {
+      lines.push(`<div>Remaining kana: ${remaining}</div>`);
+    }
+    if (reason === 'bomb') {
+      lines.push('<div>Bomb detonated!</div>');
+    }
+    if (reason === 'clear') {
+      lines.push(`<div>Cleared in ${timeSpent}s!</div>`);
+    }
+    statsEl.innerHTML = lines.join('');
+  }
   // segment-circle intersection
   function hitSegmentCircle(x1,y1,x2,y2,cx,cy,r){
     const dx=x2-x1, dy=y2-y1; const l2 = dx*dx+dy*dy; if (l2===0) return Math.hypot(cx-x1,cy-y1)<=r;
@@ -469,12 +496,15 @@ canvas.addEventListener('pointerup', () => {
   function startRound() {
     tiles = [];
     sliced.clear();
-    score = 0; combo = 0; lastSliceAt = 0;
+    score = 0; combo = 0; bestCombo = 0; lastSliceAt = 0;
     scoreEl.textContent = "Score: 0";
+    resetComboBadge();
+    if (statsEl) statsEl.textContent = "";
     timer = roundSeconds;
     timerEl.textContent = timer;
     try { if (progressEl) progressEl.textContent = `(${sliced.size}/${chars.length})`; } catch {}
     buildKanaDisplay();
+    updateProgressUI();
     try {
       const help = document.getElementById('slice-instructions');
       if (help) { help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); }
@@ -502,6 +532,8 @@ canvas.addEventListener('pointerup', () => {
     clearTimeout(spawnHandle);
     clearInterval(timerInterval);
     cancelAnimationFrame(animateId);
+    resetComboBadge();
+    renderStats(reason);
     if (overPanel) {
       const t = document.getElementById('slice-over-title');
       const r = document.getElementById('slice-over-reason');
@@ -514,7 +546,14 @@ canvas.addEventListener('pointerup', () => {
       overlay.classList.add('hidden');
     }
   }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); overlay.classList.add('hidden'); });
+  closeBtn.addEventListener("click", () => {
+    clearTimeout(spawnHandle);
+    clearInterval(timerInterval);
+    cancelAnimationFrame(animateId);
+    resetComboBadge();
+    if (statsEl) statsEl.textContent = "";
+    overlay.classList.add('hidden');
+  });
 
   // show modal & kick off - ensure sizing runs after it becomes visible
   overlay.classList.remove('hidden');

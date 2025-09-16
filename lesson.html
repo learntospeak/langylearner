@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -747,18 +747,35 @@
   const btnClose = by('#slice-close');
   function currentPhraseFromPage(){
     try {
+      const cached = window.__kanaSliceSource;
+      if (cached && cached.phrase) {
+        const phrase = (cached.phrase || '').trim();
+        const english = (cached.english || '').trim() || 'Hello';
+        const romajiCached = (cached.romaji || '').trim();
+        const romaji = romajiCached || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa');
+        if (phrase) {
+          return { phrase, romaji, english };
+          }
+      }
+    } catch {}
+    try {
       const list = document.querySelector('#jp-text');
-      // Grab the first visible .jp text as the phrase
       const jpEl = list?.querySelector('.jp');
       const enEl = list?.querySelector('.en');
-      const phrase = (jpEl?.textContent || '').trim() || 'こんにちは';
+      const phrase = (jpEl?.textContent || '').trim() || '\\u3053\\u3093\\u306B\\u3061\\u306F';
       const english = (enEl?.textContent || '').trim() || 'Hello';
       const romaji = (window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa';
       return { phrase, romaji, english };
-    } catch { return { phrase:'こんにちは', romaji:'konnichiwa', english:'Hello' } }
+    } catch {
+      return { phrase:'\\u3053\\u3093\\u306B\\u3061\\u306F', romaji:'konnichiwa', english:'Hello' };
+    }
   }
   function launchSlice(){
-    const { phrase, romaji, english } = currentPhraseFromPage();
+    const data = currentPhraseFromPage();
+    const phrase = (data?.phrase || '').trim();
+    if (!phrase) { alert('Pick a phrase first, then try Slice.'); return; }
+    const romaji = data?.romaji || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : '') || 'konnichiwa';
+    const english = data?.english || '';
     initNinjaSlice({
       containerId: 'slice-wrap',
       canvasId: 'slice-canvas',
@@ -775,6 +792,7 @@
       bubblesToggleId: 'slice-bubbles',
       progressElId: 'slice-progress',
       progressBarId: 'slice-progressbar',
+      statsElId: 'slice-over-stats',
       phrase, romaji, english,
       heightRatio: 0.55,
       spawnMsStart: 900,
