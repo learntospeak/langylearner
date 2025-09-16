@@ -207,6 +207,7 @@ export function initNinjaSlice(config) {
   // prepare tiles
   let tiles = [];
   const original = Array.from(phrase).map((c, i) => ({ char: c, index: i }));
+  if (!original.length) { console.warn('initNinjaSlice: no characters to slice'); overlay.classList.add('hidden'); return; }
   let sliced = new Set();
   let score = 0;
   let timer = roundSeconds;
