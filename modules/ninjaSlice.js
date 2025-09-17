@@ -24,6 +24,10 @@ export function initNinjaSlice(config) {
     speedMax = 2.4,
     comboWindowMs = 600,             // max gap between slices to continue combo
   } = config;
+  const BOMB_HIT_RADIUS = 28;
+  const KANA_HIT_RADIUS = 28;
+  const HIT_INFLATE = 1.15;
+  const HIT_COOLDOWN_MS = 80;
 
   // grab elements
   const overlay = document.getElementById(overlayId);
@@ -273,14 +277,14 @@ export function initNinjaSlice(config) {
   function spawn() {
     const wantBomb = Math.random() < bombChance;
     if (wantBomb) {
-      tiles.push({ type:'bomb', x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
+      tiles.push({ type:'bomb', _lastHitAt: 0, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
       return;
     }
     // pick an unsliced kana index
     const candidates = original.filter(o => !sliced.has(o.index));
     const pick = candidates[Math.floor(Math.random()*candidates.length)];
     if (!pick) return;
-    tiles.push({ type:'kana', char: pick.char, index: pick.index, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
+    tiles.push({ type:'kana', _lastHitAt: 0, char: pick.char, index: pick.index, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
   }
 
 
@@ -323,7 +327,7 @@ export function initNinjaSlice(config) {
 const trails = [];
 function drawTrails() {
   const now = Date.now();
-  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 
   // Go backwards so splice works safely
   for (let i = trails.length - 1; i >= 0; i--) {
@@ -356,46 +360,67 @@ function drawTrails() {
 
 
   canvas.style.touchAction = "none";
-canvas.addEventListener("pointerdown", e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top);
-  trails.push([{ x, y, time: Date.now() }]);
-  try { if (_ac && _ac.state === 'suspended') { _ac.resume(); } else if (AudioCtx && !_ac) { _ac = new AudioCtx(); } } catch {}
-
-  // click slice point
-  for (let i = tiles.length - 1; i >= 0; i--) {
-    const t = tiles[i];
-    if (Math.hypot(t.x - x, t.y - y) < 32) { tiles.splice(i,1); sliceKana(t); break; }
-  }
-});
-
-  canvas.addEventListener('pointermove', e => {
-  if (e.buttons === 0) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top );
-  if (!trails.length) return; // guard if move occurs before down
-  const current = trails[trails.length - 1];
-  current.push({ x, y, time: Date.now() });
-  // Slice detection along latest segment
-  const p0 = current[current.length-2];
-  const p1 = current[current.length-1];
-  if (p0 && p1){
-    // quick swish depending on stroke speed
-    const dx = p1.x - p0.x, dy = p1.y - p0.y; if ((dx*dx + dy*dy) > 80) { try { SFX('swish'); } catch {} }
+  canvas.addEventListener("pointerdown", e => {
+    if (canvas.setPointerCapture) {
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
+    }
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const y = (e.clientY - rect.top);
+    trails.push([{ x, y, time: Date.now() }]);
+    try {
+      if (_ac && _ac.state === 'suspended') { _ac.resume(); }
+      else if (AudioCtx && !_ac) { _ac = new AudioCtx(); }
+    } catch {}
+    const now = performance.now();
     for (let i = tiles.length - 1; i >= 0; i--) {
       const t = tiles[i];
-      if (hitSegmentCircle(p0.x,p0.y,p1.x,p1.y,t.x,t.y,28)) { tiles.splice(i,1); sliceKana(t); }
+      const radius = (t.type === 'bomb' ? BOMB_HIT_RADIUS : KANA_HIT_RADIUS) * HIT_INFLATE;
+      if (Math.hypot(t.x - x, t.y - y) < radius) {
+        if (t._lastHitAt && (now - t._lastHitAt) < HIT_COOLDOWN_MS) continue;
+        t._lastHitAt = now;
+        tiles.splice(i,1);
+        sliceKana(t);
+        break;
+      }
     }
-  }
-  drawTrails();
-});
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    if (e.buttons === 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const y = (e.clientY - rect.top );
+    if (!trails.length) return; // guard if move occurs before down
+    const current = trails[trails.length - 1];
+    current.push({ x, y, time: Date.now() });
+    const p0 = current[current.length-2];
+    const p1 = current[current.length-1];
+    if (p0 && p1){
+      const dx = p1.x - p0.x, dy = p1.y - p0.y; if ((dx*dx + dy*dy) > 80) { try { SFX('swish'); } catch {} }
+      const now = performance.now();
+      for (let i = tiles.length - 1; i >= 0; i--) {
+        const t = tiles[i];
+        const radius = (t.type === 'bomb' ? BOMB_HIT_RADIUS : KANA_HIT_RADIUS) * HIT_INFLATE;
+        if (hitSegmentCircle(p0.x,p0.y,p1.x,p1.y,t.x,t.y,radius)) {
+          if (t._lastHitAt && (now - t._lastHitAt) < HIT_COOLDOWN_MS) continue;
+          t._lastHitAt = now;
+          tiles.splice(i,1);
+          sliceKana(t);
+        }
+      }
+    }
+    drawTrails();
+  });
 
 // clear everything on pointerup so no ghost trails remain
 canvas.addEventListener('pointerup', () => {
-  trails.length = 0;
-  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+    trails.length = 0;
+    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+});
+  canvas.addEventListener('pointercancel', () => {
+    trails.length = 0;
+    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 });
 
   // start the round
