@@ -25,6 +25,10 @@ export function initNinjaSlice(config) {
     comboWindowMs = 600,             // max gap between slices to continue combo
   } = config;
 
+  const BOMB_HIT_RADIUS = 28;
+  const NEAR_MISS_RADIUS = 64;
+  const NEAR_MISS_COOLDOWN = 600;
+
   // grab elements
   const overlay = document.getElementById(overlayId);
   const container = document.getElementById(containerId);
@@ -42,6 +46,42 @@ export function initNinjaSlice(config) {
   const bubblesToggle = config.bubblesToggleId ? document.getElementById(config.bubblesToggleId) : null;
   const progressEl = config.progressElId ? document.getElementById(config.progressElId) : null;
   const progressBar = config.progressBarId ? document.getElementById(config.progressBarId) : null;
+  let comboEnergy = 0;
+  const COMBO_DECAY_MS = 4500;
+  let comboMeterFill = null;
+
+  const hudRow = scoreEl ? scoreEl.parentElement : null;
+  if (hudRow && !document.getElementById('slice-combo-meter')) {
+    const wrap = document.createElement('div');
+    wrap.id = 'slice-combo-meter';
+    wrap.className = 'flex flex-col items-start text-[11px] leading-snug text-emerald-600';
+    const label = document.createElement('span');
+    label.textContent = 'Combo';
+    label.style.opacity = '0.8';
+    const bar = document.createElement('div');
+    bar.style.width = '96px';
+    bar.style.height = '4px';
+    bar.style.background = 'rgba(16,185,129,0.25)';
+    bar.style.borderRadius = '9999px';
+    bar.style.overflow = 'hidden';
+    const fill = document.createElement('div');
+    fill.style.height = '100%';
+    fill.style.width = '0%';
+    fill.style.background = 'linear-gradient(90deg, #34d399, #10b981)';
+    fill.style.transition = 'width 0.12s ease, opacity 0.2s ease';
+    bar.appendChild(fill);
+    wrap.appendChild(label);
+    wrap.appendChild(bar);
+    hudRow.appendChild(wrap);
+    comboMeterFill = fill;
+  }
+
+  function updateComboMeter(){
+    if (!comboMeterFill) return;
+    const pct = Math.max(0, Math.min(1, comboEnergy));
+    comboMeterFill.style.width = Math.round(pct * 100) + '%';
+    comboMeterFill.style.opacity = pct > 0 ? '1' : '0';
+  }
   const statsEl = config.statsElId ? document.getElementById(config.statsElId) : null;
 
   // Tunables (fallbacks)
@@ -133,32 +173,53 @@ export function initNinjaSlice(config) {
   // create a second "trail" canvas on top, aligned with the game canvas
   const holder = canvas.parentElement || container;
   const trailCanvas = document.createElement("canvas");
+  if (window.getComputedStyle && window.getComputedStyle(holder).position === 'static') { holder.style.position = 'relative'; }
   trailCanvas.style.position = "absolute";
   trailCanvas.style.top = "0";
   trailCanvas.style.left = "0";
   trailCanvas.style.pointerEvents = "none";
   holder.appendChild(trailCanvas);
   const trailCtx = trailCanvas.getContext("2d");
+  trailCanvas.style.zIndex = '2';
+  const bombVignette = document.createElement('div');
+  bombVignette.style.position = 'absolute';
+  bombVignette.style.inset = '0';
+  bombVignette.style.pointerEvents = 'none';
+  bombVignette.style.background = 'radial-gradient(circle at center, rgba(239,68,68,0.55) 30%, rgba(0,0,0,0.6) 80%)';
+  bombVignette.style.opacity = '0';
+  bombVignette.style.transition = 'opacity 0.3s ease';
+  bombVignette.style.zIndex = '6';
+  holder.appendChild(bombVignette);
   // Lightweight SFX helper (no external assets)
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   let _ac = null, _lastSwish = 0;
-  function SFX(type){
+  function SFX(type, opts = {}){
     try{
       _ac = _ac || new AudioCtx();
       const ctx = _ac;
+      const pitch = Number(opts.pitch || 1);
+      const volume = Number(opts.volume || 1);
       if (type === 'slice'){
         const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type='sawtooth'; o.frequency.value = 880; g.gain.value = 0.06;
+        o.type='sawtooth'; o.frequency.value = 880 * pitch; g.gain.value = 0.06 * volume;
         o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.08);
       } else if (type === 'swish'){
         const now = ctx.currentTime; if (now - _lastSwish < 0.05) return; _lastSwish = now;
         const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type='triangle'; o.frequency.value = 520; g.gain.value = 0.03;
+        o.type='triangle'; o.frequency.value = 520 * pitch; g.gain.value = 0.03 * volume;
         o.connect(g); g.connect(ctx.destination); o.start(); o.stop(now + 0.05);
       } else if (type === 'bomb'){
         const len = 0.25; const sr = 44100; const buf = ctx.createBuffer(1, sr*len, sr);
         const data = buf.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/(sr*0.1)); }
-        const src = ctx.createBufferSource(); src.buffer = buf; const g = ctx.createGain(); g.gain.value = 0.12;
+        const src = ctx.createBufferSource(); src.buffer = buf; const g = ctx.createGain(); g.gain.value = 0.12 * volume;
+        src.connect(g); g.connect(ctx.destination); src.start();
+      } else if (type === 'near'){
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type='sine'; o.frequency.value = 660 * pitch; g.gain.value = 0.05 * volume;
+        o.connect(g); g.connect(ctx.destination); const now = ctx.currentTime; o.start(now); o.stop(now + 0.12);
+      }
+    }catch{}
+  }        const src = ctx.createBufferSource(); src.buffer = buf; const g = ctx.createGain(); g.gain.value = 0.12;
         src.connect(g); g.connect(ctx.destination); src.start();
       }
     }catch{}
@@ -210,52 +271,53 @@ export function initNinjaSlice(config) {
   if (!original.length) { console.warn('initNinjaSlice: no characters to slice'); overlay.classList.add('hidden'); return; }
   let sliced = new Set();
   let score = 0;
+  function refreshScoreLabel(){
+    if (!scoreEl) return;
+    scoreEl.textContent = combo > 1 ? `Score: ${score}  (x${combo})` : `Score: ${score}`;
+  }
   let timer = roundSeconds;
   let spawnHandle = null, animateId = null, timerInterval = null;
   let lastSliceAt = 0, combo = 0, bestCombo = 0;
   // simple time scale for hit-stop (scoped to game loop)
   let timeScale = 1;
   let hitStopTimer = null;
-  function hitStop(ms){
+  function hitStop(ms, scale = 0.25){
     try{
-      timeScale = 0.25;
+      timeScale = Math.max(0.05, Math.min(1, scale));
       clearTimeout(hitStopTimer);
       hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(40, ms||80));
     }catch{}
+  let shakeStart = 0, shakeDuration = 0, shakeStrength = 0;
+  function triggerShake(strength = 12, duration = 400){
+    shakeStrength = strength;
+    shakeDuration = duration;
+    shakeStart = performance.now();
   }
-
-  // particles (slice sparks / bomb shards)
-  const particles = [];
-  function spawnSliceSparks(x, y, count=12) {
-    for (let i=0;i<count;i++) {
-      const a = Math.random()*Math.PI*2;
-      const sp = 2 + Math.random()*2.5;
-      particles.push({
-        kind:'spark',
-        x, y,
-        vx: Math.cos(a)*sp,
-        vy: Math.sin(a)*sp - 0.5,
-        life: 320 + Math.random()*200,
-        size: 2 + Math.random()*2,
-        color: (Math.random()<0.5 ? '#f59e0b' : '#facc15') // amber/yellow
-      });
+  function flashVignette(){
+    try {
+      bombVignette.style.opacity = '0.75';
+      setTimeout(()=>{ bombVignette.style.opacity = '0'; }, 240);
+    } catch {}
+  }
+  function updateShake(){
+    if (!shakeStart) { holder.style.transform = ''; return; }
+    const now = performance.now();
+    const elapsed = now - shakeStart;
+    if (elapsed >= shakeDuration) {
+      shakeStart = 0;
+      holder.style.transform = '';
+      return;
     }
+    const t = 1 - (elapsed / shakeDuration);
+    const magnitude = shakeStrength * t;
+    const dx = (Math.random()*2 - 1) * magnitude;
+    const dy = (Math.random()*2 - 1) * magnitude;
+    holder.style.transform = 	ranslate(px, px);
   }
-  function spawnBombShards(x, y, count=36) {
-    for (let i=0;i<count;i++) {
-      const a = Math.random()*Math.PI*2;
-      const sp = 2.5 + Math.random()*3.5;
-      particles.push({
-        kind:'shard',
-        x, y,
-        vx: Math.cos(a)*sp,
-        vy: Math.sin(a)*sp - 1.0,
-        life: 600 + Math.random()*300,
-        size: 3 + Math.random()*3,
-        rot: Math.random()*Math.PI,
-        spin: (Math.random()*2-1)*0.2,
-        color: '#ef4444' // red
-      });
+  }  }
+  function spawnHitFlash(x, y, color = 'rgba(255,255,255,0.75)') {
+    hitFlashes.push({ x, y, life: 200, color });
+  });
     }
   }
   function drawParticles(dtMs){
@@ -285,35 +347,50 @@ export function initNinjaSlice(config) {
     }
   }
 
+function drawHitFlashes(dtMs){
+    for (let i = hitFlashes.length - 1; i >= 0; i--) {
+      const f = hitFlashes[i];
+      f.life -= dtMs;
+      const alpha = Math.max(0, f.life / 200);
+      if (alpha <= 0) { hitFlashes.splice(i,1); continue; }
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = f.color;
+      const radius = 80 * (1 - alpha * 0.4);
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, radius, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
   // draw loop
   let _lastFrameAt = performance.now();
   function draw() {
     const now = performance.now();
     const dt = Math.min(32, now - _lastFrameAt); // clamp for stability
     _lastFrameAt = now;
+    comboEnergy = Math.max(0, comboEnergy - (dt / COMBO_DECAY_MS));
+    updateComboMeter();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    updateShake();
     ctx.font = '64px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     for (let t of tiles) {
-      // integrate
       t.x += t.vx * timeScale;
       t.y += t.vy * timeScale;
       t.vy += gravity * timeScale; // gravity
       if (t.spin) t.rot += t.spin;
-
-      // bounce off walls slightly
       if (t.x < 0 || t.x > viewW) t.vx *= -0.98;
 
-      // draw
       ctx.save();
       ctx.translate(t.x, t.y);
       if (t.rot) ctx.rotate(t.rot);
       if (t.type === 'bomb') {
         ctx.fillStyle = '#f43f5e';
         ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = '16px system-ui'; ctx.fillText('×', 0, 1);
+        ctx.fillStyle = '#fff'; ctx.font = '16px system-ui'; ctx.fillText('x', 0, 1);
       } else {
         ctx.fillStyle = '#111';
         ctx.fillText(t.char, 0, 0);
@@ -321,8 +398,8 @@ export function initNinjaSlice(config) {
       ctx.restore();
     }
 
-    // fx layer
     drawParticles(dt);
+    drawHitFlashes(dt);
 
     animateId = requestAnimationFrame(draw);
   }
@@ -333,19 +410,30 @@ export function initNinjaSlice(config) {
   function spawn() {
     const wantBomb = Math.random() < bombChance;
     if (wantBomb) {
-      tiles.push({ type:'bomb', x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
+      tiles.push({ type:'bomb', _lastNearMiss: 0, _lastHitAt: 0, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
       return;
     }
     // pick an unsliced kana index
     const candidates = original.filter(o => !sliced.has(o.index));
     const pick = candidates[Math.floor(Math.random()*candidates.length)];
     if (!pick) return;
-    tiles.push({ type:'kana', char: pick.char, index: pick.index, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
+    tiles.push({ type:'kana', _lastHitAt: 0, char: pick.char, index: pick.index, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
   }
 
 
   // handle slicing
   let pendingEndAt = 0; let pendingReason = null;
+  function handleNearMiss(tile){
+    try { SFX('near', { pitch: 1.1 }); } catch {}
+    spawnHitFlash(tile.x, tile.y, 'rgba(20,184,166,0.6)');
+    spawnSliceSparks(tile.x, tile.y, 6);
+    triggerShake(6, 220);
+    hitStop(220, 0.5);
+    comboEnergy = Math.min(1, comboEnergy + 0.18);
+    score += 25;
+    refreshScoreLabel();
+    updateComboMeter();
+  }
   function sliceKana(t) {
     if (t.type === 'kana') {
       const group = groupForIndex(t.index);
@@ -355,8 +443,9 @@ export function initNinjaSlice(config) {
       bestCombo = Math.max(bestCombo, combo);
       lastSliceAt = now;
       score += 100 * combo;
-      scoreEl.textContent = `Score: ${score}  (x${combo})`;
-      try { SFX('slice'); } catch {}
+      refreshScoreLabel();
+      const slicePitch = 1 + Math.max(0, Math.min(combo - 1, 8)) * 0.08;
+      try { SFX('slice', { pitch: slicePitch }); } catch {}
       try { flashCombo(); } catch {}
       // sparks at kana position
       spawnSliceSparks(t.x, t.y, 10 + Math.min(20, combo*2));
@@ -371,8 +460,11 @@ export function initNinjaSlice(config) {
       if (sliced.size === original.length) endGame('clear');
     } else if (t.type === 'bomb') {
       // bomb fx then end shortly after
-      scoreEl.textContent = `BOOM!`;
+      scoreEl.textContent = `BOOM!`; comboEnergy = 0; updateComboMeter();
       try { SFX('bomb'); } catch {}
+      spawnHitFlash(t.x, t.y, 'rgba(248,113,113,0.75)');
+      flashVignette();
+      triggerShake(18, 480);
       spawnBombShards(t.x, t.y, 42);
       hitStop(120);
       // stop further spawns quickly
@@ -412,35 +504,45 @@ export function initNinjaSlice(config) {
     const dx=x2-x1, dy=y2-y1; const l2 = dx*dx+dy*dy; if (l2===0) return Math.hypot(cx-x1,cy-y1)<=r;
     let t=((cx-x1)*dx+(cy-y1)*dy)/l2; t=Math.max(0,Math.min(1,t)); const px=x1+t*dx, py=y1+t*dy; return Math.hypot(px-cx,py-cy)<=r;
   }
+  function segmentDistance(x1,y1,x2,y2,cx,cy){
+    const dx=x2-x1, dy=y2-y1; const l2 = dx*dx+dy*dy;
+    if (l2 === 0) return Math.hypot(cx-x1, cy-y1);
+    let t=((cx-x1)*dx+(cy-y1)*dy)/l2;
+    t=Math.max(0,Math.min(1,t));
+    const px=x1+t*dx, py=y1+t*dy;
+    return Math.hypot(px-cx,py-cy);
+  }
+  const FADE_DURATION = 320; // milliseconds (how long trails last)
+  const trails = [];
+  function drawTrails() {
+    const now = Date.now();
+    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 
-  // trail drawing
-  const FADE_DURATION = 1000; // milliseconds (how long trails last)
-const trails = [];
-function drawTrails() {
-  const now = Date.now();
-  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
-
-  // Go backwards so splice works safely
-  for (let i = trails.length - 1; i >= 0; i--) {
-    const segment = trails[i];
-
-    // Draw each little segment in this trail
-    for (let j = 0; j < segment.length - 1; j++) {
-      const p0 = segment[j];
-      const p1 = segment[j + 1];
-      const age = (now - p0.time) / FADE_DURATION;
-      if (age >= 1) continue; // faded, skip
-
-      // Fade out as it ages
-      trailCtx.strokeStyle = `rgba(0,255,0,${1 - age})`;
-      trailCtx.lineWidth = 4;
-      trailCtx.beginPath();
-      trailCtx.moveTo(p0.x, p0.y);
-      trailCtx.lineTo(p1.x, p1.y);
-      trailCtx.stroke();
+    for (let i = trails.length - 1; i >= 0; i--) {
+      const segment = trails[i];
+      for (let j = 0; j < segment.length - 1; j++) {
+        const p0 = segment[j];
+        const p1 = segment[j + 1];
+        const age = (now - p0.time) / FADE_DURATION;
+        if (age >= 1) continue;
+        const alpha = 1 - age;
+        const width = 6 * alpha + 1.5;
+        const grad = trailCtx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+        grad.addColorStop(0, `rgba(125,255,205,${alpha})`);
+        grad.addColorStop(1, `rgba(16,185,129,${alpha * 0.6})`);
+        trailCtx.strokeStyle = grad;
+        trailCtx.lineWidth = width;
+        trailCtx.lineCap = 'round';
+        trailCtx.beginPath();
+        trailCtx.moveTo(p0.x, p0.y);
+        trailCtx.lineTo(p1.x, p1.y);
+        trailCtx.stroke();
+      }
+      if (now - segment[segment.length - 1].time > FADE_DURATION) {
+        trails.splice(i, 1);
+      }
     }
-
-    // Remove trail if last point is old
+  }
     if (now - segment[segment.length - 1].time > FADE_DURATION) {
       trails.splice(i, 1);
     }
@@ -452,16 +554,23 @@ function drawTrails() {
 
   canvas.style.touchAction = "none";
 canvas.addEventListener("pointerdown", e => {
+  if (canvas.setPointerCapture) { try { canvas.setPointerCapture(e.pointerId); } catch {} }
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left);
   const y = (e.clientY - rect.top);
   trails.push([{ x, y, time: Date.now() }]);
   try { if (_ac && _ac.state === 'suspended') { _ac.resume(); } else if (AudioCtx && !_ac) { _ac = new AudioCtx(); } } catch {}
-
-  // click slice point
+  const now = performance.now();
   for (let i = tiles.length - 1; i >= 0; i--) {
     const t = tiles[i];
-    if (Math.hypot(t.x - x, t.y - y) < 32) { tiles.splice(i,1); sliceKana(t); break; }
+    const radius = (t.type === 'bomb' ? BOMB_HIT_RADIUS : KANA_HIT_RADIUS) * HIT_INFLATE;
+    if (Math.hypot(t.x - x, t.y - y) < radius) {
+      if (t._lastHitAt && (now - t._lastHitAt) < 80) continue;
+      t._lastHitAt = now;
+      tiles.splice(i,1);
+      sliceKana(t);
+      break;
+    }
   }
 });
 
@@ -473,15 +582,28 @@ canvas.addEventListener("pointerdown", e => {
   if (!trails.length) return; // guard if move occurs before down
   const current = trails[trails.length - 1];
   current.push({ x, y, time: Date.now() });
-  // Slice detection along latest segment
   const p0 = current[current.length-2];
   const p1 = current[current.length-1];
   if (p0 && p1){
-    // quick swish depending on stroke speed
-    const dx = p1.x - p0.x, dy = p1.y - p0.y; if ((dx*dx + dy*dy) > 80) { try { SFX('swish'); } catch {} }
+    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+    if ((dx*dx + dy*dy) > 80) { try { SFX('swish'); } catch {} }
+    const now = performance.now();
     for (let i = tiles.length - 1; i >= 0; i--) {
       const t = tiles[i];
-      if (hitSegmentCircle(p0.x,p0.y,p1.x,p1.y,t.x,t.y,28)) { tiles.splice(i,1); sliceKana(t); }
+      if (hitSegmentCircle(p0.x,p0.y,p1.x,p1.y,t.x,t.y,BOMB_HIT_RADIUS)) {
+        tiles.splice(i,1);
+        sliceKana(t);
+        continue;
+      }
+      if (t.type === 'bomb') {
+        const dist = segmentDistance(p0.x,p0.y,p1.x,p1.y,t.x,t.y);
+        if (dist < NEAR_MISS_RADIUS && dist > BOMB_HIT_RADIUS + 4) {
+          if (!t._lastNearMiss || (now - t._lastNearMiss) > NEAR_MISS_COOLDOWN) {
+            t._lastNearMiss = now;
+            handleNearMiss(t);
+          }
+        }
+      }
     }
   }
   drawTrails();
@@ -498,8 +620,13 @@ canvas.addEventListener('pointerup', () => {
     tiles = [];
     sliced.clear();
     score = 0; combo = 0; bestCombo = 0; lastSliceAt = 0;
-    scoreEl.textContent = "Score: 0";
+    refreshScoreLabel();
     resetComboBadge();
+    comboEnergy = 0;
+    updateComboMeter();
+    shakeStart = 0;
+    holder.style.transform = '';
+    bombVignette.style.opacity = '0';
     if (statsEl) statsEl.textContent = "";
     timer = roundSeconds;
     timerEl.textContent = timer;
@@ -512,7 +639,6 @@ canvas.addEventListener('pointerup', () => {
     } catch {}
 
     draw();
-    // dynamic spawn rate over time
     const start = performance.now();
     function scheduleNext(){
       const t = Math.min(1, (performance.now()-start)/(roundSeconds*1000));
@@ -534,6 +660,11 @@ canvas.addEventListener('pointerup', () => {
     clearInterval(timerInterval);
     cancelAnimationFrame(animateId);
     resetComboBadge();
+    comboEnergy = 0;
+    updateComboMeter();
+    shakeStart = 0;
+    holder.style.transform = '';
+    bombVignette.style.opacity = '0';
     renderStats(reason);
     if (overPanel) {
       const t = document.getElementById('slice-over-title');
@@ -547,11 +678,17 @@ canvas.addEventListener('pointerup', () => {
       overlay.classList.add('hidden');
     }
   }
+
   closeBtn.addEventListener("click", () => {
     clearTimeout(spawnHandle);
     clearInterval(timerInterval);
     cancelAnimationFrame(animateId);
     resetComboBadge();
+    comboEnergy = 0;
+    updateComboMeter();
+    shakeStart = 0;
+    holder.style.transform = '';
+    bombVignette.style.opacity = '0';
     if (statsEl) statsEl.textContent = "";
     overlay.classList.add('hidden');
   });
