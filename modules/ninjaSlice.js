@@ -80,6 +80,16 @@ export function initNinjaSlice(config) {
 
   const holder = canvas.parentElement || container;
 
+  const swordCursor = 'url("images/slice-cursor.svg") 6 6, auto';
+  const cursorTargets = [canvas, holder, overlay];
+  const originalCursors = cursorTargets.map(el => (el && el.style ? el.style.cursor || '' : ''));
+  function applySwordCursor(){
+    cursorTargets.forEach(el => { if (el && el.style) el.style.cursor = swordCursor; });
+  }
+  function resetSwordCursor(){
+    cursorTargets.forEach((el, idx) => { if (el && el.style) el.style.cursor = originalCursors[idx]; });
+  }
+
   // populate text areas
   const chars = Array.from(phrase);
   function buildKanaDisplay(){
@@ -545,6 +555,7 @@ canvas.addEventListener('pointercancel', e => {
     comboDecayTimer = null;
     updateScoreHud();
     resetComboBadge();
+    applySwordCursor();
     timer = roundSeconds;
     timerEl.textContent = timer;
     try { nearMissBadge.style.opacity = '0'; } catch {}
@@ -589,6 +600,7 @@ canvas.addEventListener('pointercancel', e => {
       combo = 0;
     }
     resetComboBadge();
+    resetSwordCursor();
     try { nearMissBadge.style.opacity = '0'; } catch {}
     if (statsEl) {
       let displayScore = `${score}`;
@@ -609,7 +621,13 @@ canvas.addEventListener('pointercancel', e => {
       overlay.classList.add('hidden');
     }
   }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); overlay.classList.add('hidden'); });
+  closeBtn.addEventListener("click", () => {
+    clearTimeout(spawnHandle);
+    clearInterval(timerInterval);
+    cancelAnimationFrame(animateId);
+    resetSwordCursor();
+    overlay.classList.add('hidden');
+  });
 
   // show modal & kick off — ensure sizing runs after it becomes visible
   overlay.classList.remove('hidden');
