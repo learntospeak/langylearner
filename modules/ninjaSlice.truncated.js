@@ -1,4 +1,4 @@
-ï»¿// modules/ninjaSlice.js
+// modules/ninjaSlice.js
 
 export function initNinjaSlice(config) {
   const {
@@ -71,7 +71,7 @@ export function initNinjaSlice(config) {
     clearTimeout(comboHideTimer);
     comboHideTimer = setTimeout(()=>{ comboBadge.style.opacity = '0'; }, 500);
   }
-  function resetComboBadge(){ if (comboBadge) { comboBadge.style.opacity = '0'; comboBadge.style.transform = 'scale(1)'; } }
+  function resetComboBadge(){ if (comboBadge) comboBadge.style.opacity = '0'; }
   if (!overlay || !container || !canvas || !ctx || !closeBtn
     || !scoreEl || !timerEl || !kanaEl || !romajiEl || !englishEl) {
     console.warn("initNinjaSlice: missing DOM nodes");
@@ -79,6 +79,7 @@ export function initNinjaSlice(config) {
   }
 
   const holder = canvas.parentElement || container;
+
 
   // populate text areas
   const chars = Array.from(phrase);
@@ -132,14 +133,13 @@ export function initNinjaSlice(config) {
   nearMissBadge.className = 'pointer-events-none absolute left-1/2 -translate-x-1/2 top-16 text-sm font-semibold text-amber-200 drop-shadow opacity-0 transition-opacity';
   holder.appendChild(nearMissBadge);
   let nearMissHideTimer = null;
-  function flashNearMiss(message = 'Bomb dodged!'){
+  function flashNearMiss(message = 'Near miss!'){
     nearMissBadge.textContent = message;
     nearMissBadge.style.opacity = '1';
     clearTimeout(nearMissHideTimer);
     nearMissHideTimer = window.setTimeout(()=>{ nearMissBadge.style.opacity = '0'; }, 420);
   }
 
-  buildKanaDisplay();
   romajiEl.textContent = romaji;
   englishEl.textContent = english;
 
@@ -261,7 +261,7 @@ export function initNinjaSlice(config) {
     try {
       if (progressEl) {
         const base = `(${sliced.size}/${chars.length})`;
-        const extra = nearMisses > 0 ? ` | Near misses: ${nearMisses}` : '';
+        const extra = nearMisses > 0 ? ` • Near misses: ${nearMisses}` : '';
         const prefix = lastSliceLabel ? `${lastSliceLabel}  ` : '';
         progressEl.textContent = prefix + base + extra;
       }
@@ -310,7 +310,7 @@ export function initNinjaSlice(config) {
       if (t.type === 'bomb') {
         ctx.fillStyle = '#f43f5e';
         ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = '16px system-ui'; ctx.fillText('Ã—', 0, 1);
+        ctx.fillStyle = '#fff'; ctx.font = '16px system-ui'; ctx.fillText('×', 0, 1);
       } else {
         ctx.fillStyle = '#111';
         ctx.fillText(t.char, 0, 0);
@@ -342,7 +342,7 @@ export function initNinjaSlice(config) {
     if (t.type === 'kana') {
       const group = groupForIndex(t.index);
       group.forEach(i=>sliced.add(i));
-      totalSlices += group.length;
+      totalSlices += 1;
       const now = performance.now();
       combo = (now - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
       lastSliceAt = now;
@@ -409,8 +409,7 @@ export function initNinjaSlice(config) {
     updateProgressUI();
   }
 
-  // trail drawing
-  const FADE_DURATION = 1000; // milliseconds (how long trails last)
+  // trail drawing  const FADE_DURATION = 1000; // milliseconds (how long trails last)
   const trails = [];
   function drawTrails() {
     const now = Date.now();
@@ -442,179 +441,6 @@ export function initNinjaSlice(config) {
       }
     }
   }
-}
-
-
-
-
-  canvas.style.touchAction = "none";
-canvas.addEventListener("pointerdown", e => {
-  if (canvas.setPointerCapture) {
-    try { canvas.setPointerCapture(e.pointerId); } catch {}
-  }
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top);
-  trails.push([{ x, y, time: Date.now() }]);
-  try {
-    if (_ac && _ac.state === 'suspended') { _ac.resume(); }
-    else if (AudioCtx && !_ac) { _ac = new AudioCtx(); }
-  } catch {}
-  const now = performance.now();
-  for (let i = tiles.length - 1; i >= 0; i--) {
-    const t = tiles[i];
-    const radius = (t.type === 'bomb' ? BOMB_HIT_RADIUS : KANA_HIT_RADIUS) * HIT_INFLATE;
-    if (Math.hypot(t.x - x, t.y - y) < radius) {
-      if (t._lastHitAt && (now - t._lastHitAt) < HIT_COOLDOWN_MS) continue;
-      t._lastHitAt = now;
-      tiles.splice(i,1);
-      sliceKana(t);
-      break;
-    }
-  }
-});
-
-  canvas.addEventListener('pointermove', e => {
-  if (e.buttons === 0) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top );
-  if (!trails.length) return; // guard if move occurs before down
-  const current = trails[trails.length - 1];
-  current.push({ x, y, time: Date.now() });
-  // Slice detection along latest segment
-  const p0 = current[current.length-2];
-  const p1 = current[current.length-1];
-  if (p0 && p1){
-    // quick swish depending on stroke speed
-    const dx = p1.x - p0.x, dy = p1.y - p0.y; if ((dx*dx + dy*dy) > 80) { try { SFX('swish'); } catch {} }
-    const now = performance.now();
-    for (let i = tiles.length - 1; i >= 0; i--) {
-      const t = tiles[i];
-      const radius = (t.type === 'bomb' ? BOMB_HIT_RADIUS : KANA_HIT_RADIUS) * HIT_INFLATE;
-      if (hitSegmentCircle(p0.x,p0.y,p1.x,p1.y,t.x,t.y,radius)) {
-        if (t._lastHitAt && (now - t._lastHitAt) < HIT_COOLDOWN_MS) continue;
-        t._lastHitAt = now;
-        tiles.splice(i,1);
-        sliceKana(t);
-        continue;
-      }
-      if (t.type === 'bomb') {
-        const dist = segmentDistance(p0.x,p0.y,p1.x,p1.y,t.x,t.y);
-        if (dist < NEAR_MISS_RADIUS && dist > (BOMB_HIT_RADIUS + 4)) {
-          if (!t._lastNearMiss || (now - t._lastNearMiss) > NEAR_MISS_COOLDOWN) {
-            t._lastNearMiss = now;
-            handleNearMiss(t);
-          }
-        }
-      }
-    }
-  }
-  drawTrails();
-});
-
-// clear everything on pointerup so no ghost trails remain
-canvas.addEventListener('pointerup', e => {
-  if (canvas.releasePointerCapture) {
-    try { canvas.releasePointerCapture(e.pointerId); } catch {}
-  }
-  trails.length = 0;
-  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
-});
-canvas.addEventListener('pointercancel', e => {
-  if (canvas.releasePointerCapture) {
-    try { canvas.releasePointerCapture(e.pointerId); } catch {}
-  }
-  trails.length = 0;
-  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
-});
-
-  // start the round
-  function startRound() {
-    tiles = [];
-    sliced.clear();
-    score = 0;
-    combo = 0;
-    maxCombo = 0;
-    totalSlices = 0;
-    nearMisses = 0;
-    lastSliceLabel = '';
-    lastSliceAt = 0;
-    timeScale = 1;
-    clearTimeout(comboDecayTimer);
-    comboDecayTimer = null;
-    updateScoreHud();
-    resetComboBadge();
-    timer = roundSeconds;
-    timerEl.textContent = timer;
-    try { nearMissBadge.style.opacity = '0'; } catch {}
-    try { romaBubble.style.opacity = '0'; } catch {}
-    if (statsEl) statsEl.innerHTML = '';
-    updateProgressUI();
-    buildKanaDisplay();
-    try {
-      const help = document.getElementById('slice-instructions');
-      if (help) { help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); }
-    } catch {}
-
-    draw();
-    // dynamic spawn rate over time
-    const start = performance.now();
-    function scheduleNext(){
-      const t = Math.min(1, (performance.now()-start)/(roundSeconds*1000));
-      const ms = Math.round(spawnMsStart + (spawnMsEnd-spawnMsStart)*t);
-      spawn();
-      spawnHandle = setTimeout(scheduleNext, ms);
-    }
-    scheduleNext();
-
-    timerInterval = setInterval(() => {
-      timerEl.textContent = --timer;
-      if (timer <= 0) endGame();
-    }, 1000);
-  }
-
-  // clean up and show game-over panel or close
-  function endGame(reason = 'timeout') {
-    clearTimeout(spawnHandle);
-    clearInterval(timerInterval);
-    cancelAnimationFrame(animateId);
-    clearTimeout(comboDecayTimer);
-    comboDecayTimer = null;
-    timeScale = 1;
-    if (reason !== 'bomb') {
-      combo = 0;
-      updateScoreHud();
-    } else {
-      combo = 0;
-    }
-    resetComboBadge();
-    try { nearMissBadge.style.opacity = '0'; } catch {}
-    if (statsEl) {
-      let displayScore = `${score}`;
-      try { displayScore = score.toLocaleString(); } catch {}
-      const cleared = `${sliced.size}/${original.length}`;
-      const accuracy = original.length ? Math.round((sliced.size / original.length) * 100) : 0;
-      statsEl.innerHTML = `Score: ${displayScore}<br>Max combo: x${Math.max(1, maxCombo)}<br>Sliced tiles: ${totalSlices}<br>Near misses: ${nearMisses}<br>Progress: ${cleared} (${accuracy}%)`;
-    }
-    if (overPanel) {
-      const t = document.getElementById('slice-over-title');
-      const r = document.getElementById('slice-over-reason');
-      if (t) t.textContent = (reason === 'clear') ? 'All Done!' : 'Game Over';
-      if (r) r.textContent = (reason === 'bomb') ? 'You hit a bomb.' : (reason === 'timeout' ? 'Time up.' : 'Great job!');
-      overPanel.classList.remove('hidden');
-      if (tryBtn) tryBtn.onclick = () => { overPanel.classList.add('hidden'); startRound(); };
-      if (finishBtn) finishBtn.onclick = () => { overPanel.classList.add('hidden'); overlay.classList.add('hidden'); };
-    } else {
-      overlay.classList.add('hidden');
-    }
-  }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); overlay.classList.add('hidden'); });
-
-  // show modal & kick off â€” ensure sizing runs after it becomes visible
-  overlay.classList.remove('hidden');
-  requestAnimationFrame(() => { resize(); startRound(); });
-}
 
 
 
