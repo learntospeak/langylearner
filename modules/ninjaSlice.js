@@ -46,10 +46,21 @@ export function initNinjaSlice(config) {
   const comboMeter = document.getElementById('slice-combo-meter');
   const comboMeterFill = comboMeter ? document.getElementById('slice-combo-meter-fill') : null;
   const holder = canvas.parentElement || container;
+  if (holder && holder.style && (!holder.style.position || holder.style.position === '')) {
+    holder.style.position = 'relative';
+  }
   const KANA_RADIUS = 42;
   const BOMB_RADIUS = 32;
   let stageIndex = 0;
   let stageData = [];
+  let roundActive = false;
+  let spawnStartTime = 0;
+  let spawnScheduledAt = 0;
+  let nextSpawnDelay = spawnMsStart;
+  let isPaused = false;
+  let pauseTimeoutId = null;
+  let currentPauseState = null;
+  let scheduleNext = () => {};
 
   // Tunables (fallbacks)
   const launchBoost = Number((config && config.launchBoost) ?? 1.0);
@@ -117,27 +128,50 @@ export function initNinjaSlice(config) {
   const romaBubble = document.createElement('div');
   romaBubble.className = 'absolute pointer-events-none bg-black text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity duration-300';
   holder.appendChild(romaBubble);
+  const pauseOverlay = document.createElement('div');
+  pauseOverlay.style.position = 'absolute';
+  pauseOverlay.style.inset = '0';
+  pauseOverlay.style.display = 'flex';
+  pauseOverlay.style.alignItems = 'center';
+  pauseOverlay.style.justifyContent = 'center';
+  pauseOverlay.style.pointerEvents = 'none';
+  pauseOverlay.style.background = 'rgba(0, 0, 0, 0.35)';
+  pauseOverlay.style.color = '#fff';
+  pauseOverlay.style.fontSize = '2.4rem';
+  pauseOverlay.style.fontWeight = '600';
+  pauseOverlay.style.letterSpacing = '0.08em';
+  pauseOverlay.style.textShadow = '0 4px 12px rgba(0,0,0,0.55)';
+  pauseOverlay.style.transition = 'opacity 0.2s ease';
+  pauseOverlay.style.opacity = '0';
+  pauseOverlay.style.zIndex = '30';
+  pauseOverlay.textContent = '';
+  holder.appendChild(pauseOverlay);
   let bubblesOn = true;
   if (bubblesToggle) {
     bubblesOn = !!bubblesToggle.checked;
     bubblesToggle.addEventListener('change', ()=>{ bubblesOn = !!bubblesToggle.checked; romaBubble.style.opacity = '0'; });
   }
   function showRomaForGroup(indices){
-    if (!bubblesOn) return;
+    const result = { romajiText: '', kanaText: '' };
+    if (!Array.isArray(indices) || !indices.length) return result;
     try{
-      const anchorIdx = indices[indices.length-1];
-      const span = kanaEl.querySelector(`[data-idx="${anchorIdx}"]`);
-      if (!span) return;
-      const text = indices.map(i=>chars[i]).join('');
-      const roma = toRomaStr(text);
-      const r1 = span.getBoundingClientRect();
-      const r0 = holder.getBoundingClientRect();
-      romaBubble.textContent = roma;
-      romaBubble.style.left = (r1.left - r0.left + r1.width/2) + 'px';
-      romaBubble.style.top  = (r1.top - r0.top - 18) + 'px';
-      romaBubble.style.opacity = '1';
-      setTimeout(()=>{ romaBubble.style.opacity = '0'; }, 700);
+      result.kanaText = indices.map(i => (typeof i === 'number' && chars[i] !== undefined) ? chars[i] : '').join('');
+      result.romajiText = toRomaStr(result.kanaText) || '';
+      if (bubblesOn) {
+        const anchorIdx = indices[indices.length - 1];
+        const span = kanaEl.querySelector(`[data-idx="${anchorIdx}"]`);
+        if (!span) return result;
+        const r1 = span.getBoundingClientRect();
+        const r0 = holder.getBoundingClientRect();
+        const bubbleText = result.romajiText || result.kanaText;
+        romaBubble.textContent = bubbleText;
+        romaBubble.style.left = (r1.left - r0.left + r1.width / 2) + 'px';
+        romaBubble.style.top = (r1.top - r0.top - 18) + 'px';
+        romaBubble.style.opacity = '1';
+        setTimeout(()=>{ romaBubble.style.opacity = '0'; }, 700);
+      }
     }catch{}
+    return result;
   }
   const normalizeStage = (entry = {}) => {
     const raw = (entry.phrase || entry.jp || '').trim();
@@ -371,6 +405,107 @@ export function initNinjaSlice(config) {
       clearTimeout(hitStopTimer);
       hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(40, ms||80));
     }catch{}
+  }
+
+  const SLICE_PAUSE_MS = 1000;
+
+  function startTimerTicker() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timerEl.textContent = --timer;
+      if (timer <= 0) endGame();
+    }, 1000);
+  }
+
+  function resumeFromPause(options = {}) {
+    if (!isPaused || !currentPauseState) return;
+    const { skipCallbacks = false, skipResume = false } = options || {};
+    if (pauseTimeoutId) {
+      clearTimeout(pauseTimeoutId);
+      pauseTimeoutId = null;
+    }
+    const state = currentPauseState;
+    currentPauseState = null;
+    isPaused = false;
+    pauseOverlay.style.opacity = '0';
+    setTimeout(() => { if (!isPaused) pauseOverlay.textContent = ''; }, 220);
+    const resumedAt = performance.now();
+    const pausedDuration = Math.max(0, resumedAt - state.startedAt);
+    spawnStartTime += pausedDuration;
+    if (lastSliceAt) lastSliceAt += pausedDuration;
+    for (const fx of popFx) {
+      fx.created += pausedDuration;
+    }
+    if (!skipResume && state.roundActive && roundActive) {
+      if (state.timerWasRunning) startTimerTicker();
+      const delay = state.spawnRemainingDelay != null ? Math.max(0, state.spawnRemainingDelay) : 0;
+      spawnScheduledAt = performance.now();
+      nextSpawnDelay = delay || nextSpawnDelay;
+      spawnHandle = setTimeout(scheduleNext, delay);
+      if (state.comboShouldResume && combo > 1) {
+        if (!comboDecayHandle) comboDecayHandle = requestAnimationFrame(tickComboMeter);
+      }
+      if (!animateId) draw();
+    }
+    if (!skipCallbacks && typeof state.afterPause === 'function') {
+      try { state.afterPause(); } catch (err) { console.error(err); }
+    }
+  }
+
+  function cancelActivePause(options = {}) {
+    if (!isPaused) return;
+    const opts = Object.assign({ skipCallbacks: true, skipResume: true }, options || {});
+    resumeFromPause(opts);
+  }
+
+  function pauseSliceMoment(displayText, afterPause) {
+    if (!roundActive || isPaused) {
+      if (typeof afterPause === 'function' && !isPaused) {
+        afterPause();
+      }
+      return;
+    }
+    const now = performance.now();
+    const text = (displayText || '').trim();
+    pauseOverlay.textContent = text;
+    pauseOverlay.style.opacity = text ? '1' : '0.6';
+    pointerIsDown = false;
+    clearTrails();
+    const state = {
+      startedAt: now,
+      afterPause: typeof afterPause === 'function' ? afterPause : null,
+      timerWasRunning: !!timerInterval,
+      comboShouldResume: combo > 1 && !!lastSliceAt,
+      spawnRemainingDelay: 0,
+      roundActive
+    };
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    if (comboDecayHandle) {
+      cancelAnimationFrame(comboDecayHandle);
+      comboDecayHandle = null;
+    }
+    if (spawnHandle) {
+      const elapsed = Math.max(0, now - spawnScheduledAt);
+      state.spawnRemainingDelay = Math.max(0, nextSpawnDelay - elapsed);
+      clearTimeout(spawnHandle);
+      spawnHandle = null;
+    } else {
+      state.spawnRemainingDelay = Math.max(0, nextSpawnDelay);
+    }
+    if (animateId) {
+      cancelAnimationFrame(animateId);
+      animateId = null;
+    }
+    if (pauseTimeoutId) {
+      clearTimeout(pauseTimeoutId);
+      pauseTimeoutId = null;
+    }
+    isPaused = true;
+    currentPauseState = state;
+    pauseTimeoutId = setTimeout(() => resumeFromPause(), SLICE_PAUSE_MS);
   }
 
   function draw() {
