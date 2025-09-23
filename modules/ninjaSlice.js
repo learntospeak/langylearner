@@ -167,9 +167,43 @@ export function initNinjaSlice(config) {
       _ac = _ac || new AudioCtx();
       const ctx = _ac;
       if (type === 'slice'){
-        const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.type='sawtooth'; o.frequency.value = 880; g.gain.value = 0.06;
-        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.08);
+        const len = 0.18;
+        const sr = ctx.sampleRate || 44100;
+        const buffer = ctx.createBuffer(1, Math.floor(sr * len), sr);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          const t = i / sr;
+          const env = Math.pow(Math.max(0, 1 - t / len), 3);
+          const wobble = 1 + Math.sin(t * Math.PI * 10) * 0.2;
+          data[i] = (Math.random() * 2 - 1) * env * wobble;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1700;
+        filter.Q.value = 0.9;
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0.55, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + len);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start();
+        noise.stop(now + len);
+
+        const osc = ctx.createOscillator();
+        const popGain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + len);
+        popGain.gain.setValueAtTime(0.24, now);
+        popGain.gain.exponentialRampToValueAtTime(0.002, now + len);
+        osc.connect(popGain);
+        popGain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + len);
       } else if (type === 'swish'){
         const now = ctx.currentTime; if (now - _lastSwish < 0.05) return; _lastSwish = now;
         const o = ctx.createOscillator(); const g = ctx.createGain();
@@ -318,9 +352,81 @@ export function initNinjaSlice(config) {
       ctx.translate(t.x, t.y);
       if (t.rot) ctx.rotate(t.rot);
       if (t.type === 'bomb') {
-        ctx.fillStyle = '#f43f5e';
-        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.font = '16px system-ui'; ctx.fillText('x', 0, 1);
+        ctx.save();
+        const bodyRadius = (t.radius || BOMB_RADIUS) * 0.9;
+        const bodyGradient = ctx.createLinearGradient(0, -bodyRadius, 0, bodyRadius * 1.2);
+        bodyGradient.addColorStop(0, '#fde7d9');
+        bodyGradient.addColorStop(1, '#f2b190');
+        ctx.beginPath();
+        ctx.fillStyle = bodyGradient;
+        ctx.ellipse(0, bodyRadius * 0.1, bodyRadius * 0.95, bodyRadius * 1.05, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+        ctx.ellipse(0, bodyRadius * 0.32, bodyRadius * 0.55, bodyRadius * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(-bodyRadius * 0.95, bodyRadius * 0.12, bodyRadius * 1.9, bodyRadius * 0.48);
+        ctx.fillRect(-bodyRadius * 0.28, bodyRadius * 0.12, bodyRadius * 0.56, bodyRadius * 0.88);
+
+        const clothGradient = ctx.createLinearGradient(0, bodyRadius * 0.12, 0, bodyRadius * 0.9);
+        clothGradient.addColorStop(0, 'rgba(255,255,255,0.2)');
+        clothGradient.addColorStop(1, 'rgba(17,24,39,0.65)');
+        ctx.fillStyle = clothGradient;
+        ctx.fillRect(-bodyRadius * 0.25, bodyRadius * 0.16, bodyRadius * 0.5, bodyRadius * 0.7);
+
+        const headRadius = bodyRadius * 0.44;
+        const headGradient = ctx.createLinearGradient(0, -bodyRadius * 1.35, 0, -bodyRadius * 0.4);
+        headGradient.addColorStop(0, '#fdd9c2');
+        headGradient.addColorStop(1, '#f4b28c');
+        ctx.beginPath();
+        ctx.fillStyle = headGradient;
+        ctx.arc(0, -bodyRadius * 0.92, headRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = '#111827';
+        ctx.arc(0, -bodyRadius * 1.08, headRadius * 0.78, Math.PI * 0.95, Math.PI * 2.05);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, -bodyRadius * 1.24, headRadius * 0.36, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = '#111';
+        ctx.arc(-headRadius * 0.36, -bodyRadius * 0.95, headRadius * 0.14, 0, Math.PI * 2);
+        ctx.arc(headRadius * 0.36, -bodyRadius * 0.95, headRadius * 0.14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = headRadius * 0.18;
+        ctx.lineCap = 'round';
+        ctx.arc(0, -bodyRadius * 0.74, headRadius * 0.48, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+
+        const armColor = '#f3b48f';
+        ctx.beginPath();
+        ctx.strokeStyle = armColor;
+        ctx.lineWidth = bodyRadius * 0.32;
+        ctx.lineCap = 'round';
+        ctx.moveTo(-bodyRadius * 0.92, -bodyRadius * 0.08);
+        ctx.lineTo(-bodyRadius * 0.38, bodyRadius * 0.46);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(bodyRadius * 0.92, -bodyRadius * 0.08);
+        ctx.lineTo(bodyRadius * 0.38, bodyRadius * 0.46);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.fillStyle = armColor;
+        ctx.arc(-bodyRadius * 0.78, bodyRadius * 0.68, bodyRadius * 0.22, 0, Math.PI * 2);
+        ctx.arc(bodyRadius * 0.78, bodyRadius * 0.68, bodyRadius * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
       } else {
         const radius = t.radius || KANA_RADIUS;
         const bubbleGradient = ctx.createRadialGradient(0, -radius * 0.25, radius * 0.1, 0, 0, radius);
@@ -437,7 +543,7 @@ export function initNinjaSlice(config) {
   }
 
   // trail drawing
-  const FADE_DURATION = 1000; // milliseconds (how long trails last)
+  const FADE_DURATION = 220; // milliseconds (how long trails last)
 const trails = [];
 function drawTrails() {
   const now = Date.now();
@@ -505,7 +611,8 @@ canvas.addEventListener("pointerdown", e => {
   const x = (e.clientX - rect.left);
   const y = (e.clientY - rect.top);
   clearTrails();
-  trails.push([{ x, y, time: Date.now() }]);
+  const now = Date.now();
+  trails.push([{ x, y, time: now }]);
   try {
     if (_ac && _ac.state === 'suspended') { _ac.resume(); }
     else if (AudioCtx && !_ac) { _ac = new AudioCtx(); }
@@ -527,7 +634,14 @@ canvas.addEventListener("pointerdown", e => {
   const y = (e.clientY - rect.top );
   if (!trails.length) return; // guard if move occurs before down
   const current = trails[trails.length - 1];
-  current.push({ x, y, time: Date.now() });
+  const now = Date.now();
+  const lastPoint = current[current.length - 1];
+  if (!lastPoint || (now - lastPoint.time) > 18) {
+    current.push({ x, y, time: now });
+    if (current.length > 6) {
+      current.splice(0, current.length - 6);
+    }
+  }
   // Slice detection along latest segment
   const p0 = current[current.length-2];
   const p1 = current[current.length-1];
@@ -572,6 +686,7 @@ canvas.addEventListener("pointerdown", e => {
     clearTrails();
     activeClickPad = CLICK_PAD;
     activeSlicePad = SLICE_PAD;
+    trails.length = 0;
     if (canvas.releasePointerCapture && e) {
       try { canvas.releasePointerCapture(e.pointerId); } catch {}
     }
