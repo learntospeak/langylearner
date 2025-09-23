@@ -760,8 +760,9 @@
         const english = (cached.english || '').trim() || 'Hello';
         const romajiCached = (cached.romaji || '').trim();
         const romaji = romajiCached || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa');
+        const stages = Array.isArray(cached.stages) ? cached.stages : [];
         if (phrase) {
-          return { phrase, romaji, english };
+          return { phrase, romaji, english, stages };
           }
       }
     } catch {}
@@ -772,9 +773,9 @@
       const phrase = (jpEl?.textContent || '').trim() || '\\u3053\\u3093\\u306B\\u3061\\u306F';
       const english = (enEl?.textContent || '').trim() || 'Hello';
       const romaji = (window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa';
-      return { phrase, romaji, english };
+      return { phrase, romaji, english, stages: [] };
     } catch {
-      return { phrase:'こんにちは', romaji:'konnichiwa', english:'Hello' };
+      return { phrase:'こんにちは', romaji:'konnichiwa', english:'Hello' , stages: [] };
     }
   }
   function launchSlice(){
@@ -800,6 +801,7 @@
       progressElId: 'slice-progress',
       progressBarId: 'slice-progressbar',
       statsElId: 'slice-over-stats',
+      phrases: Array.isArray(data?.stages) ? data.stages : [],
       phrase, romaji, english,
       heightRatio: 0.55,
       spawnMsStart: 900,

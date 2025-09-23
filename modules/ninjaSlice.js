@@ -14,6 +14,7 @@ export function initNinjaSlice(config) {
     phrase = "",
     romaji = "",
     english = "",
+    phrases = [],
     // Tunables
     heightRatio = 0.5,              // canvas height relative to container
     spawnMsStart = 800,              // initial spawn interval
@@ -47,7 +48,8 @@ export function initNinjaSlice(config) {
   const holder = canvas.parentElement || container;
   const KANA_RADIUS = 42;
   const BOMB_RADIUS = 32;
-
+  let stageIndex = 0;
+  let stageData = [];
 
   // Tunables (fallbacks)
   const launchBoost = Number((config && config.launchBoost) ?? 1.0);
@@ -58,15 +60,17 @@ export function initNinjaSlice(config) {
   function updateProgressUI(){
     try {
       if (progressEl) {
-        progressEl.textContent = `(${sliced.size}/${chars.length})`;
+        const total = Math.max(1, (chars && chars.length) ? chars.length : 0);
+        const stageLabel = (stageData && stageData.length > 1) ? `Stage ${stageIndex + 1}/${stageData.length} ` : '';
+        progressEl.textContent = `${stageLabel}(${sliced.size}/${total})`;
       }
       if (progressBar) {
-        const pct = Math.max(0, Math.min(100, Math.round((sliced.size/Math.max(1,chars.length))*100)));
+        const total = Math.max(1, (chars && chars.length) ? chars.length : 0);
+        const pct = Math.max(0, Math.min(100, Math.round((sliced.size/total)*100)));
         progressBar.style.width = pct + '%';
       }
     } catch {}
   }
-
   // Combo badge
   const comboBadge = document.getElementById('slice-combo');
   if (comboBadge) comboBadge.classList.add('opacity-0');
@@ -87,7 +91,9 @@ export function initNinjaSlice(config) {
   }
 
   // populate text areas
-  const chars = Array.from(phrase);
+  let chars = [];
+  let original = [];
+  let sliced = new Set();
   function buildKanaDisplay(){
     try{
       kanaEl.innerHTML = chars.map((ch, i) => {
@@ -95,7 +101,7 @@ export function initNinjaSlice(config) {
         const cls = done ? 'text-emerald-600 font-semibold underline' : '';
         return `<span data-idx="${i}" class="kana-ch ${cls}" style="transition:color .2s">${ch}</span>`;
       }).join('');
-    }catch{ kanaEl.textContent = phrase; }
+    }catch{ kanaEl.textContent = chars.join(''); }
   }
   function toRomaStr(s){ try { return (window.wanakana ? wanakana.toRomaji(s) : ''); } catch { return ''; } }
   const SMALL_YOON = new Set(['\u3083','\u3085','\u3087','\u30E3','\u30E5','\u30E7']);
@@ -133,9 +139,59 @@ export function initNinjaSlice(config) {
       setTimeout(()=>{ romaBubble.style.opacity = '0'; }, 700);
     }catch{}
   }
-  buildKanaDisplay();
-  romajiEl.textContent = romaji;
-  englishEl.textContent = english;
+  const normalizeStage = (entry = {}) => {
+    const raw = (entry.phrase || entry.jp || '').trim();
+    if (!raw) return null;
+    const cleaned = raw.replace(/[。．.]+$/u, '');
+    const phraseClean = cleaned || raw;
+    let romajiText = (entry.romaji || entry.romaji_full || entry.romajiFull || '').trim();
+    if (!romajiText && typeof window !== 'undefined' && window.wanakana) {
+      try { romajiText = window.wanakana.toRomaji(raw) || ''; } catch {}
+    }
+    const englishText = (entry.english || entry.en || '').trim();
+    return { phrase: phraseClean, romaji: romajiText, english: englishText };
+  };
+
+  const stageListRaw = Array.isArray(phrases) ? phrases : [];
+  stageData = [];
+  const seenStages = new Set();
+  const addStage = (entry) => {
+    const normalized = normalizeStage(entry);
+    if (normalized && !seenStages.has(normalized.phrase)) {
+      seenStages.add(normalized.phrase);
+      stageData.push(normalized);
+    }
+  };
+  stageListRaw.forEach(addStage);
+  addStage({ phrase, romaji, english });
+  stageData = stageData.filter(stage => stage && stage.phrase);
+  if (!stageData.length && (phrase || '').trim()) {
+    const fallbackStage = normalizeStage({ phrase, romaji, english });
+    if (fallbackStage) stageData.push(fallbackStage);
+  }
+
+  function setStage(index) {
+    if (!stageData.length) return;
+    stageIndex = Math.max(0, Math.min(index, stageData.length - 1));
+    const stage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
+    const phraseText = (stage.phrase || '').toString();
+    chars = Array.from(phraseText);
+    original = chars.map((ch, i) => ({ char: ch, index: i }));
+    sliced = new Set();
+    if (typeof tiles !== 'undefined') { tiles.length = 0; }
+    if (typeof popFx !== 'undefined') { popFx.length = 0; }
+    buildKanaDisplay();
+    const romajiText = stage.romaji || ((typeof window !== 'undefined' && window.wanakana && phraseText) ? window.wanakana.toRomaji(phraseText) : '');
+    romajiEl.textContent = romajiText || '';
+    englishEl.textContent = stage.english || '';
+    if (progressBar) progressBar.style.width = '0%';
+    combo = 0;
+    lastSliceAt = 0;
+    if (scoreEl) scoreEl.textContent = `${score}`;
+    stopComboMeter();
+    resetComboBadge();
+    updateProgressUI();
+  }
 
   // create a second "trail" canvas on top, aligned with the game canvas
 
@@ -262,12 +318,11 @@ export function initNinjaSlice(config) {
   let tiles = [];
   const popFx = [];
   const POP_DURATION = 220;
-  const original = Array.from(phrase).map((c, i) => ({ char: c, index: i }));
-  let sliced = new Set();
   let score = 0;
   let timer = roundSeconds;
   let spawnHandle = null, animateId = null, timerInterval = null;
   let lastSliceAt = 0, combo = 0;
+
   let comboDecayHandle = null;
 
   function setComboMeter(value) {
@@ -317,26 +372,10 @@ export function initNinjaSlice(config) {
       hitStopTimer = setTimeout(()=>{ timeScale = 1; }, Math.max(40, ms||80));
     }catch{}
   }
-  function updateProgressUI(){
-    try {
-      if (progressEl) {
-        progressEl.textContent = `(${sliced.size}/${chars.length})`;
-      }
-      if (progressBar) {
-        const pct = Math.max(0, Math.min(100, Math.round((sliced.size/Math.max(1,chars.length))*100)));
-        progressBar.style.width = pct + '%';
-      }
-    } catch {}
-  }
 
-  // draw loop
   function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '64px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
     const now = performance.now();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let t of tiles) {
       // integrate
       t.x += t.vx * timeScale;
@@ -426,6 +465,16 @@ export function initNinjaSlice(config) {
         ctx.arc(bodyRadius * 0.78, bodyRadius * 0.68, bodyRadius * 0.22, 0, Math.PI * 2);
         ctx.fill();
 
+        ctx.save();
+        ctx.fillStyle = '#111';
+        ctx.font = '52px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const sumoGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
+        const sumoYOffset = bodyRadius * 0.18;
+        if (sumoGlyph) ctx.fillText(sumoGlyph, 0, sumoYOffset);
+        ctx.restore();
+
         ctx.restore();
       } else {
         const radius = t.radius || KANA_RADIUS;
@@ -450,9 +499,15 @@ export function initNinjaSlice(config) {
         ctx.arc(-radius*0.35, -radius*0.35, radius*0.32, Math.PI*1.1, Math.PI*1.9, false);
         ctx.fill();
 
+        ctx.save();
         ctx.fillStyle = '#111';
         ctx.font = '56px system-ui, sans-serif';
-        ctx.fillText(t.char, 0, 2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
+        const bubbleYOffset = radius * 0.06;
+        if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
+        ctx.restore();
       }
       ctx.restore();
     }
@@ -523,10 +578,14 @@ export function initNinjaSlice(config) {
       showRomaForGroup(group);
       // remove partner tile(s) if present
       for (let j = tiles.length - 1; j >= 0; j--) { if (group.includes(tiles[j].index) && tiles[j].index !== t.index) { tiles.splice(j,1); } }
-      // persistent progress: show last romaji + count and update bar
-      try { if (progressEl) { const text = group.map(i=>chars[i]).join(''); const roma = toRomaStr(text); progressEl.textContent = `${roma}  (${sliced.size}/${chars.length})`; } } catch {}
-      updateProgressUI();
-      if (sliced.size === original.length) endGame('clear');
+      // persistent progress: show last romaji + count and update bar      updateProgressUI();
+      if (sliced.size === original.length) {
+        if (stageData && stageIndex < stageData.length - 1) {
+          setStage(stageIndex + 1);
+          return;
+        }
+        endGame('clear');
+      }
     } else if (t.type === 'bomb') {
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 6, isBomb: true });
       // penalty: end game or big score drop
@@ -621,7 +680,8 @@ canvas.addEventListener("pointerdown", e => {
   // click slice point
   for (let i = tiles.length - 1; i >= 0; i--) {
     const t = tiles[i];
-    const baseRadius = t.radius || (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
+    if (!t) continue;
+    const baseRadius = (typeof t.radius === 'number') ? t.radius : (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
     const clickRadius = baseRadius + activeClickPad + 8;
     if (Math.hypot(t.x - x, t.y - y) < clickRadius) { tiles.splice(i,1); sliceKana(t); break; }
   }
@@ -656,7 +716,8 @@ canvas.addEventListener("pointerdown", e => {
   }
   for (let i = tiles.length - 1; i >= 0; i--) {
     const t = tiles[i];
-    const baseRadius = t.radius || (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
+    if (!t) continue;
+    const baseRadius = (typeof t.radius === 'number') ? t.radius : (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
     const sweepRadius = baseRadius + activeSlicePad + speedBoost;
     const pointerRadius = sweepRadius + 6;
     let hit = Math.hypot(t.x - x, t.y - y) < pointerRadius;
@@ -704,20 +765,14 @@ canvas.addEventListener('pointerout', endPointer);
   function startRound() {
     tiles = [];
     popFx.length = 0;
-    sliced.clear();
     score = 0; combo = 0; lastSliceAt = 0;
-    scoreEl.textContent = "0";
+    scoreEl.textContent = '0';
+    stageIndex = 0;
+    setStage(stageIndex);
     timer = roundSeconds;
     timerEl.textContent = timer;
-    resetComboBadge();
-    stopComboMeter();
     applySwordCursor();
-    try { if (progressEl) progressEl.textContent = `(${sliced.size}/${chars.length})`; } catch {}
-    buildKanaDisplay();
-    try {
-      const help = document.getElementById('slice-instructions');
-      if (help) { help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); }
-    } catch {}
+    try { const help = document.getElementById('slice-instructions'); if (help) { help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); } } catch {}
 
     draw();
     // dynamic spawn rate over time
@@ -764,6 +819,31 @@ canvas.addEventListener('pointerout', endPointer);
   overlay.classList.remove('hidden');
   requestAnimationFrame(() => { resize(); startRound(); });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

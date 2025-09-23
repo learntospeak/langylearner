@@ -1557,6 +1557,42 @@ window.LessonShim = (() => {
         english: entry.en || entry.english || ''
       };
     };
+    const collectStageStages = () => {
+      const seen = new Set();
+      const stages = [];
+      const pushSentence = (sid) => {
+        if (!sid) return;
+        const entry = findSentence(sid);
+        const data = fromSentence(entry);
+        if (data && data.phrase && !seen.has(data.phrase)) {
+          seen.add(data.phrase);
+          stages.push(data);
+        }
+      };
+      const pushVariantStage = (entry) => {
+        const data = fromVariant(entry);
+        if (data && data.phrase && !seen.has(data.phrase)) {
+          seen.add(data.phrase);
+          stages.push(data);
+        }
+      };
+      const firstStep = steps[0] || {};
+      if (Array.isArray(firstStep.item_refs)) firstStep.item_refs.forEach(pushSentence);
+      if (Array.isArray(firstStep.items)) firstStep.items.forEach(item => pushSentence(item && item.ref));
+      if (Array.isArray(firstStep.pairs)) firstStep.pairs.forEach(pushVariantStage);
+      if (Array.isArray(firstStep.variations)) firstStep.variations.forEach(pushVariantStage);
+      if (!stages.length) {
+        (sentences || []).forEach(entry => {
+          const data = fromSentence(entry);
+          if (data && data.phrase && !seen.has(data.phrase)) {
+            seen.add(data.phrase);
+            stages.push(data);
+          }
+        });
+      }
+      return stages;
+    };
+
     function updateSliceContext() {
       let data = null;
       const step = steps[state.stepIndex] || {};
@@ -1593,7 +1629,16 @@ window.LessonShim = (() => {
         }
       }
       const valid = (data && typeof data.phrase === 'string' && data.phrase.trim()) ? data : null;
-      try { window.__kanaSliceSource = valid; } catch { window.__kanaSliceSource = valid; }
+      const stages = collectStageStages();
+      let payload = null;
+      if (valid) {
+        payload = Object.assign({}, valid, { stages });
+      } else if (stages.length) {
+        payload = Object.assign({}, stages[0], { stages });
+      } else {
+        payload = valid;
+      }
+      try { window.__kanaSliceSource = payload; } catch { window.__kanaSliceSource = payload; }
     }
     try { window.__kanaSliceSource = null; } catch {}
 
