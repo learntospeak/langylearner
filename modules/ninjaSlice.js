@@ -70,6 +70,8 @@ export function initNinjaSlice(config) {
   const quizChoices = Math.max(2, Math.min(6, Number((config && config.quizChoices) ?? 4)));
   // Memory mode (speak + flipping tiles before stage)
   const memoryCue = !!(config && config.memoryCue);
+  // Sequence mode (target one kana at a time, in order)
+  const sequenceMode = !!(config && config.sequenceMode);
   let quizActive = false;
   let quizGroups = [];
   let quizIndex = 0;
@@ -223,24 +225,21 @@ export function initNinjaSlice(config) {
   pauseOverlay.textContent = '';
   holder.appendChild(pauseOverlay);
 
-  // Quiz prompt UI (top-center), only if quizMode
-  let quizPromptEl = null;
-  if (quizMode) {
-    quizPromptEl = document.createElement('div');
-    quizPromptEl.style.position = 'absolute';
-    quizPromptEl.style.top = '8px';
-    quizPromptEl.style.left = '50%';
-    quizPromptEl.style.transform = 'translateX(-50%)';
-    quizPromptEl.style.background = 'rgba(255,255,255,0.92)';
-    quizPromptEl.style.color = '#111827';
-    quizPromptEl.style.padding = '6px 10px';
-    quizPromptEl.style.borderRadius = '10px';
-    quizPromptEl.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)';
-    quizPromptEl.style.font = '600 14px system-ui, sans-serif';
-    quizPromptEl.style.zIndex = '40';
-    quizPromptEl.textContent = '';
-    holder.appendChild(quizPromptEl);
-  }
+  // Prompt UI (top-center) for quiz/sequence targets
+  let quizPromptEl = document.createElement('div');
+  quizPromptEl.style.position = 'absolute';
+  quizPromptEl.style.top = '8px';
+  quizPromptEl.style.left = '50%';
+  quizPromptEl.style.transform = 'translateX(-50%)';
+  quizPromptEl.style.background = 'rgba(255,255,255,0.92)';
+  quizPromptEl.style.color = '#111827';
+  quizPromptEl.style.padding = '6px 10px';
+  quizPromptEl.style.borderRadius = '10px';
+  quizPromptEl.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)';
+  quizPromptEl.style.font = '600 14px system-ui, sans-serif';
+  quizPromptEl.style.zIndex = '40';
+  quizPromptEl.textContent = '';
+  holder.appendChild(quizPromptEl);
 
   // Stage-complete overlay (medallion banner)
   const stageOverlay = document.createElement('div');
@@ -467,7 +466,7 @@ export function initNinjaSlice(config) {
     resetComboBadge();
     updateProgressUI();
     // Rebuild quiz groups for the new stage
-    if (quizMode) {
+    if (quizMode || sequenceMode) {
       quizGroups = buildMoraGroups();
       quizIndex = 0;
     }
@@ -911,6 +910,19 @@ export function initNinjaSlice(config) {
         ctx.lineWidth = 2.4;
         ctx.arc(0, 0, radius-1, 0, Math.PI*2); ctx.stroke();
 
+        // Glow effect when streak is active
+        if (typeof glowUntil === 'number' && performance.now() < glowUntil) {
+          ctx.save();
+          ctx.shadowColor = 'rgba(255,215,0,0.85)';
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius+1.5, 0, Math.PI*2);
+          ctx.strokeStyle = 'rgba(255,215,0,0.8)';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        }
+
         const highlightGradient = ctx.createRadialGradient(-radius * 0.4, -radius * 0.45, radius * 0.05, -radius * 0.4, -radius * 0.45, radius * 0.35);
         highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
         highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
@@ -1033,9 +1045,21 @@ export function initNinjaSlice(config) {
     }
     // pick an unsliced kana index
     const candidates = original.filter(o => !sliced.has(o.index));
+    if (!candidates.length) return;
+    if (sequenceMode && quizGroups.length) {
+      // Ensure the current target appears frequently; force one if none exists
+      const tg = targetGroup();
+      const tText = groupToText(tg);
+      const haveTarget = tiles.some(t => t && t.type==='kana' && (t.char === tText) && t.isTarget);
+      const forceTarget = !haveTarget || Math.random() < 0.45;
+      if (forceTarget) {
+        tiles.push({ type:'kana', char: tText, index: tg[0] ?? -1, indices: tg.slice(0), isTarget: true, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
+        return;
+      }
+    }
     const pick = candidates[Math.floor(Math.random()*candidates.length)];
     if (!pick) return;
-    tiles.push({ type:'kana', char: pick.char, index: pick.index, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
+    tiles.push({ type:'kana', char: pick.char, index: pick.index, indices: [pick.index], radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
   }
 
 
