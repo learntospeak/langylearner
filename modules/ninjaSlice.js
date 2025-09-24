@@ -87,6 +87,13 @@ export function initNinjaSlice(config) {
     const v = (diffCtl?.value || 'normal').toLowerCase();
     difficulty = (v === 'easy' || v === 'hard') ? v : 'normal';
   }
+  function getCueHoldMs(){
+    // Longer hold for slower speeds, shorter for faster
+    // Base ~1600ms at Normal; clamp between 600–2400ms
+    const base = 1600;
+    const hold = Math.round(base / Math.max(0.5, speedScale));
+    return Math.max(600, Math.min(2400, hold));
+  }
   function diffVyBoost(){ return difficulty === 'easy' ? 0.95 : (difficulty === 'hard' ? 1.25 : 1.0); }
   function diffSpawnExtra(){ return (!quizMode && difficulty === 'hard'); }
   function getQuizChoices(){
@@ -321,8 +328,8 @@ export function initNinjaSlice(config) {
           tile.style.transform = 'scale(1) rotateX(0deg)';
         }, idx * step);
       });
-      // Hold on the full phrase longer before starting
-      const hold = 1400; // extra ms to keep tiles visible at full phrase
+      // Hold on the full phrase; duration tied to Speed control
+      const hold = getCueHoldMs();
       const total = tiles.length ? (tiles.length - 1) * step + 450 + hold : 350 + hold;
       setTimeout(() => { memoryOverlay.style.display = 'none'; onDone && onDone(); }, total);
     } catch { onDone && onDone(); }
