@@ -1,4 +1,4 @@
-// modules/ninjaSlice.js
+﻿// modules/ninjaSlice.js
 
 export function initNinjaSlice(config) {
   const {
@@ -65,6 +65,37 @@ export function initNinjaSlice(config) {
   // Tunables (fallbacks)
   const launchBoost = Number((config && config.launchBoost) ?? 1.0);
   const gravity = Number((config && config.gravity) ?? 0.02);
+  // Quiz Burst config
+  const quizMode = !!(config && config.quizMode);
+  const quizChoices = Math.max(2, Math.min(6, Number((config && config.quizChoices) ?? 4)));
+  // Memory mode (speak + flipping tiles before stage)
+  const memoryCue = !!(config && config.memoryCue);
+  let quizActive = false;
+  let quizGroups = [];
+  let quizIndex = 0;
+  let quizWaveId = 0;
+  // Speed/Difficulty controls
+  const speedCtl = document.getElementById('slice-speed');
+  const diffCtl = document.getElementById('slice-diff');
+  let speedScale = 1.0;
+  let difficulty = 'normal';
+  function readSpeed() {
+    const v = parseFloat(speedCtl?.value || '1');
+    speedScale = isFinite(v) && v > 0 ? v : 1.0;
+  }
+  function readDifficulty() {
+    const v = (diffCtl?.value || 'normal').toLowerCase();
+    difficulty = (v === 'easy' || v === 'hard') ? v : 'normal';
+  }
+  function diffVyBoost(){ return difficulty === 'easy' ? 0.95 : (difficulty === 'hard' ? 1.25 : 1.0); }
+  function diffSpawnExtra(){ return (!quizMode && difficulty === 'hard'); }
+  function getQuizChoices(){
+    if (!quizMode) return 0;
+    if (difficulty === 'easy') return Math.max(2, Math.min(6, 3));
+    if (difficulty === 'hard') return Math.max(2, Math.min(6, 5));
+    return Math.max(2, Math.min(6, quizChoices));
+  }
+  try { readSpeed(); readDifficulty(); speedCtl?.addEventListener('change', readSpeed); diffCtl?.addEventListener('change', readDifficulty); } catch {}
 
 
   // Progress UI updater
@@ -114,6 +145,18 @@ export function initNinjaSlice(config) {
       }).join('');
     }catch{ kanaEl.textContent = chars.join(''); }
   }
+  // Simple TTS helper (pronounce kana using ja-JP voice if available)
+  function speakKana(text) {
+    try {
+      if (!window.speechSynthesis || !text) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP';
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      try { window.speechSynthesis.cancel(); } catch {}
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }
   function toRomaStr(s){ try { return (window.wanakana ? wanakana.toRomaji(s) : ''); } catch { return ''; } }
   const SMALL_YOON = new Set(['\u3083','\u3085','\u3087','\u30E3','\u30E5','\u30E7']);
   function groupForIndex(idx){
@@ -124,10 +167,36 @@ export function initNinjaSlice(config) {
     if (SMALL_YOON.has(next)) return [idx, idx+1];
     return [idx];
   }
-  // Small floating romaji bubble near the sliced kana
+  // Build mora groups for the current phrase (ordered, no duplicates)
+  function buildMoraGroups(){
+    const groups = [];
+    const seen = new Set();
+    for (let i = 0; i < chars.length; i++) {
+      if (seen.has(i)) continue;
+      const g = groupForIndex(i);
+      g.forEach(ix => seen.add(ix));
+      groups.push(g);
+    }
+    return groups;
+  }
+  // Small floating romaji bubble
   const romaBubble = document.createElement('div');
   romaBubble.className = 'absolute pointer-events-none bg-black text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity duration-300';
   holder.appendChild(romaBubble);
+  function showRomaAt(x, y, text) {
+    try {
+      if (!bubblesOn) return;
+      const rCanvas = canvas.getBoundingClientRect();
+      const rHolder = holder.getBoundingClientRect();
+      romaBubble.textContent = text || '';
+      const left = (rCanvas.left - rHolder.left) + x;
+      const top = (rCanvas.top - rHolder.top) + y;
+      romaBubble.style.left = left + 'px';
+      romaBubble.style.top = top + 'px';
+      romaBubble.style.opacity = '1';
+      setTimeout(()=>{ romaBubble.style.opacity = '0'; }, 800);
+    } catch {}
+  }
   const pauseOverlay = document.createElement('div');
   pauseOverlay.style.position = 'absolute';
   pauseOverlay.style.inset = '0';
@@ -146,6 +215,169 @@ export function initNinjaSlice(config) {
   pauseOverlay.style.zIndex = '30';
   pauseOverlay.textContent = '';
   holder.appendChild(pauseOverlay);
+
+  // Quiz prompt UI (top-center), only if quizMode
+  let quizPromptEl = null;
+  if (quizMode) {
+    quizPromptEl = document.createElement('div');
+    quizPromptEl.style.position = 'absolute';
+    quizPromptEl.style.top = '8px';
+    quizPromptEl.style.left = '50%';
+    quizPromptEl.style.transform = 'translateX(-50%)';
+    quizPromptEl.style.background = 'rgba(255,255,255,0.92)';
+    quizPromptEl.style.color = '#111827';
+    quizPromptEl.style.padding = '6px 10px';
+    quizPromptEl.style.borderRadius = '10px';
+    quizPromptEl.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)';
+    quizPromptEl.style.font = '600 14px system-ui, sans-serif';
+    quizPromptEl.style.zIndex = '40';
+    quizPromptEl.textContent = '';
+    holder.appendChild(quizPromptEl);
+  }
+
+  // Stage-complete overlay (medallion banner)
+  const stageOverlay = document.createElement('div');
+  stageOverlay.style.position = 'absolute';
+  stageOverlay.style.inset = '0';
+  stageOverlay.style.display = 'none';
+  stageOverlay.style.alignItems = 'center';
+  stageOverlay.style.justifyContent = 'center';
+  stageOverlay.style.background = 'rgba(0,0,0,0.45)';
+  stageOverlay.style.zIndex = '60';
+  stageOverlay.style.pointerEvents = 'auto';
+  stageOverlay.innerHTML = `
+    <div id="slice-stage-medallion" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+      <div style="width:220px;height:220px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #fff7d6, #f5c86b 60%, #b7791f);box-shadow:0 12px 28px rgba(0,0,0,.35), inset 0 6px 12px rgba(255,255,255,.6); border: 4px solid rgba(180, 83, 9, .85); display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;color:#7c2d12;text-shadow:0 2px 0 rgba(255,255,255,.5);font-weight:800;">
+          <div id="slice-stage-title" style="font-size:18px;letter-spacing:.05em;margin-bottom:.1rem;">You completed phrase</div>
+          <div id="slice-stage-number" style="font-size:42px;letter-spacing:.03em;">1</div>
+        </div>
+      </div>
+      <div id="slice-stage-phrase" style="font-size:22px;font-weight:700;color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.6);"></div>
+      <div id="slice-stage-romaji" style="font-size:16px;color:#fde68a; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
+      <div id="slice-stage-en" style="font-size:15px;color:#e5e7eb; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
+      <button id="slice-stage-next" class="btn btn-primary" style="margin-top:.25rem;">Continue</button>
+    </div>`;
+  holder.appendChild(stageOverlay);
+  function showStageBanner(number, phraseText, romajiText, englishText){
+    try{
+      const numEl = stageOverlay.querySelector('#slice-stage-number');
+      const phEl = stageOverlay.querySelector('#slice-stage-phrase');
+      const roEl = stageOverlay.querySelector('#slice-stage-romaji');
+      const enEl = stageOverlay.querySelector('#slice-stage-en');
+      if (numEl) numEl.textContent = String(number);
+      if (phEl) phEl.textContent = phraseText || '';
+      if (roEl) roEl.textContent = romajiText || '';
+      if (enEl) enEl.textContent = englishText || '';
+      stageOverlay.style.display = 'flex';
+    }catch{}
+  }
+  function hideStageBanner(){
+    try { stageOverlay.style.display = 'none'; } catch {}
+  }
+  // Memory cue overlay (shows tiles flipping the phrase)
+  const memoryOverlay = document.createElement('div');
+  memoryOverlay.style.position = 'absolute';
+  memoryOverlay.style.inset = '0';
+  memoryOverlay.style.display = 'none';
+  memoryOverlay.style.alignItems = 'center';
+  memoryOverlay.style.justifyContent = 'center';
+  memoryOverlay.style.background = 'rgba(0,0,0,0.35)';
+  memoryOverlay.style.zIndex = '50';
+  holder.appendChild(memoryOverlay);
+  function presentMemoryCue(onDone){
+    try{
+      const phraseText = (chars || []).join('');
+      if (!phraseText) { onDone && onDone(); return; }
+      // Build tiles container
+      memoryOverlay.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.gap = '10px';
+      wrap.style.padding = '12px 16px';
+      wrap.style.borderRadius = '12px';
+      wrap.style.background = 'rgba(255,255,255,0.9)';
+      wrap.style.boxShadow = '0 12px 30px rgba(0,0,0,0.25)';
+      memoryOverlay.appendChild(wrap);
+      const tiles = [];
+      for (let i = 0; i < chars.length; i++) {
+        const tile = document.createElement('div');
+        tile.textContent = chars[i];
+        tile.style.width = '42px'; tile.style.height = '56px';
+        tile.style.display = 'flex'; tile.style.alignItems = 'center'; tile.style.justifyContent = 'center';
+        tile.style.font = '700 28px system-ui, sans-serif'; tile.style.color = '#111827';
+        tile.style.background = '#fde68a'; tile.style.border = '2px solid #b45309'; tile.style.borderRadius = '10px';
+        tile.style.transform = 'scale(0.6) rotateX(90deg)'; tile.style.opacity = '0';
+        tile.style.transition = 'transform 220ms ease, opacity 220ms ease';
+        wrap.appendChild(tile); tiles.push(tile);
+      }
+      memoryOverlay.style.display = 'flex';
+      // Speak full phrase; start flipping tiles in sequence
+      speakJA(phraseText).catch(()=>{});
+      const step = 140; // ms between flips
+      tiles.forEach((tile, idx) => {
+        setTimeout(() => {
+          tile.style.opacity = '1';
+          tile.style.transform = 'scale(1) rotateX(0deg)';
+        }, idx * step);
+      });
+      // Hold on the full phrase longer before starting
+      const hold = 1400; // extra ms to keep tiles visible at full phrase
+      const total = tiles.length ? (tiles.length - 1) * step + 450 + hold : 350 + hold;
+      setTimeout(() => { memoryOverlay.style.display = 'none'; onDone && onDone(); }, total);
+    } catch { onDone && onDone(); }
+  }
+
+  function speakJA(text, opts={}){
+    return new Promise((resolve) => {
+      try{
+        if (!text || !window.speechSynthesis){ resolve(); return; }
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ja-JP';
+        u.rate = 1.0; u.pitch = 1.0;
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
+        try { window.speechSynthesis.cancel(); } catch {}
+        window.speechSynthesis.speak(u);
+        // Fallback timeout in case onend never fires
+        setTimeout(()=>resolve(), Math.min(6000, Math.max(1500, (text||'').length*90)));
+      }catch{ resolve(); }
+    });
+  }
+  // Handle stage completion: banner + speech + advance or end
+  function completeStage(){
+    // Guard if already not active
+    const completedStage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
+    const thisStageNumber = stageIndex + 1;
+    pauseForStage();
+    showStageBanner(thisStageNumber, completedStage.phrase || '', (completedStage.romaji || ''), (completedStage.english || ''));
+    let advanced = false;
+    const proceed = () => {
+      if (advanced) return; advanced = true;
+      hideStageBanner();
+      if (stageData && stageIndex < stageData.length - 1) {
+        setStage(stageIndex + 1);
+        if (memoryCue) {
+          // Keep paused; present cue, then resume and start next stage
+          presentMemoryCue(() => {
+            resumeFromPause();
+            if (quizMode) startQuiz();
+          });
+        } else {
+          resumeFromPause();
+          if (quizMode) startQuiz();
+        }
+      } else {
+        resumeFromPause({ skipResume: true });
+        endGame('clear');
+      }
+    };
+    const btn = stageOverlay.querySelector('#slice-stage-next');
+    if (btn) {
+      btn.onclick = () => { try { window.speechSynthesis?.cancel(); } catch{} proceed(); };
+    }
+    speakJA(completedStage.phrase || '').then(() => setTimeout(proceed, 400));
+  }
   let bubblesOn = true;
   if (bubblesToggle) {
     bubblesOn = !!bubblesToggle.checked;
@@ -176,7 +408,7 @@ export function initNinjaSlice(config) {
   const normalizeStage = (entry = {}) => {
     const raw = (entry.phrase || entry.jp || '').trim();
     if (!raw) return null;
-    const cleaned = raw.replace(/[。．.]+$/u, '');
+    const cleaned = raw.replace(/[ã€‚ï¼Ž.]+$/u, '');
     const phraseClean = cleaned || raw;
     let romajiText = (entry.romaji || entry.romaji_full || entry.romajiFull || '').trim();
     if (!romajiText && typeof window !== 'undefined' && window.wanakana) {
@@ -209,13 +441,15 @@ export function initNinjaSlice(config) {
     stageIndex = Math.max(0, Math.min(index, stageData.length - 1));
     const stage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
     const phraseText = (stage.phrase || '').toString();
-    chars = Array.from(phraseText);
+    // Strip full stops (Japanese/ASCII) from phrase used for slicing to avoid blocking progression
+    const phraseForPlay = phraseText.replace(/[。．\.]/g, '');
+    chars = Array.from(phraseForPlay);
     original = chars.map((ch, i) => ({ char: ch, index: i }));
     sliced = new Set();
     if (typeof tiles !== 'undefined') { tiles.length = 0; }
     if (typeof popFx !== 'undefined') { popFx.length = 0; }
     buildKanaDisplay();
-    const romajiText = stage.romaji || ((typeof window !== 'undefined' && window.wanakana && phraseText) ? window.wanakana.toRomaji(phraseText) : '');
+    const romajiText = stage.romaji || ((typeof window !== 'undefined' && window.wanakana && phraseForPlay) ? window.wanakana.toRomaji(phraseForPlay) : '');
     romajiEl.textContent = romajiText || '';
     englishEl.textContent = stage.english || '';
     if (progressBar) progressBar.style.width = '0%';
@@ -225,6 +459,21 @@ export function initNinjaSlice(config) {
     stopComboMeter();
     resetComboBadge();
     updateProgressUI();
+    // Rebuild quiz groups for the new stage
+    if (quizMode) {
+      quizGroups = buildMoraGroups();
+      quizIndex = 0;
+    }
+    // Apply initial phrase visibility based on control
+    try {
+      const showCtl = document.getElementById('slice-showphrase');
+      const show = !!(showCtl && showCtl.checked);
+      const ids = ['slice-kana','slice-romaji','slice-en'];
+      ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.visibility = show ? 'visible' : 'hidden'; });
+      showCtl?.addEventListener('change', () => {
+        const showNow = !!showCtl.checked; ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.visibility = showNow ? 'visible' : 'hidden'; });
+      });
+    } catch {}
   }
 
   // create a second "trail" canvas on top, aligned with the game canvas
@@ -434,7 +683,7 @@ export function initNinjaSlice(config) {
     spawnStartTime += pausedDuration;
     if (lastSliceAt) lastSliceAt += pausedDuration;
     for (const fx of popFx) {
-      fx.created += pausedDuration;
+      fx.created = Math.min(fx.created + pausedDuration, resumedAt - 1);
     }
     if (!skipResume && state.roundActive && roundActive) {
       if (state.timerWasRunning) startTimerTicker();
@@ -506,6 +755,35 @@ export function initNinjaSlice(config) {
     isPaused = true;
     currentPauseState = state;
     pauseTimeoutId = setTimeout(() => resumeFromPause(), SLICE_PAUSE_MS);
+  }
+
+  // Pause without auto-resume (used for stage-complete banner)
+  function pauseForStage() {
+    if (!roundActive || isPaused) return;
+    const now = performance.now();
+    pointerIsDown = false;
+    clearTrails();
+    const state = {
+      startedAt: now,
+      afterPause: null,
+      timerWasRunning: !!timerInterval,
+      comboShouldResume: combo > 1 && !!lastSliceAt,
+      spawnRemainingDelay: 0,
+      roundActive
+    };
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if (comboDecayHandle) { cancelAnimationFrame(comboDecayHandle); comboDecayHandle = null; }
+    if (spawnHandle) {
+      const elapsed = Math.max(0, now - spawnScheduledAt);
+      state.spawnRemainingDelay = Math.max(0, nextSpawnDelay - elapsed);
+      clearTimeout(spawnHandle); spawnHandle = null;
+    } else {
+      state.spawnRemainingDelay = Math.max(0, nextSpawnDelay);
+    }
+    if (animateId) { cancelAnimationFrame(animateId); animateId = null; }
+    if (pauseTimeoutId) { clearTimeout(pauseTimeoutId); pauseTimeoutId = null; }
+    isPaused = true;
+    currentPauseState = state;
   }
 
   function draw() {
@@ -650,13 +928,14 @@ export function initNinjaSlice(config) {
     for (let i = popFx.length - 1; i >= 0; i--) {
       const fx = popFx[i];
       const age = now - fx.created;
+      if (age < 0) { continue; } // guard against clock drift during pause/resume
       if (age > POP_DURATION) {
         popFx.splice(i, 1);
         continue;
       }
       const pct = age / POP_DURATION;
-      const baseRadius = fx.radius || KANA_RADIUS;
-      const ringRadius = baseRadius + pct * 16;
+      const baseRadius = Math.max(0, fx.radius || KANA_RADIUS);
+      const ringRadius = Math.max(0.1, baseRadius + pct * 16);
       ctx.save();
       const alpha = fx.isBomb ? Math.max(0, 0.9 - pct) : Math.max(0, 0.7 - pct * 0.7);
       ctx.globalAlpha = alpha;
@@ -673,24 +952,124 @@ export function initNinjaSlice(config) {
 
   // console.debug('Slice tiles:', original.length);
 
+  // ---------- Quiz Burst helpers ----------
+  function setQuizPrompt(text){ if (quizPromptEl) quizPromptEl.textContent = text || ''; }
+  const KANA_FALLBACKS = ['ã‚','ã„','ã†','ãˆ','ãŠ','ã‹','ã','ã','ã‘','ã“','ã•','ã—','ã™','ã›','ã','ãª','ã«','ã¬','ã­','ã®','ã¯','ã²','ãµ','ã¸','ã»','ã¾','ã¿','ã‚€','ã‚','ã‚‚','ã‚„','ã‚†','ã‚ˆ','ã‚‰','ã‚Š','ã‚‹','ã‚Œ','ã‚','ã‚','ã‚“','ãŸ','ã¡','ã¤','ã¦','ã¨'];
+  function unique(arr){ return Array.from(new Set(arr)); }
+  function groupToText(g){ return (g || []).map(i => chars[i] || '').join(''); }
+  function otherGroupTexts(excludeText){
+    const texts = quizGroups.map(g => groupToText(g)).filter(t => t && t !== excludeText);
+    return unique(texts);
+  }
+  function spawnQuizWave(){
+    // Clear any existing quiz tiles before spawning
+    for (let i = tiles.length - 1; i >= 0; i--) {
+      if (tiles[i] && tiles[i].waveId != null) tiles.splice(i, 1);
+    }
+    const targetG = quizGroups[quizIndex] || [];
+    const kanaText = groupToText(targetG);
+    const romajiText = toRomaStr(kanaText) || '';
+    setQuizPrompt(`Slice: ${romajiText || kanaText}`);
+    // Speak the kana once per wave
+    if (kanaText) speakKana(kanaText);
+    // Build options
+    const options = [];
+    const waveId = ++quizWaveId;
+    // Target first
+    options.push({ text: kanaText, indices: targetG.slice(0), isCorrect: true });
+    // Distractors from other groups
+    let distractors = otherGroupTexts(kanaText);
+    // Fill up with fallbacks if needed
+    let di = 0;
+    const wantChoices = getQuizChoices();
+    while (options.length < wantChoices) {
+      let pick = distractors[di++] || KANA_FALLBACKS[Math.floor(Math.random()*KANA_FALLBACKS.length)];
+      if (!pick || pick === kanaText || options.some(o => o.text === pick)) continue;
+      options.push({ text: pick, indices: [], isCorrect: false });
+    }
+    // Shuffle options
+    for (let i = options.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
+    // Spawn across width
+    const cols = options.length + 1;
+    options.forEach((opt, idx) => {
+      const x = Math.floor((viewW / cols) * (idx + 1));
+      const y = viewH + 20;
+      tiles.push({ type:'kana', char: opt.text, index: (opt.isCorrect && opt.indices.length ? opt.indices[0] : -1), indices: opt.indices, isCorrect: !!opt.isCorrect, radius: KANA_RADIUS, x, y, vx:(Math.random()*2-1)*0.8, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(0.8, launchBoost*0.9) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05, waveId });
+    });
+  }
+  function scheduleNextQuizWave(prevWaveId){
+    // Move to next group or finish
+    quizIndex++;
+    if (sliced.size === original.length || quizIndex >= quizGroups.length) {
+      // Completed this phrase in quiz mode
+      completeStage();
+      return;
+    }
+    const baseDelay = Math.max(300, SLICE_PAUSE_MS - 100);
+    const delay = Math.max(100, Math.round(baseDelay / Math.max(0.5, speedScale)));
+    setTimeout(() => spawnQuizWave(), delay);
+  }
+  function startQuiz(){
+    quizActive = true;
+    quizGroups = buildMoraGroups();
+    quizIndex = 0;
+    setQuizPrompt('');
+    spawnQuizWave();
+  }
+
   // spawn a new tile (kana or bomb)
   function spawn() {
     const wantBomb = Math.random() < bombChance;
     if (wantBomb) {
-      tiles.push({ type:'bomb', radius: BOMB_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
+      tiles.push({ type:'bomb', radius: BOMB_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
       return;
     }
     // pick an unsliced kana index
     const candidates = original.filter(o => !sliced.has(o.index));
     const pick = candidates[Math.floor(Math.random()*candidates.length)];
     if (!pick) return;
-    tiles.push({ type:'kana', char: pick.char, index: pick.index, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost), rot:0, spin:(Math.random()*2-1)*0.05 });
+    tiles.push({ type:'kana', char: pick.char, index: pick.index, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
   }
 
 
   // handle slicing
   function sliceKana(t) {
     if (t.type === 'kana') {
+      // Quiz Burst handling: multiple-option wave tiles carry indices + isCorrect
+      if (quizMode && t && Array.isArray(t.indices)) {
+        popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS });
+        const isCorrect = !!t.isCorrect;
+        if (isCorrect) {
+          (t.indices || []).forEach(i => { if (typeof i === 'number' && i >= 0) sliced.add(i); });
+          const kanaTextQ = (t.kanaText || (t.indices || []).map(i => chars[i]).join('')) || '';
+          const romajiTextQ = toRomaStr(kanaTextQ) || '';
+          const yAboveQ = t.y - ((t.radius || KANA_RADIUS) + 16);
+          showRomaAt(t.x, yAboveQ, romajiTextQ || kanaTextQ);
+          if (kanaTextQ) speakKana(kanaTextQ);
+          // scoring
+          const nowQ = performance.now();
+          combo = (nowQ - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
+          lastSliceAt = nowQ;
+          score += 200 * Math.max(1, combo);
+          scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}`;
+          if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
+          try { (t.indices || []).forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s) s.classList.add('text-emerald-600','font-semibold','underline'); }); } catch {}
+          // remove the whole wave
+          const waveId = t.waveId;
+          for (let j = tiles.length - 1; j >= 0; j--) { if (tiles[j] && tiles[j].waveId === waveId) tiles.splice(j, 1); }
+          updateProgressUI();
+          if (sliced.size === original.length) {
+            completeStage();
+          } else {
+            pauseSliceMoment('', null);
+            scheduleNextQuizWave(waveId);
+          }
+        } else {
+          score = Math.max(0, score - 50);
+          scoreEl.textContent = `${score}`;
+        }
+        return;
+      }
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS });
       const group = groupForIndex(t.index);
       group.forEach(i=>sliced.add(i));
@@ -708,18 +1087,21 @@ export function initNinjaSlice(config) {
         stopComboMeter();
       }
       try { SFX('slice'); } catch {}
-      // highlight sliced kana(s) and show combined romaji bubble
+      // highlight sliced kana(s) and show combined romaji bubble near the sliced tile
       try { group.forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s) s.classList.add('text-emerald-600','font-semibold','underline'); }); } catch {}
-      showRomaForGroup(group);
+      const kanaText = group.map(i => (typeof i === 'number' && chars[i] !== undefined) ? chars[i] : '').join('');
+      const romajiText = toRomaStr(kanaText) || '';
+      // place bubble slightly above the sliced tile position
+      const yAbove = t.y - ((t.radius || KANA_RADIUS) + 16);
+      showRomaAt(t.x, yAbove, romajiText || kanaText);
+      if (kanaText) speakKana(kanaText);
+      // Pause briefly so the romaji bubble can be read
+      pauseSliceMoment('', null);
       // remove partner tile(s) if present
       for (let j = tiles.length - 1; j >= 0; j--) { if (group.includes(tiles[j].index) && tiles[j].index !== t.index) { tiles.splice(j,1); } }
       // persistent progress: show last romaji + count and update bar      updateProgressUI();
       if (sliced.size === original.length) {
-        if (stageData && stageIndex < stageData.length - 1) {
-          setStage(stageIndex + 1);
-          return;
-        }
-        endGame('clear');
+        completeStage();
       }
     } else if (t.type === 'bomb') {
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 6, isBomb: true });
@@ -906,24 +1288,40 @@ canvas.addEventListener('pointerout', endPointer);
     setStage(stageIndex);
     timer = roundSeconds;
     timerEl.textContent = timer;
+    roundActive = true;
     applySwordCursor();
     try { const help = document.getElementById('slice-instructions'); if (help) { help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); } } catch {}
 
     draw();
-    // dynamic spawn rate over time
-    const start = performance.now();
-    function scheduleNext(){
-      const t = Math.min(1, (performance.now()-start)/(roundSeconds*1000));
-      const ms = Math.round(spawnMsStart + (spawnMsEnd-spawnMsStart)*t);
-      spawn();
-      spawnHandle = setTimeout(scheduleNext, ms);
+    const kick = () => {
+      // dynamic spawn rate over time (track timing for pause/resume) or Quiz mode
+      if (!quizMode) {
+        spawnStartTime = performance.now();
+        scheduleNext = function(){
+          const t = Math.min(1, (performance.now()-spawnStartTime)/(roundSeconds*1000));
+          const msBase = Math.round(spawnMsStart + (spawnMsEnd - spawnMsStart) * t);
+          const ms = Math.max(50, Math.round(msBase / Math.max(0.5, speedScale)));
+          spawn();
+          if (diffSpawnExtra() && Math.random() < 0.5) spawn();
+          nextSpawnDelay = ms;
+          spawnScheduledAt = performance.now();
+          spawnHandle = setTimeout(scheduleNext, ms);
+        };
+        scheduleNext();
+      } else {
+        startQuiz();
+      }
+      timerInterval = setInterval(() => {
+        timerEl.textContent = --timer;
+        if (timer <= 0) endGame();
+      }, 1000);
+    };
+    if (memoryCue) {
+      pauseForStage();
+      presentMemoryCue(() => { resumeFromPause(); kick(); });
+    } else {
+      kick();
     }
-    scheduleNext();
-
-    timerInterval = setInterval(() => {
-      timerEl.textContent = --timer;
-      if (timer <= 0) endGame();
-    }, 1000);
   }
 
   // clean up and show game-over panel or close
@@ -936,6 +1334,10 @@ canvas.addEventListener('pointerout', endPointer);
     resetSwordCursor();
     popFx.length = 0;
     clearTrails();
+    roundActive = false;
+    // Ensure no pending pause resumes after ending
+    cancelActivePause({ skipResume: true, skipCallbacks: true });
+    if (quizMode) setQuizPrompt('');
     if (overPanel) {
       const t = document.getElementById('slice-over-title');
       const r = document.getElementById('slice-over-reason');
@@ -948,9 +1350,9 @@ canvas.addEventListener('pointerout', endPointer);
       overlay.classList.add('hidden');
     }
   }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); overlay.classList.add('hidden'); });
+  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); overlay.classList.add('hidden'); });
 
-  // show modal & kick off — ensure sizing runs after it becomes visible
+  // show modal & kick off â€” ensure sizing runs after it becomes visible
   overlay.classList.remove('hidden');
   requestAnimationFrame(() => { resize(); startRound(); });
 }

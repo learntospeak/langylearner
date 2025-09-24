@@ -711,6 +711,29 @@
           <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
           <span>Romaji bubbles</span>
         </label>
+        <div class="absolute top-16 right-56 flex items-center gap-2 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900 pointer-events-auto">
+          <label class="flex items-center gap-1">
+            <span class="text-xs">Speed</span>
+            <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
+              <option value="0.85">Slow</option>
+              <option value="1.0" selected>Normal</option>
+              <option value="1.25">Fast</option>
+              <option value="1.5">Turbo</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-1">
+            <span class="text-xs">Difficulty</span>
+            <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-1">
+            <input type="checkbox" id="slice-showphrase" class="accent-teal-600" />
+            <span class="text-xs">Show phrase</span>
+          </label>
+        </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
         <div id="slice-instructions" class="absolute inset-x-0 top-28 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
           Slice kana. Red circles are bombs — avoid them. Swipe for combos.
@@ -810,6 +833,10 @@
       bombChance: 0.08,
       launchBoost: 1.8,
       gravity: 0.015,
+      // Enable Quiz Burst mode
+      quizMode: false,
+      quizChoices: 4,
+      memoryCue: true,
     });
   }
   btnOpen?.addEventListener('click', launchSlice);
