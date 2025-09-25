@@ -72,9 +72,6 @@ export function initNinjaSlice(config) {
   const memoryCue = !!(config && config.memoryCue);
   // Sequence mode (target one kana at a time, in order)
   const sequenceMode = !!(config && config.sequenceMode);
-  // Review + streaks (runtime)
-  let reviewItems = [];
-  let roundMistake = false;
   let quizActive = false;
   let quizGroups = [];
   let quizIndex = 0;
@@ -198,8 +195,6 @@ export function initNinjaSlice(config) {
   function showRomaAt(x, y, text) {
     try {
       if (!bubblesOn) return;
-      // In Hard difficulty, don't show romaji bubbles at all
-      if (difficulty === 'hard') return;
       const rCanvas = canvas.getBoundingClientRect();
       const rHolder = holder.getBoundingClientRect();
       romaBubble.textContent = text || '';
@@ -355,153 +350,10 @@ export function initNinjaSlice(config) {
       }catch{ resolve(); }
     });
   }
-  // Review overlay (end of game)
-  const reviewOverlay = document.createElement('div');
-  reviewOverlay.style.position = 'absolute';
-  reviewOverlay.style.inset = '0';
-  reviewOverlay.style.display = 'none';
-  reviewOverlay.style.background = 'rgba(0,0,0,0.55)';
-  reviewOverlay.style.zIndex = '70';
-  reviewOverlay.innerHTML = '';
-  holder.appendChild(reviewOverlay);
-  function hideReview(){ reviewOverlay.style.display = 'none'; reviewOverlay.innerHTML = ''; }
-  function renderBadges(items){
-    // Simple vowel mastery streak (あいうえお present somewhere in run, and no mistakes)
-    const vowels = new Set(['あ','い','う','え','お']);
-    const present = new Set(items.map(it=>it.kana).join('').split(''));
-    let badges = [];
-    if ([...vowels].every(k => present.has(k)) && !roundMistake) {
-      try {
-        const key = 'streak_vowels';
-        const oldVal = parseInt(localStorage.getItem(key) || '0', 10) || 0;
-        const newVal = oldVal + 1; localStorage.setItem(key, String(newVal));
-        if (newVal >= 3) badges.push(`You sliced all あ–お correctly ${newVal} times in a row!`);
-        else badges.push(`Vowel mastery streak: ${newVal}`);
-      } catch { badges.push('Vowel mastery achieved!'); }
-    } else {
-      try { localStorage.setItem('streak_vowels', '0'); } catch {}
-    }
-    return badges;
-  }
-  function showReview(reason){
-    try{
-      // Deduplicate items by kana|english and group by English phrase
-      const items = [];
-      const seen = new Set();
-      const groups = new Map(); // english -> items[]
-      for (const it of (reviewItems || [])) {
-        const kana = (it?.kana || '').trim();
-        const en = (it?.english || '').trim();
-        if (!kana) continue;
-        const key = `${kana}|${en}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const cleaned = { kana, romaji: (it?.romaji || '').trim(), english: en };
-        items.push(cleaned);
-        const k = en || '(No English)';
-        if (!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(cleaned);
-      }
-      const wrap = document.createElement('div');
-      wrap.style.position = 'absolute';
-      wrap.style.top = '50%'; wrap.style.left = '50%'; wrap.style.transform = 'translate(-50%, -50%)';
-      wrap.style.maxWidth = '800px'; wrap.style.width = '92%';
-      wrap.style.background = 'white'; wrap.style.borderRadius = '12px';
-      wrap.style.boxShadow = '0 20px 50px rgba(0,0,0,0.35)';
-      wrap.style.padding = '16px';
-      const title = document.createElement('div');
-      title.textContent = 'Review Board';
-      title.style.font = '700 18px system-ui, sans-serif';
-      title.style.marginBottom = '8px';
-      wrap.appendChild(title);
-      const badges = renderBadges(items);
-      if (badges.length){
-        const badgeBox = document.createElement('div');
-        badgeBox.style.margin = '6px 0 10px 0';
-        badges.forEach(txt => {
-          const b = document.createElement('div');
-          b.textContent = txt;
-          b.style.background = '#fef3c7';
-          b.style.border = '1px solid #f59e0b';
-          b.style.color = '#7c2d12';
-          b.style.borderRadius = '8px';
-          b.style.padding = '6px 8px';
-          b.style.marginBottom = '4px';
-          badgeBox.appendChild(b);
-        });
-        wrap.appendChild(badgeBox);
-      }
-      if (!items.length) {
-        const empty = document.createElement('div');
-        empty.textContent = 'No slices recorded — try another round!';
-        empty.style.color = '#6b7280';
-        empty.style.padding = '12px 0';
-        wrap.appendChild(empty);
-      } else {
-        // Render per English-phrase section
-        for (const [en, list] of groups.entries()) {
-          const secTitle = document.createElement('div');
-          secTitle.textContent = en;
-          secTitle.style.font = '600 14px system-ui, sans-serif';
-          secTitle.style.color = '#374151';
-          secTitle.style.margin = '10px 0 6px 0';
-          wrap.appendChild(secTitle);
-          const grid = document.createElement('div');
-          grid.style.display = 'grid';
-          grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(120px, 1fr))';
-          grid.style.gap = '8px';
-          list.forEach(it => {
-            const card = document.createElement('div');
-            card.style.border = '1px solid #e5e7eb';
-            card.style.borderRadius = '10px';
-            card.style.padding = '8px';
-            card.style.background = '#fff';
-            const kana = document.createElement('div');
-            kana.textContent = it.kana;
-            kana.style.font = '700 20px system-ui, sans-serif';
-            kana.style.marginBottom = '2px';
-            const roma = document.createElement('div');
-            roma.textContent = it.romaji;
-            roma.style.color = '#4b5563';
-            roma.style.fontSize = '12px';
-            card.appendChild(kana); card.appendChild(roma);
-            grid.appendChild(card);
-          });
-          wrap.appendChild(grid);
-        }
-      }
-      const actions = document.createElement('div');
-      actions.style.marginTop = '10px';
-      actions.style.textAlign = 'right';
-      const close = document.createElement('button');
-      close.textContent = 'Close';
-      close.className = 'btn btn-ghost';
-      close.onclick = hideReview;
-      actions.appendChild(close);
-      wrap.appendChild(actions);
-      reviewOverlay.innerHTML = '';
-      reviewOverlay.appendChild(wrap);
-      reviewOverlay.style.display = 'block';
-    } catch {}
-  }
   // Handle stage completion: banner + speech + advance or end
   function completeStage(){
     // Guard if already not active
     const completedStage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
-    // Add this stage's kana groups to review list
-    try {
-      const p = (completedStage.phrase || '').toString().replace(/[。．\.]/g, '');
-      const charsStage = Array.from(p);
-      // Temporarily use current buildMoraGroups() by swapping chars reference
-      const prevChars = chars; chars = charsStage;
-      const groups = buildMoraGroups();
-      chars = prevChars;
-      groups.forEach(g => {
-        const kana = (g || []).map(i => charsStage[i] || '').join('');
-        const romaji = toRomaStr(kana) || '';
-        reviewItems.push({ kana, romaji, english: completedStage.english || '' });
-      });
-    } catch {}
     const thisStageNumber = stageIndex + 1;
     pauseForStage();
     showStageBanner(thisStageNumber, completedStage.phrase || '', (completedStage.romaji || ''), (completedStage.english || ''));
@@ -511,13 +363,6 @@ export function initNinjaSlice(config) {
       hideStageBanner();
       if (stageData && stageIndex < stageData.length - 1) {
         setStage(stageIndex + 1);
-        // Reset timer per phrase so each stage has a full timebox
-        try {
-          timer = roundSeconds;
-          if (timerEl) timerEl.textContent = timer;
-        } catch {}
-        // Reset spawn ramp baseline
-        try { spawnStartTime = performance.now(); } catch {}
         if (memoryCue) {
           // Keep paused; present cue, then resume and start next stage
           presentMemoryCue(() => {
@@ -624,10 +469,6 @@ export function initNinjaSlice(config) {
     if (quizMode || sequenceMode) {
       quizGroups = buildMoraGroups();
       quizIndex = 0;
-      if (sequenceMode) {
-        seqIndex = 0; seqMistake = false; seqStreak = 0; glowUntil = 0;
-        ensurePromptForSequence();
-      }
     }
     // Apply initial phrase visibility based on control
     try {
@@ -663,15 +504,6 @@ export function initNinjaSlice(config) {
   trailCanvas.style.pointerEvents = "none";
   holder.appendChild(trailCanvas);
   const trailCtx = trailCanvas.getContext("2d");
-  // FX canvas for fireworks/shimmers
-  const fxCanvas = document.createElement('canvas');
-  fxCanvas.style.position = 'absolute';
-  fxCanvas.style.top = '0';
-  fxCanvas.style.left = '0';
-  fxCanvas.style.pointerEvents = 'none';
-  fxCanvas.style.zIndex = '200';
-  holder.appendChild(fxCanvas);
-  const fxCtx = fxCanvas.getContext('2d');
   // Lightweight SFX helper (no external assets)
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   let _ac = null, _lastSwish = 0;
@@ -727,16 +559,6 @@ export function initNinjaSlice(config) {
         const data = buf.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/(sr*0.1)); }
         const src = ctx.createBufferSource(); src.buffer = buf; const g = ctx.createGain(); g.gain.value = 0.12;
         src.connect(g); g.connect(ctx.destination); src.start();
-      } else if (type === 'firework') {
-        // Simple celebratory shimmer: short chord + sparkle
-        const now = ctx.currentTime;
-        const g = ctx.createGain(); g.gain.value = 0.0001; g.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-        notes.forEach((f,i)=>{ const o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(f, now); o.frequency.exponentialRampToValueAtTime(f*1.5, now+0.2); o.connect(g); o.start(now+0.02*i); o.stop(now+0.8); });
-        const nbuf = ctx.createBuffer(1, 44100*0.6, 44100); const ndata = nbuf.getChannelData(0); for(let i=0;i<ndata.length;i++){ const t=i/44100; ndata[i]=(Math.random()*2-1)*Math.max(0,1-t*1.6); }
-        const nsrc = ctx.createBufferSource(); nsrc.buffer = nbuf; const nf = ctx.createBiquadFilter(); nf.type='highpass'; nf.frequency.value=2000; nsrc.connect(nf); nf.connect(g);
-        g.connect(ctx.destination); nsrc.start(now+0.05); nsrc.stop(now+0.65);
       }
     }catch{}
   }
@@ -758,10 +580,6 @@ export function initNinjaSlice(config) {
     trailCanvas.style.height = h + 'px';
     trailCanvas.width = w;
     trailCanvas.height = h;
-    fxCanvas.style.width = w + 'px';
-    fxCanvas.style.height = h + 'px';
-    fxCanvas.width = w;
-    fxCanvas.height = h;
     viewW = w;
     viewH = h;
     alignTrail();
@@ -775,8 +593,6 @@ export function initNinjaSlice(config) {
       const dy = Math.round(rC.top - rH.top);
       trailCanvas.style.left = dx + 'px';
       trailCanvas.style.top  = dy + 'px';
-      fxCanvas.style.left = dx + 'px';
-      fxCanvas.style.top  = dy + 'px';
     }catch{}
   }
 
@@ -1123,18 +939,6 @@ export function initNinjaSlice(config) {
         const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
         const bubbleYOffset = radius * 0.06;
         if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
-        // Easy mode: always show tiny romaji under kana
-        if (difficulty === 'easy') {
-          try {
-            const roma = toRomaStr(bubbleGlyph) || '';
-            if (roma) {
-              ctx.font = '12px system-ui, sans-serif';
-              ctx.fillStyle = '#334155';
-              ctx.textBaseline = 'top';
-              ctx.fillText(roma, 0, radius * 0.55);
-            }
-          } catch {}
-        }
         ctx.restore();
       }
       ctx.restore();
@@ -1212,18 +1016,6 @@ export function initNinjaSlice(config) {
       tiles.push({ type:'kana', char: opt.text, index: (opt.isCorrect && opt.indices.length ? opt.indices[0] : -1), indices: opt.indices, isCorrect: !!opt.isCorrect, radius: KANA_RADIUS, x, y, vx:(Math.random()*2-1)*0.8, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(0.8, launchBoost*0.9) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05, waveId });
     });
   }
-
-  // ---------- Sequence Mode helpers ----------
-  let seqIndex = 0;
-  let seqMistake = false;
-  let seqStreak = 0;
-  let glowUntil = 0;
-  function targetGroup(){ return (quizGroups && quizGroups[seqIndex]) || []; }
-  function targetText(){ return groupToText(targetGroup()); }
-  function ensurePromptForSequence(){
-    const tg = targetText();
-    if (tg) setQuizPrompt(`Slice: ${toRomaStr(tg) || tg}`);
-  }
   function scheduleNextQuizWave(prevWaveId){
     // Move to next group or finish
     quizIndex++;
@@ -1274,57 +1066,11 @@ export function initNinjaSlice(config) {
   // handle slicing
   function sliceKana(t) {
     if (t.type === 'kana') {
-      // Sequence mode: enforce per-mora order
-      if (sequenceMode) {
-        popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS });
-        const tg = targetGroup();
-        const tgText = groupToText(tg);
-        const tryText = (t.indices && t.indices.length ? groupToText(t.indices) : (typeof t.char==='string'? t.char:''));
-        const correct = (tryText === tgText);
-        if (correct) {
-          (tg || []).forEach(i => sliced.add(i));
-          seqStreak = (seqStreak || 0) + 1;
-          if (seqStreak >= 2) glowUntil = performance.now() + 3500;
-          score += 150 * Math.max(1, seqStreak);
-          scoreEl.textContent = `${score}`;
-          // Visuals + audio
-          const yAbove = t.y - ((t.radius || KANA_RADIUS) + 16);
-          showRomaAt(t.x, yAbove, toRomaStr(tgText) || tgText);
-          try { SFX('slice'); } catch {}
-          try { (tg || []).forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s) s.classList.add('text-emerald-600','font-semibold','underline'); }); } catch {}
-          // add to review
-          try { const st = stageData[stageIndex] || {}; reviewItems.push({ kana: tgText, romaji: toRomaStr(tgText) || '', english: st.english || '' }); } catch {}
-          // Next target or complete stage
-          seqIndex++;
-          updateProgressUI();
-          if (sliced.size === original.length || seqIndex >= quizGroups.length) {
-            if (!seqMistake) {
-              try { SFX('firework'); } catch {}
-              try { launchFireworkEffect(1200, 1.8, ['rgba(255, 215, 0, ALPHA)','rgba(255, 255, 255, ALPHA)','rgba(0, 191, 255, ALPHA)']); } catch {}
-            }
-            completeStage();
-          } else {
-            ensurePromptForSequence();
-          }
-        } else {
-          roundMistake = true;
-          seqMistake = true; seqStreak = 0;
-          score = Math.max(0, score - 50);
-          scoreEl.textContent = `${score}`;
-          // Flash the correct target in bottom phrase
-          try {
-            (tg || []).forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s){ s.classList.add('bg-amber-200'); setTimeout(()=>s.classList.remove('bg-amber-200'), 600); } });
-          } catch {}
-          setQuizPrompt(`Slice: ${toRomaStr(tgText) || tgText}`);
-          try { SFX('bomb'); } catch {}
-        }
-        return;
-      }
       // Quiz Burst handling: multiple-option wave tiles carry indices + isCorrect
       if (quizMode && t && Array.isArray(t.indices)) {
         popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS });
         const isCorrect = !!t.isCorrect;
-      if (isCorrect) {
+        if (isCorrect) {
           (t.indices || []).forEach(i => { if (typeof i === 'number' && i >= 0) sliced.add(i); });
           const kanaTextQ = (t.kanaText || (t.indices || []).map(i => chars[i]).join('')) || '';
           const romajiTextQ = toRomaStr(kanaTextQ) || '';
@@ -1343,8 +1089,6 @@ export function initNinjaSlice(config) {
           const waveId = t.waveId;
           for (let j = tiles.length - 1; j >= 0; j--) { if (tiles[j] && tiles[j].waveId === waveId) tiles.splice(j, 1); }
           updateProgressUI();
-          // add to review
-          try { const st = stageData[stageIndex] || {}; reviewItems.push({ kana: kanaTextQ, romaji: romajiTextQ, english: st.english || '' }); } catch {}
           if (sliced.size === original.length) {
             completeStage();
           } else {
@@ -1352,7 +1096,6 @@ export function initNinjaSlice(config) {
             scheduleNextQuizWave(waveId);
           }
         } else {
-          roundMistake = true;
           score = Math.max(0, score - 50);
           scoreEl.textContent = `${score}`;
         }
@@ -1409,7 +1152,7 @@ export function initNinjaSlice(config) {
   // trail drawing
   const FADE_DURATION = 220; // milliseconds (how long trails last)
 const trails = [];
-  function drawTrails() {
+function drawTrails() {
   const now = Date.now();
   trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 
@@ -1440,55 +1183,12 @@ const trails = [];
   }
 }
 
-  // Fireworks shimmer (visual) on fxCanvas
-  let fwAnimId = null;
-  function launchFireworkEffect(durationMs = 900, intensity = 1.0, colors) {
-    try {
-      const particles = [];
-      const N = Math.max(60, Math.round(((viewW * viewH) / 18000) * Math.max(0.5, intensity)));
-      const palette = Array.isArray(colors) && colors.length ? colors : ['rgba(255, 215, 0, ALPHA)','rgba(255, 255, 255, ALPHA)','rgba(255, 180, 0, ALPHA)'];
-      for (let i = 0; i < N; i++) {
-        particles.push({
-          x: Math.random() * fxCanvas.width,
-          y: Math.random() * fxCanvas.height,
-          r: (Math.random() * 2 + 0.5) * (0.8 + 0.6 * Math.random()),
-          vx: (Math.random()*2-1) * 0.6 * (0.7 + 0.6 * intensity),
-          vy: (Math.random()*2-1) * 0.6 * (0.7 + 0.6 * intensity),
-          a: 1,
-          c: palette[Math.floor(Math.random()*palette.length)]
-        });
-      }
-      const start = performance.now();
-      const drawFw = () => {
-        const t = performance.now() - start;
-        if (t >= durationMs) { fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height); fwAnimId = null; return; }
-        fxCtx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
-        fxCtx.globalCompositeOperation = 'lighter';
-        for (const p of particles) {
-          p.x += p.vx; p.y += p.vy; p.a *= 0.97;
-          fxCtx.beginPath();
-          const col = (p.c || '').replace('ALPHA', String(Math.max(0, p.a)));
-          fxCtx.fillStyle = col || `rgba(255,215,0, ${Math.max(0, p.a)})`;
-          fxCtx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-          fxCtx.fill();
-        }
-        fxCtx.globalCompositeOperation = 'source-over';
-        fwAnimId = requestAnimationFrame(drawFw);
-      };
-      if (fwAnimId) cancelAnimationFrame(fwAnimId);
-      drawFw();
-    } catch {}
-  }
-
 
 
 
   canvas.style.touchAction = "none";
-  // Tighten hit detection to reduce accidental pops
-  const SLICE_PAD = 8;   // base sweep padding
-  const CLICK_PAD = 3;   // base click padding
-  const MIN_SEG_DIST = 18; // px - require this much stroke length to count as a slice
-  const MAX_EXTRA_SWEEP = 24; // px - clamp padding+boost
+  const SLICE_PAD = 14;
+  const CLICK_PAD = 9;
   let pointerIsDown = false;
   let activeSlicePad = SLICE_PAD;
   let activeClickPad = CLICK_PAD;
@@ -1502,14 +1202,14 @@ canvas.addEventListener("pointerdown", e => {
   pointerIsDown = true;
   const pointerType = (e.pointerType || '').toLowerCase();
   if (pointerType === 'mouse') {
-    activeClickPad = CLICK_PAD + 6;
-    activeSlicePad = SLICE_PAD + 10;
+    activeClickPad = CLICK_PAD + 18;
+    activeSlicePad = SLICE_PAD + 28;
   } else if (pointerType === 'pen') {
-    activeClickPad = CLICK_PAD + 5;
-    activeSlicePad = SLICE_PAD + 8;
-  } else { // touch
-    activeClickPad = CLICK_PAD + 4;
-    activeSlicePad = SLICE_PAD + 6;
+    activeClickPad = CLICK_PAD + 8;
+    activeSlicePad = SLICE_PAD + 18;
+  } else {
+    activeClickPad = CLICK_PAD + 6;
+    activeSlicePad = SLICE_PAD + 14;
   }
   if (canvas.setPointerCapture) {
     try { canvas.setPointerCapture(e.pointerId); } catch {}
@@ -1525,16 +1225,13 @@ canvas.addEventListener("pointerdown", e => {
     else if (AudioCtx && !_ac) { _ac = new AudioCtx(); }
   } catch {}
 
-  // click slice point (much stricter to avoid accidental hits)
+  // click slice point
   for (let i = tiles.length - 1; i >= 0; i--) {
     const t = tiles[i];
     if (!t) continue;
     const baseRadius = (typeof t.radius === 'number') ? t.radius : (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
-    const clickRadius = baseRadius + activeClickPad; // no extra fudge
-    const d = Math.hypot(t.x - x, t.y - y);
-    // bombs require a more direct click
-    const threshold = (t.type === 'bomb') ? baseRadius * 0.9 : clickRadius;
-    if (d < threshold) { tiles.splice(i,1); sliceKana(t); break; }
+    const clickRadius = baseRadius + activeClickPad + 8;
+    if (Math.hypot(t.x - x, t.y - y) < clickRadius) { tiles.splice(i,1); sliceKana(t); break; }
   }
 });
 
@@ -1563,28 +1260,17 @@ canvas.addEventListener("pointerdown", e => {
     const dySeg = p1.y - p0.y;
     const distSeg = Math.hypot(dxSeg, dySeg);
     if (distSeg > 60) { try { SFX('swish'); } catch {} }
-    // Only consider a sweep if the stroke segment is long enough
-    if (distSeg >= MIN_SEG_DIST) {
-      speedBoost = Math.min(16, distSeg * 0.4);
-    } else {
-      speedBoost = 0;
-    }
+    speedBoost = Math.min(32, distSeg * 0.7);
   }
-  let slicedThisMove = false;
   for (let i = tiles.length - 1; i >= 0; i--) {
     const t = tiles[i];
     if (!t) continue;
     const baseRadius = (typeof t.radius === 'number') ? t.radius : (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
-    const sweepExtra = Math.min(MAX_EXTRA_SWEEP, activeSlicePad + speedBoost);
-    const sweepRadius = baseRadius + sweepExtra;
-    const pointerRadius = sweepRadius + 4;
+    const sweepRadius = baseRadius + activeSlicePad + speedBoost;
+    const pointerRadius = sweepRadius + 6;
     let hit = Math.hypot(t.x - x, t.y - y) < pointerRadius;
     if (!hit && hasSegment){
-      // Only check segment intersections if the recent movement was long enough
-      const dx = p1.x - p0.x, dy = p1.y - p0.y;
-      const dist = Math.hypot(dx, dy);
-      const segmentEligible = dist >= MIN_SEG_DIST;
-      const maxSegments = Math.min(current.length - 1, 3);
+      const maxSegments = Math.min(current.length - 1, 4);
       for (let s = 0; s < maxSegments; s++) {
         const idx2 = current.length - 1 - s;
         const idx1 = idx2 - 1;
@@ -1592,17 +1278,13 @@ canvas.addEventListener("pointerdown", e => {
         const segStart = current[idx1];
         const segEnd = current[idx2];
         if (!segStart || !segEnd) break;
-        if (!segmentEligible) break;
-        if (hitSegmentCircle(segStart.x,segStart.y,segEnd.x,segEnd.y,t.x,t.y,sweepRadius)) { hit = true; break; }
+        if (hitSegmentCircle(segStart.x,segStart.y,segEnd.x,segEnd.y,t.x,t.y,sweepRadius + 8)) { hit = true; break; }
       }
     }
-    // Bombs require a real swipe (no proximity-only hits)
-    if (t.type === 'bomb' && (!hasSegment || speedBoost === 0)) hit = false;
     if (hit) {
       tiles.splice(i,1);
       sliceKana(t);
-      slicedThisMove = true;
-      break; // limit to one slice per move frame to avoid multi-pop
+      continue;
     }
   }
   drawTrails();
@@ -1631,7 +1313,7 @@ canvas.addEventListener('pointerout', endPointer);
   function startRound() {
     tiles = [];
     popFx.length = 0;
-    score = 0; combo = 0; lastSliceAt = 0; reviewItems = []; roundMistake = false;
+    score = 0; combo = 0; lastSliceAt = 0;
     scoreEl.textContent = '0';
     stageIndex = 0;
     setStage(stageIndex);
@@ -1686,14 +1368,7 @@ canvas.addEventListener('pointerout', endPointer);
     roundActive = false;
     // Ensure no pending pause resumes after ending
     cancelActivePause({ skipResume: true, skipCallbacks: true });
-    // Round clear celebration (lighter sparkles)
-    if (reason === 'clear') {
-      try { SFX('firework'); } catch {}
-      try { launchFireworkEffect(1000, 1.2, ['rgba(255, 215, 0, ALPHA)','rgba(173, 216, 230, ALPHA)','rgba(255, 255, 255, ALPHA)']); } catch {}
-    }
     if (quizMode) setQuizPrompt('');
-    // Show review board when game ends
-    try { showReview(reason); } catch {}
     if (overPanel) {
       const t = document.getElementById('slice-over-title');
       const r = document.getElementById('slice-over-reason');

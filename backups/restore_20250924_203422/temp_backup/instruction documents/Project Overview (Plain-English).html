@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- saved from url=(0054)file:///C:/Users/Owner/Downloads/Project_Overview.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project Overview (Plain-English)</title>
+<style>body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.5;padding:24px;max-width:900px;margin:auto;} code,pre{background:#f6f8fa;padding:2px 6px;border-radius:4px;} h1,h2,h3{margin-top:1.2em;} ul{margin-left:1.2em;}</style>
+</head><body><article>
+# Project Overview (Plain-English)<br>
+<br>
+## What this is<br>
+<br>
+A small web app for learning Japanese. You open an HTML page in a browser and it shows<br>
+lesson steps. You type romaji (like 'kon'nichiwa') and the app turns it into kana (こんにちは).<br>
+It can also speak lines, and in some browsers listen to your voice.<br>
+<br>
+## What lives where<br>
+<br>
+**HTML pages** (the 'screens' of the app):<br>
+- `Kana-reader2/index.html` – title: 'KanaReader', scripts: 0<br>
+- `Kana-reader2/lesson.html` – title: 'KanaReader — Lesson', scripts: 4<br>
+- `Kana-reader2/old lesson attempts/back-up-index.html` – title: 'KanaReader', scripts: 8<br>
+- `Kana-reader2/old lesson attempts/reference.html` – title: 'Japanese Kana Reference', scripts: 0<br>
+<br>
+**JavaScript** (the brains):<br>
+- `Kana-reader2/lesson-loader.js` – about 2879 bytes; notable functions: loadLessons, pickLesson, show, updateTitle, waitForShim<br>
+- `Kana-reader2/lesson-shim backup copy.js` – about 54079 bytes; notable functions: Speech, attachGreetingNormalizer, attachKanaGuide, attachSmartNormalizer, bindNDisambiguator, bindOnce<br>
+- `Kana-reader2/lesson-shim.js` – about 54802 bytes; notable functions: Speech, attachGreetingNormalizer, attachKanaGuide, attachSmartNormalizer, bindNDisambiguator, bindOnce<br>
+- `Kana-reader2/memorymatch.js` – about 4243 bytes; notable functions: checkForMatch, onCardClick, resetTurn, shuffle, speakKana, startMemoryMatch<br>
+- `Kana-reader2/sw.js` – about 2510 bytes; notable functions: functions defined inside this file<br>
+- `Kana-reader2/modules/ninjaSlice.js` – about 7584 bytes; notable functions: draw, drawTrails, endGame, initNinjaSlice, resize, sliceAt<br>
+- `Kana-reader2/old lesson attempts/backup copy of js script.js` – about 41279 bytes; notable functions: addLine, appendChatMessage, bindLineEvents, checkForMatch, converterSpeak, drawFrame<br>
+- `Kana-reader2/old lesson attempts/backup copy of ninjaslice.js` – about 12008 bytes; notable functions: drawFrame, drawTrails, endGame, getPointerPosition, handleSlice, initNinjaSlice<br>
+<br>
+**CSS** (the look):<br>
+- `Kana-reader2/style.css` – selectors: #lesson-main, #lesson-row, #mascot<br>
+<br>
+**Data files / manifest**:<br>
+- `Kana-reader2/manifest.webmanifest` – top-level keys: name, short_name, lang, start_url, scope, display, orientation, background_color, theme_color, icons<br>
+- `Kana-reader2/stories.json` – top-level keys: lessons<br>
+- `Kana-reader2/images/site.webmanifest` – top-level keys: name, short_name, icons, theme_color, background_color, display<br>
+- `Kana-reader2/old lesson attempts/stories-backup.json` – top-level keys: (could not parse)<br>
+<br>
+## How typing works (simple)<br>
+<br>
+When you type romaji, the app uses a library called WanaKana to convert it into kana.<br>
+Example: typing 'kon'nichiwa' becomes こんにちは. The code also adds some small helpers: it<br>
+corrects common mistakes (like わ vs は), handles small っ, and compares what you typed to the<br>
+answer using kana (so punctuation like 。 won’t block you).<br>
+<br>
+## Audio and voice<br>
+<br>
+Text-to-speech (TTS) uses the browser’s built-in voices. It works on most devices, but the<br>
+first sound usually requires a tap. Speech recognition (listening) only works on some<br>
+browsers like Android Chrome. iOS Safari does not support it; the app shows a friendly<br>
+fallback.<br>
+<br>
+## Deploying (very short)<br>
+<br>
+1) Put your files in a GitHub repo. 2) Enable GitHub Pages to host them. 3) On your phone,<br>
+open the Pages link and test typing + sound. 4) For an Android app, turn the site into a PWA<br>
+and use Bubblewrap to package it.<br>
+<br>
+## Glossary (super short)<br>
+<br>
+- **Relative path**: `stories.json` (works from any folder). Not `/stories.json` (root-only).<br>
+- **PWA**: Website that can be installed like an app.<br>
+- **TTS**: Computer voice that reads text.
+</article></body></html>

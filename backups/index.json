@@ -1,5 +1,11 @@
 ﻿[
     {
+        "timestamp_iso":  "2025-09-25T14:06:31.3902223+10:00",
+        "filename":  "kana-reader2-backup-20250925-140631-2432ec0.zip",
+        "size_bytes":  25757193,
+        "git_commit":  "2432ec0"
+    },
+    {
         "timestamp_iso":  "2025-09-24T20:34:22.5813304+10:00",
         "filename":  "kana-reader2-backup-20250924-203422-b838429.zip",
         "size_bytes":  25742835,
