@@ -68,6 +68,9 @@
   // Tunables (fallbacks)
   const launchBoost = Number((config && config.launchBoost) ?? 1.0);
   const gravity = Number((config && config.gravity) ?? 0.02);
+  // Bubble spin behavior
+  const bubbleSpinStyle = (config && config.bubbleSpinStyle) ? String(config.bubbleSpinStyle) : 'upright'; // 'upright' | 'flip' | 'none'
+  const bubbleSpinSpeed = Math.max(0, Number((config && config.bubbleSpinSpeed) ?? 1.0));
   // Quiz Burst config
   const quizMode = !!(config && config.quizMode);
   const quizChoices = Math.max(2, Math.min(6, Number((config && config.quizChoices) ?? 4)));
@@ -81,6 +84,9 @@
   const ffaSpawnRateBoost = Math.max(1, Number((config && config.ffaSpawnRateBoost) ?? 2.0));
   const ffaBombs = !!(config && config.ffaBombs);
   const coinPerKana = Math.max(0, Number((config && config.coinPerKana) ?? 1));
+  // Timer + failure handling
+  const timerPerStage = !!(config && config.timerPerStage);
+  const bombEndsRound = !!(config && config.bombEndsRound);
 
   // ---- Free-for-All (FFA) game state ----
   const MODE_NORMAL = 'normal';
@@ -117,6 +123,16 @@
   bankEl.style.color = '#065f46';
   bankEl.style.font = '700 13px system-ui, sans-serif';
   bankEl.textContent = 'Total: 0';
+  const bankReset = document.createElement('button');
+  bankReset.type = 'button';
+  bankReset.textContent = 'Reset';
+  bankReset.style.marginLeft = '6px';
+  bankReset.style.font = '600 11px system-ui, sans-serif';
+  bankReset.style.padding = '2px 6px';
+  bankReset.style.borderRadius = '8px';
+  bankReset.style.border = '1px solid rgba(16,185,129,0.35)';
+  bankReset.style.background = 'rgba(236,253,245,0.9)';
+  bankReset.style.color = '#047857';
   const coinCounterEl = document.createElement('div');
   coinCounterEl.id = 'slice-coin-counter';
   coinCounterEl.style.display = 'none';
@@ -139,8 +155,13 @@
   countdownEl.textContent = String(ffaSeconds);
   try {
     if (statusBar) {
-      // layout: score | time | combo | coins | countdown
-      statusBar.appendChild(bankEl);
+      // layout: score | time | combo | total | coins | countdown
+      const bankWrap = document.createElement('div');
+      bankWrap.style.display = 'flex';
+      bankWrap.style.alignItems = 'center';
+      bankWrap.appendChild(bankEl);
+      bankWrap.appendChild(bankReset);
+      statusBar.appendChild(bankWrap);
       statusBar.appendChild(coinCounterEl);
       statusBar.appendChild(countdownEl);
     } else {
@@ -148,6 +169,9 @@
       bankEl.style.position = 'absolute';
       bankEl.style.left = '12px';
       bankEl.style.top = '8px';
+      bankReset.style.position = 'absolute';
+      bankReset.style.left = '90px';
+      bankReset.style.top = '8px';
       coinCounterEl.style.position = 'absolute';
       coinCounterEl.style.left = '12px';
       coinCounterEl.style.top = '38px';
@@ -155,6 +179,7 @@
       countdownEl.style.right = '12px';
       countdownEl.style.top = '8px';
       holder.appendChild(bankEl);
+      holder.appendChild(bankReset);
       holder.appendChild(coinCounterEl);
       holder.appendChild(countdownEl);
     }
@@ -164,6 +189,16 @@
     try { bankEl.textContent = `Total: ${coinBank}`; } catch {}
     try { localStorage.setItem('sliceCoinBank', String(Math.max(0, coinBank|0))); } catch {}
   }
+  try {
+    bankReset.addEventListener('click', () => {
+      try {
+        const ok = window.confirm ? window.confirm('Reset total coins?') : true;
+        if (!ok) return;
+      } catch {}
+      coinBank = 0;
+      updateCoinBankUI();
+    });
+  } catch {}
   function startFreeForAll(){
     try {
       if (!ffaEnabled || mode === MODE_FFA) { if (typeof flashFullMapping === 'function') flashFullMapping(); completeStage(); return; }
@@ -366,6 +401,34 @@ function groupForIndex(idx){
   function targetGroup(){ try { return (quizGroups && quizGroups[seqIndex]) || []; } catch { return []; } }
   function targetText(){ try { return (targetGroup()||[]).map(i => (chars[i] || '')).join(''); } catch { return ''; } }
   function ensurePromptForSequence(){ try { const tg = targetText(); if (tg){ setQuizPrompt(`Slice: ${toRomaStr(tg) || tg}`); } } catch {} }
+  // Bottom-row target pulse styling
+  let targetPulseStyleAdded = false;
+  function addTargetPulseCss(){
+    if (targetPulseStyleAdded) return;
+    try {
+      const style = document.createElement('style');
+      style.textContent = `@keyframes slicePulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 16px rgba(255,215,0,0.9)}} .slice-target-pulse{animation:slicePulse .6s linear infinite}`;
+      (document.head || holder || document.body).appendChild(style);
+      targetPulseStyleAdded = true;
+    } catch {}
+  }
+  function updateBottomTargetHighlight(){
+    try{
+      const spans = kanaEl.querySelectorAll('.kana-ch');
+      spans.forEach(s => s.classList && s.classList.remove('slice-target-pulse'));
+      if (!sequenceMode) return;
+      const tg = (typeof targetGroup === 'function') ? (targetGroup() || []) : [];
+      if (!Array.isArray(tg) || !tg.length) return;
+      addTargetPulseCss();
+      tg.forEach(i => {
+        const span = kanaEl.querySelector(`[data-idx="${i}"]`);
+        if (span && span.classList) span.classList.add('slice-target-pulse');
+      });
+    }catch{}
+  }
+  // Extend prompt to also update highlight
+  const _ensurePromptOrig = ensurePromptForSequence;
+  ensurePromptForSequence = function(){ try { _ensurePromptOrig && _ensurePromptOrig(); } catch {} updateBottomTargetHighlight(); };
   // Small floating romaji bubble
   const romaBubble = document.createElement('div');
   romaBubble.className = 'absolute pointer-events-none bg-black text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity duration-300';
@@ -640,6 +703,7 @@ function groupForIndex(idx){
     combo = 0;
     lastSliceAt = 0;
     if (scoreEl) scoreEl.textContent = `${score}`;
+    if (timerPerStage) { try { timer = roundSeconds|0; timerEl.textContent = String(timer); } catch {} }
     stopComboMeter();
     resetComboBadge();
     updateProgressUI();
@@ -1006,7 +1070,7 @@ function groupForIndex(idx){
       t.x += t.vx * timeScale;
       t.y += t.vy * timeScale;
       t.vy += gravity * timeScale; // gravity
-      if (t.spin) t.rot += t.spin;
+      if (t.spin) t.rot += t.spin * Math.max(0, bubbleSpinSpeed || 0);
 
       // bounce off walls slightly
       if (t.x < 0 || t.x > viewW) t.vx *= -0.98;
@@ -1129,6 +1193,27 @@ function groupForIndex(idx){
           ctx.restore();
         }
 
+        // Pulse target highlight (Sequence mode)
+        if (sequenceMode) {
+          try {
+            const tg = (typeof targetGroup === 'function') ? (targetGroup() || []) : [];
+            const want = (tg || []).map(i => (chars[i] || '')).join('');
+            const got = (Array.isArray(t.indices) && t.indices.length) ? t.indices.map(i => (chars[i]||'')).join('') : (typeof t.char === 'string' ? t.char : '');
+            if (want && got === want) {
+              const pulse = (Math.sin(now * 0.02) + 1) * 0.5; // 0..1
+              ctx.save();
+              ctx.shadowColor = 'rgba(255,215,0,0.95)';
+              ctx.shadowBlur = 10 + pulse * 24;
+              ctx.beginPath();
+              ctx.arc(0, 0, radius + 2 + pulse * 2, 0, Math.PI*2);
+              ctx.strokeStyle = 'rgba(255,215,0,' + (0.7 + 0.25*pulse) + ')';
+              ctx.lineWidth = 2.5 + pulse * 2;
+              ctx.stroke();
+              ctx.restore();
+            }
+          } catch {}
+        }
+
         const highlightGradient = ctx.createRadialGradient(-radius * 0.4, -radius * 0.45, radius * 0.05, -radius * 0.4, -radius * 0.45, radius * 0.35);
         highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
         highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
@@ -1137,7 +1222,12 @@ function groupForIndex(idx){
         ctx.arc(-radius*0.35, -radius*0.35, radius*0.32, Math.PI*1.1, Math.PI*1.9, false);
         ctx.fill();
 
+        // Draw glyph upright regardless of bubble spin
         ctx.save();
+        if (bubbleSpinStyle === 'upright') {
+          // cancel current rotation so text is upright
+          ctx.rotate(- (t.rot || 0));
+        }
         ctx.fillStyle = '#111';
         ctx.font = "56px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
         ctx.textAlign = 'center';
@@ -1145,7 +1235,7 @@ function groupForIndex(idx){
         const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
         const bubbleYOffset = radius * 0.06;
         if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
-        
+
         if (difficulty === 'easy') {
           try {
             const roma = toRomaStr(bubbleGlyph) || '';
@@ -1480,10 +1570,19 @@ function groupForIndex(idx){
       }
     } else if (t.type === 'bomb') {
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 6, isBomb: true });
-      // penalty: end game or big score drop
+      // penalty: end game or restart stage
       scoreEl.textContent = `BOOM!`;
       try { SFX('bomb'); } catch {}
-      endGame('bomb');
+      if (bombEndsRound) {
+        endGame('bomb');
+      } else {
+        // restart current stage, optionally resetting the timer if configured
+        const msg = timerPerStage ? 'Bomb! Restarting stage and timer…' : 'Bomb! Restarting stage…';
+        pauseSliceMoment(msg, () => {
+          try { setStage(stageIndex); } catch {}
+          // Timer will restart on resumeFromPause via startTimerTicker if it was running when paused
+        });
+      }
     }
   }
 
