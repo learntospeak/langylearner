@@ -692,54 +692,57 @@
 <div id="slice-overlay" class="fixed inset-0 bg-black/60 hidden z-[9999]">
   <div id="slice-wrap" class="absolute inset-0 flex flex-col items-center justify-center p-4">
     <div class="bg-white rounded shadow w-[80vw] max-w-[1100px] p-3 relative">
-      <button id="slice-close" class="absolute top-4 right-4 z-30 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow-lg border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300 pointer-events-auto">Close</button>
-      <div class="relative pt-20 pb-16">
-        <div id="slice-status" class="pointer-events-none absolute top-6 left-6 flex items-center gap-6 bg-amber-200/95 text-slate-900 px-5 py-4 rounded-xl shadow-lg">
-          <div class="flex flex-col gap-1">
-            <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Score</span>
-            <span id="slice-score" class="font-semibold text-lg tracking-wide">0</span>
+      <div class="relative pt-24 pb-16">
+        <!-- Unified top bar: status + controls + close -->
+        <div class="pointer-events-none absolute top-4 left-4 right-4 flex items-center justify-between gap-3">
+          <div id="slice-status" class="pointer-events-auto flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Score</span>
+              <span id="slice-score" class="font-semibold text-lg tracking-wide">0</span>
+            </div>
+            <div class="flex flex-col gap-1 text-right">
+              <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Time</span>
+              <span id="slice-timer" class="font-semibold text-lg tracking-wide">60</span>
+            </div>
+            <div id="slice-combo-meter" class="pointer-events-none w-32 h-1.5 bg-white/60 rounded-full overflow-hidden opacity-0 transition-opacity">
+              <div id="slice-combo-meter-fill" class="h-full bg-emerald-500" style="width:0%"></div>
+            </div>
           </div>
-          <div class="flex flex-col gap-1 text-right">
-            <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Time</span>
-            <span id="slice-timer" class="font-semibold text-lg tracking-wide">60</span>
+          <div class="pointer-events-auto flex items-center gap-2 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900">
+            <label class="flex items-center gap-1">
+              <span class="text-xs">Speed</span>
+              <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
+                <option value="0.85">Slow</option>
+                <option value="1.0" selected>Normal</option>
+                <option value="1.25">Fast</option>
+                <option value="1.5">Turbo</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-1">
+              <span class="text-xs">Difficulty</span>
+              <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="checkbox" id="slice-showphrase" class="accent-teal-600" checked />
+              <span class="text-xs">Show phrase</span>
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
+              <span class="text-xs">Speak on slice</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2">
+              <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
+              <span class="text-xs">Romaji bubbles</span>
+            </label>
+            <button id="slice-close" class="ml-2 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
           </div>
-          <div id="slice-combo-meter" class="pointer-events-none w-32 h-1.5 bg-white/60 rounded-full overflow-hidden opacity-0 transition-opacity">
-            <div id="slice-combo-meter-fill" class="h-full bg-emerald-500" style="width:0%"></div>
-          </div>
-        </div>
-        <label class="absolute top-16 right-4 inline-flex items-center gap-1 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900 pointer-events-auto">
-          <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
-          <span>Romaji bubbles</span>
-        </label>
-        <div class="absolute top-16 right-56 flex items-center gap-2 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900 pointer-events-auto">
-          <label class="flex items-center gap-1">
-            <span class="text-xs">Speed</span>
-            <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
-              <option value="0.85">Slow</option>
-              <option value="1.0" selected>Normal</option>
-              <option value="1.25">Fast</option>
-              <option value="1.5">Turbo</option>
-            </select>
-          </label>
-          <label class="flex items-center gap-1">
-            <span class="text-xs">Difficulty</span>
-            <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
-              <option value="easy">Easy</option>
-              <option value="normal" selected>Normal</option>
-              <option value="hard">Hard</option>
-            </select>
-          </label>
-          <label class="flex items-center gap-1">
-            <input type="checkbox" id="slice-showphrase" class="accent-teal-600" checked />
-            <span class="text-xs">Show phrase</span>
-          </label>
-          <label class="flex items-center gap-1">
-            <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
-            <span class="text-xs">Speak on slice</span>
-          </label>
         </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
-        <div id="slice-instructions" class="absolute inset-x-0 top-28 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
+        <div id="slice-instructions" class="absolute inset-x-0 top-32 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
           Slice kana. Red circles are bombs â€” avoid them. Swipe for combos.
         </div>
         <div id="slice-progress" class="mt-1 text-center text-sm text-gray-700"></div>

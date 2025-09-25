@@ -94,6 +94,7 @@
   let mode = MODE_NORMAL;        // current round mode
   let coinCount = 0;             // coins collected (incremented during FFA)
   let ffaEndsAt = 0;             // timestamp when FFA ends
+  let ffaReadyAt = 0;            // until this time, input is gated
   const coinFx = [];             // coin particles (rendered later via fxCanvas)
   // Persistent coin bank across rounds (page-level)
   let coinBank = 0;
@@ -108,7 +109,7 @@
   bonusOverlay.style.pointerEvents = 'none';
   bonusOverlay.style.zIndex = '80';
   bonusOverlay.style.background = 'rgba(0,0,0,0.35)';
-  bonusOverlay.innerHTML = '<div style="color:#fff; font:700 20px system-ui, sans-serif; background:rgba(0,0,0,0.35); padding:8px 12px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.35)">Bonus Round - slice to collect coins!</div>';
+  bonusOverlay.innerHTML = '<div style="color:#fff; font:700 20px system-ui, sans-serif; background:rgba(0,0,0,0.35); padding:8px 12px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.35)">Collect all the coins!</div>';
   holder.appendChild(bonusOverlay);
   // Coin counter + countdown inside the status bar if present
   const statusBar = document.getElementById('slice-status');
@@ -205,9 +206,14 @@
       mode = MODE_FFA;
       coinCount = 0;
       ffaEndsAt = performance.now() + (ffaSeconds * 1000);
+      ffaReadyAt = performance.now() + 1000; // wait 1s before accepting input
+      // Remove any existing bombs from the board to avoid interference
+      try { for (let i = tiles.length - 1; i >= 0; i--) { if (tiles[i] && tiles[i].type === 'bomb') tiles.splice(i, 1); } } catch {}
       bonusOverlay.style.display = 'flex';
       coinCounterEl.style.display = '';
       countdownEl.style.display = '';
+      // Hide message after the short intro gate
+      setTimeout(() => { try { if (mode === MODE_FFA) bonusOverlay.style.display = 'none'; } catch {} }, 1000);
       setTimeout(() => finishFreeForAll(), Math.max(500, ffaSeconds * 1000));
     } catch { completeStage(); }
   }
@@ -233,7 +239,12 @@
       countdownEl.style.display = 'none';
       // Keep coin counter visible until after swoop completes
       // Clear any remaining FFA tiles by mutating the array (preserve reference)
-      try { for (let i = tiles.length - 1; i >= 0; i--) { if (tiles[i] && tiles[i].ffa) tiles.splice(i, 1); } } catch {}
+      try {
+        for (let i = tiles.length - 1; i >= 0; i--) {
+          if (!tiles[i]) continue;
+          if (tiles[i].ffa || tiles[i].type === 'bomb') tiles.splice(i, 1);
+        }
+      } catch {}
     } catch {}
     // Run a quick swoop animation to the top-right, then tally + stage banner
     const award = Math.max(0, Math.floor(coinCount));
@@ -1415,7 +1426,7 @@ function groupForIndex(idx){
     // Free-for-All spawns: kana-only, denser, slightly higher launch
     if (mode === MODE_FFA) {
       if (!Array.isArray(chars) || chars.length === 0) return;
-      const ch = chars[Math.floor(Math.random() * chars.length)] || '';
+      const ch = '$';
       tiles.push({
         type:'kana', char: ch, index: -1, ffa: true, radius: KANA_RADIUS,
         x: Math.random()*viewW, y: viewH+20,
@@ -1569,6 +1580,8 @@ function groupForIndex(idx){
       if (sliced.size === original.length) { if (ffaEnabled) { startFreeForAll(); } else { flashFullMapping(); completeStage(); }
       }
     } else if (t.type === 'bomb') {
+      // During FFA, bombs are inert: remove and ignore
+      if (mode === MODE_FFA) { try { /* visual pop without penalty */ popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 4, isBomb: false }); } catch {} return; }
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 6, isBomb: true });
       // penalty: end game or restart stage
       scoreEl.textContent = `BOOM!`;
