@@ -75,20 +75,23 @@
   const memoryCue = !!(config && config.memoryCue);
   // Sequence mode (target one kana at a time, in order)
   const sequenceMode = !!(config && config.sequenceMode);
-  // Free‑for‑All (coin bonus) config — flag only; behavior added in later steps
+  // Free-for-All (coin bonus) config
   const ffaEnabled = !!(config && config.freeForAllEnabled);
   const ffaSeconds = Math.max(1, Number((config && config.ffaSeconds) ?? 5));
   const ffaSpawnRateBoost = Math.max(1, Number((config && config.ffaSpawnRateBoost) ?? 2.0));
   const ffaBombs = !!(config && config.ffaBombs);
   const coinPerKana = Math.max(0, Number((config && config.coinPerKana) ?? 1));
 
-  // ---- Free‑for‑All (FFA) game state (added in step 3) ----
+  // ---- Free-for-All (FFA) game state ----
   const MODE_NORMAL = 'normal';
   const MODE_FFA = 'freeForAll';
   let mode = MODE_NORMAL;        // current round mode
   let coinCount = 0;             // coins collected (incremented during FFA)
   let ffaEndsAt = 0;             // timestamp when FFA ends
   const coinFx = [];             // coin particles (rendered later via fxCanvas)
+  // Persistent coin bank across rounds (page-level)
+  let coinBank = 0;
+  try { const saved = Number(localStorage.getItem('sliceCoinBank') || '0'); coinBank = isFinite(saved) ? Math.max(0, Math.floor(saved)) : 0; } catch {}
   // Simple bonus overlay (text only for the wiring step)
   const bonusOverlay = document.createElement('div');
   bonusOverlay.style.position = 'absolute';
@@ -99,32 +102,117 @@
   bonusOverlay.style.pointerEvents = 'none';
   bonusOverlay.style.zIndex = '80';
   bonusOverlay.style.background = 'rgba(0,0,0,0.35)';
-  bonusOverlay.innerHTML = '<div style="color:#fff; font:700 20px system-ui, sans-serif; background:rgba(0,0,0,0.35); padding:8px 12px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.35)">Bonus Round – slice to collect coins!</div>';
+  bonusOverlay.innerHTML = '<div style="color:#fff; font:700 20px system-ui, sans-serif; background:rgba(0,0,0,0.35); padding:8px 12px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.35)">Bonus Round - slice to collect coins!</div>';
   holder.appendChild(bonusOverlay);
+  // Coin counter + countdown inside the status bar if present
+  const statusBar = document.getElementById('slice-status');
+  // Persistent bank display
+  const bankEl = document.createElement('div');
+  bankEl.id = 'slice-coin-bank';
+  bankEl.style.display = '';
+  bankEl.style.padding = '4px 8px';
+  bankEl.style.borderRadius = '10px';
+  bankEl.style.background = 'rgba(255,255,255,0.9)';
+  bankEl.style.border = '1px solid rgba(16,185,129,0.35)';
+  bankEl.style.color = '#065f46';
+  bankEl.style.font = '700 13px system-ui, sans-serif';
+  bankEl.textContent = 'Total: 0';
+  const coinCounterEl = document.createElement('div');
+  coinCounterEl.id = 'slice-coin-counter';
+  coinCounterEl.style.display = 'none';
+  coinCounterEl.style.padding = '4px 8px';
+  coinCounterEl.style.borderRadius = '10px';
+  coinCounterEl.style.background = 'rgba(255,255,255,0.9)';
+  coinCounterEl.style.border = '1px solid rgba(245,158,11,0.4)';
+  coinCounterEl.style.color = '#111827';
+  coinCounterEl.style.font = '600 13px system-ui, sans-serif';
+  coinCounterEl.textContent = 'Coins: 0';
+  const countdownEl = document.createElement('div');
+  countdownEl.id = 'slice-ffa-countdown';
+  countdownEl.style.display = 'none';
+  countdownEl.style.padding = '4px 8px';
+  countdownEl.style.borderRadius = '10px';
+  countdownEl.style.background = 'rgba(255,255,255,0.9)';
+  countdownEl.style.border = '1px solid rgba(245,158,11,0.4)';
+  countdownEl.style.color = '#92400e';
+  countdownEl.style.font = '700 13px system-ui, sans-serif';
+  countdownEl.textContent = String(ffaSeconds);
+  try {
+    if (statusBar) {
+      // layout: score | time | combo | coins | countdown
+      statusBar.appendChild(bankEl);
+      statusBar.appendChild(coinCounterEl);
+      statusBar.appendChild(countdownEl);
+    } else {
+      // fallback: pin to top-left in holder
+      bankEl.style.position = 'absolute';
+      bankEl.style.left = '12px';
+      bankEl.style.top = '8px';
+      coinCounterEl.style.position = 'absolute';
+      coinCounterEl.style.left = '12px';
+      coinCounterEl.style.top = '38px';
+      countdownEl.style.position = 'absolute';
+      countdownEl.style.right = '12px';
+      countdownEl.style.top = '8px';
+      holder.appendChild(bankEl);
+      holder.appendChild(coinCounterEl);
+      holder.appendChild(countdownEl);
+    }
+  } catch {}
+
+  function updateCoinBankUI(){
+    try { bankEl.textContent = `Total: ${coinBank}`; } catch {}
+    try { localStorage.setItem('sliceCoinBank', String(Math.max(0, coinBank|0))); } catch {}
+  }
   function startFreeForAll(){
     try {
-      if (!ffaEnabled || mode === MODE_FFA) { if (typeof flashFullMapping==='function') flashFullMapping(); completeStage(); return; }
+      if (!ffaEnabled || mode === MODE_FFA) { if (typeof flashFullMapping === 'function') flashFullMapping(); completeStage(); return; }
       mode = MODE_FFA;
       coinCount = 0;
       ffaEndsAt = performance.now() + (ffaSeconds * 1000);
       bonusOverlay.style.display = 'flex';
+      coinCounterEl.style.display = '';
+      countdownEl.style.display = '';
       setTimeout(() => finishFreeForAll(), Math.max(500, ffaSeconds * 1000));
     } catch { completeStage(); }
   }
-  function finishFreeForAll(){
-    try { mode = MODE_NORMAL; bonusOverlay.style.display = 'none'; } catch {}
-    if (typeof flashFullMapping===''function'') flashFullMapping();
-    completeStage();
+  function launchCoinSwoop(award, onDone){
+    try {
+      const now = performance.now();
+      const awardSafe = Math.max(0, Math.floor(award || 0));
+      const n = Math.min(12, Math.max(6, Math.round(Math.min(awardSafe, 30) / 2)));
+      const tx = Math.max(24, viewW - 36);
+      const ty = 24;
+      for (let i = 0; i < n; i++) {
+        const delay = i * 60;
+        const startAt = now + delay;
+        coinFx.push({ mode:'swoop', sx: Math.random()*viewW, sy: (viewH*0.5) + Math.random()*(viewH*0.5), tx, ty, born: startAt, dur: 600 });
+      }
+      setTimeout(()=>{ try { SFX('coin'); } catch {}; onDone && onDone(); }, Math.round((n*60) + 620));
+    } catch { onDone && onDone(); }
   }
-
-
-  // ---- Free‑for‑All (FFA) game state (added in step 2) ----
-  const MODE_NORMAL = 'normal';
-  const MODE_FFA = 'freeForAll';
-  let mode = MODE_NORMAL;        // current round mode
-  let coinCount = 0;             // coins collected (incremented during FFA)
-  let ffaEndsAt = 0;             // timestamp when FFA ends
-  const coinFx = [];             // coin particles (rendered later via fxCanvas)
+  function finishFreeForAll(){
+    try {
+      mode = MODE_NORMAL;
+      bonusOverlay.style.display = 'none';
+      countdownEl.style.display = 'none';
+      // Keep coin counter visible until after swoop completes
+      // Clear any remaining FFA tiles by mutating the array (preserve reference)
+      try { for (let i = tiles.length - 1; i >= 0; i--) { if (tiles[i] && tiles[i].ffa) tiles.splice(i, 1); } } catch {}
+    } catch {}
+    // Run a quick swoop animation to the top-right, then tally + stage banner
+    const award = Math.max(0, Math.floor(coinCount));
+    launchCoinSwoop(award, () => {
+      try { coinCounterEl.style.display = 'none'; } catch {}
+      // add to persistent bank and update UI
+      try { coinBank = Math.max(0, (coinBank|0) + award); } catch { coinBank += award; }
+      updateCoinBankUI();
+      coinCount = 0; // avoid double-adding if finish is called again by any guard
+      if (typeof flashFullMapping === 'function') flashFullMapping();
+      completeStage();
+    });
+  }
+  // ---- Quiz helpers ----
   let quizActive = false;
   let quizGroups = [];
   let quizIndex = 0;
@@ -653,6 +741,17 @@ function groupForIndex(idx){
         const data = buf.getChannelData(0); for(let i=0;i<data.length;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/(sr*0.1)); }
         const src = ctx.createBufferSource(); src.buffer = buf; const g = ctx.createGain(); g.gain.value = 0.12;
         src.connect(g); g.connect(ctx.destination); src.start();
+      } else if (type === 'coin'){
+        const now = ctx.currentTime;
+        const o1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        o1.type = 'square';
+        o1.frequency.setValueAtTime(880, now);
+        o1.frequency.exponentialRampToValueAtTime(1760, now + 0.08);
+        g1.gain.setValueAtTime(0.06, now);
+        g1.gain.exponentialRampToValueAtTime(0.0008, now + 0.12);
+        o1.connect(g1); g1.connect(ctx.destination);
+        o1.start(now); o1.stop(now + 0.12);
       }
     }catch{}
   }
@@ -759,10 +858,17 @@ function groupForIndex(idx){
   const SLICE_PAUSE_MS = 1000;
 
   function startTimerTicker() {
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerInterval) { try { clearInterval(timerInterval); } catch {} }
     timerInterval = setInterval(() => {
-      timerEl.textContent = --timer;
-      if (timer <= 0) endGame();
+      try {
+        timer = Math.max(0, (timer|0) - 1);
+        timerEl.textContent = String(timer);
+        if (timer <= 0) { endGame(); }
+      } catch {
+        // Best effort to stop runaway interval
+        try { clearInterval(timerInterval); } catch {}
+        timerInterval = null;
+      }
     }, 1000);
   }
 
@@ -889,6 +995,12 @@ function groupForIndex(idx){
   function draw() {
     const now = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // FFA countdown UI and guard
+    if (mode === MODE_FFA && ffaEndsAt > 0) {
+      const msLeft = Math.max(0, Math.floor(ffaEndsAt - now));
+      const sec = Math.max(0, Math.ceil(msLeft / 1000));
+      try { countdownEl.textContent = String(sec); } catch {}
+    }
     for (let t of tiles) {
       // integrate
       t.x += t.vx * timeScale;
@@ -1072,6 +1184,71 @@ function groupForIndex(idx){
       ctx.restore();
     }
 
+    // Draw and advance coin particles (on main canvas layer)
+    for (let i = coinFx.length - 1; i >= 0; i--) {
+      const fx = coinFx[i];
+      // Swoop coins: parametric animation from sx,sy -> tx,ty
+      if (fx && fx.mode === 'swoop') {
+        const start = fx.born || now;
+        const dur = Math.max(1, fx.dur || 600);
+        const elapsed = now - start;
+        if (elapsed < 0) continue; // not started yet
+        const t01 = Math.min(1, elapsed / dur);
+        const ease = (p) => 1 - Math.pow(1 - p, 3);
+        const u = ease(t01);
+        const x = (fx.sx || 0) + (fx.tx - (fx.sx || 0)) * u;
+        const y = (fx.sy || 0) + (fx.ty - (fx.sy || 0)) * u;
+        const alpha = Math.max(0, 1 - (t01 * 0.1));
+        const r = 8;
+        ctx.save();
+        ctx.globalAlpha = 0.9 * alpha;
+        const g = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.2, x, y, r);
+        g.addColorStop(0, '#fff8c4');
+        g.addColorStop(1, '#fbbf24');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#b45309';
+        ctx.beginPath();
+        ctx.arc(x, y, r-1, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.restore();
+        if (t01 >= 1) { coinFx.splice(i, 1); }
+        continue;
+      }
+      const age = now - (fx.born || now);
+      const life = Math.max(1, fx.life || 600);
+      if (age >= life) { coinFx.splice(i, 1); continue; }
+      fx.x = (typeof fx.x === 'number') ? fx.x + (fx.vx || 0) * timeScale : (fx.x || 0);
+      fx.y = (typeof fx.y === 'number') ? fx.y + (fx.vy || 0) * timeScale : (fx.y || 0);
+      // mild gravity during float
+      fx.vy = (fx.vy || 0) + (0.012 * timeScale);
+      const alpha = Math.max(0, 1 - (age / life));
+      const r = 8;
+      ctx.save();
+      ctx.globalAlpha = 0.9 * alpha;
+      const g = ctx.createRadialGradient((fx.x||0) - r*0.3, (fx.y||0) - r*0.3, r*0.2, (fx.x||0), (fx.y||0), r);
+      g.addColorStop(0, '#fff8c4');
+      g.addColorStop(1, '#fbbf24');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc((fx.x||0), (fx.y||0), r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#b45309';
+      ctx.beginPath();
+      ctx.arc((fx.x||0), (fx.y||0), r-1, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // End FFA if time has elapsed (extra guard)
+    if (mode === MODE_FFA && ffaEndsAt && now >= ffaEndsAt) {
+      try { finishFreeForAll(); } catch {}
+    }
+
     animateId = requestAnimationFrame(draw);
   }
 
@@ -1119,7 +1296,7 @@ function groupForIndex(idx){
     options.forEach((opt, idx) => {
       const x = Math.floor((viewW / cols) * (idx + 1));
       const y = viewH + 20;
-      tiles.push({ type:'kana', char: opt.text, index: (opt.isCorrect && opt.indices.length ? opt.indices[0] : -1), indices: opt.indices, isCorrect: !!opt.isCorrect, radius: KANA_RADIUS, x, y, vx:(Math.random()*2-1)*0.8, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(0.8, launchBoost*0.9) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05, waveId });
+      tiles.push({ type:'kana', char: opt.text, index: (opt.isCorrect && opt.indices.length ? opt.indices[0] : -1), indices: opt.indices, isCorrect: !!opt.isCorrect, radius: KANA_RADIUS, x, y, vx:(Math.random()*2-1) * (0.8 * Math.max(1, speedScale)), vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(0.8, launchBoost*0.9) * Math.max(1, speedScale) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05, waveId });
     });
   }
   function scheduleNextQuizWave(prevWaveId){
@@ -1127,7 +1304,8 @@ function groupForIndex(idx){
     quizIndex++;
     if (sliced.size === original.length || quizIndex >= quizGroups.length) {
       // Completed this phrase in quiz mode
-      completeStage();
+      if (ffaEnabled) { startFreeForAll(); }
+      else { completeStage(); }
       return;
     }
     const baseDelay = Math.max(300, SLICE_PAUSE_MS - 100);
@@ -1142,11 +1320,24 @@ function groupForIndex(idx){
     spawnQuizWave();
   }
 
-  // spawn a new tile (kana or bomb)
+  // spawn a new tile (kana or bomb). During FFA: kana-only, marked as FFA.
   function spawn() {
+    // Free-for-All spawns: kana-only, denser, slightly higher launch
+    if (mode === MODE_FFA) {
+      if (!Array.isArray(chars) || chars.length === 0) return;
+      const ch = chars[Math.floor(Math.random() * chars.length)] || '';
+      tiles.push({
+        type:'kana', char: ch, index: -1, ffa: true, radius: KANA_RADIUS,
+        x: Math.random()*viewW, y: viewH+20,
+        vx:(Math.random()*2-1) * (1.6 * Math.max(1, speedScale)),
+        vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1.15, launchBoost*1.1) * Math.max(1, speedScale) * diffVyBoost(),
+        rot:0, spin:(Math.random()*2-1)*0.06
+      });
+      return;
+    }
     const wantBomb = Math.random() < bombChance;
-    if (wantBomb) {
-      tiles.push({ type:'bomb', radius: BOMB_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
+    if (wantBomb && !(mode === MODE_FFA && !ffaBombs)) {
+      tiles.push({ type:'bomb', radius: BOMB_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1) * (1.2 * Math.max(1, speedScale)), vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * Math.max(1, speedScale) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
       return;
     }
     // pick an unsliced kana index
@@ -1159,18 +1350,37 @@ function groupForIndex(idx){
       const haveTarget = tiles.some(t => t && t.type==='kana' && (t.char === tText) && t.isTarget);
       const forceTarget = !haveTarget || Math.random() < 0.45;
       if (forceTarget) {
-        tiles.push({ type:'kana', char: tText, index: tg[0] ?? -1, indices: tg.slice(0), isTarget: true, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
+        tiles.push({ type:'kana', char: tText, index: tg[0] ?? -1, indices: tg.slice(0), isTarget: true, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1) * (1.2 * Math.max(1, speedScale)), vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * Math.max(1, speedScale) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
         return;
       }
     }
     const pick = candidates[Math.floor(Math.random()*candidates.length)];
     if (!pick) return;
-    tiles.push({ type:'kana', char: pick.char, index: pick.index, indices: [pick.index], radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
+    tiles.push({ type:'kana', char: pick.char, index: pick.index, indices: [pick.index], radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1) * (1.2 * Math.max(1, speedScale)), vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * Math.max(1, speedScale) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
   }
 
 
   // handle slicing
   function sliceKana(t) {
+    // Bonus Free-for-All: collect coins only, no quiz/sequence checks
+    if (mode === MODE_FFA && t && t.type === 'kana') {
+      try {
+        coinCount += Math.max(0, coinPerKana);
+        coinCounterEl.textContent = `Coins: ${coinCount}`;
+        // coin particle
+        coinFx.push({
+          kind: 'coin',
+          x: t.x || 0,
+          y: t.y || 0,
+          vx: (Math.random()*2-1) * 0.8,
+          vy: - (1.8 + Math.random()*0.6),
+          born: performance.now(),
+          life: 650
+        });
+        try { SFX('coin'); } catch {}
+      } catch {}
+      return;
+    }
     if (t.type === 'kana') {
       // Sequence Mode: only accept the current target, advance prompt after correct
       if (sequenceMode) {
@@ -1184,6 +1394,7 @@ function groupForIndex(idx){
             if (got !== want) { setQuizPrompt(`Slice: ${toRomaStr(want) || want}`); return; }
             // correct: mark sliced, show hint bubble, advance index
             (wantG || []).forEach(i => { if (typeof i === 'number') sliced.add(i); });
+            try { buildKanaDisplay(); } catch {}
             const yHint = (t.y || 0) - ((t.radius || KANA_RADIUS) + 16);
             const rTxt = toRomaStr(want) || want;
             showRomaAt(t.x || 0, yHint, rTxt);
@@ -1191,7 +1402,10 @@ function groupForIndex(idx){
             seqIndex = (typeof seqIndex === 'number') ? (seqIndex + 1) : 1;
             updateProgressUI();
             ensurePromptForSequence && ensurePromptForSequence();
-            if (sliced.size === original.length) { flashFullMapping && flashFullMapping(); completeStage(); }
+            if (sliced.size === original.length) {
+              if (ffaEnabled) { startFreeForAll(); }
+              else { try { if (typeof flashFullMapping === 'function') flashFullMapping(); } catch {} completeStage(); }
+            }
             return;
           }
         } catch {}
@@ -1202,6 +1416,7 @@ function groupForIndex(idx){
         const isCorrect = !!t.isCorrect;
         if (isCorrect) {
           (t.indices || []).forEach(i => { if (typeof i === 'number' && i >= 0) sliced.add(i); });
+          try { buildKanaDisplay(); } catch {}
           const kanaTextQ = (t.kanaText || (t.indices || []).map(i => chars[i]).join('')) || '';
           const romajiTextQ = toRomaStr(kanaTextQ) || '';
           const yAboveQ = t.y - ((t.radius || KANA_RADIUS) + 16);
@@ -1233,6 +1448,7 @@ function groupForIndex(idx){
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS });
       const group = groupForIndex(t.index);
       group.forEach(i=>sliced.add(i));
+      try { buildKanaDisplay(); } catch {}
       const now = performance.now();
       combo = (now - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
       lastSliceAt = now;
@@ -1444,6 +1660,8 @@ canvas.addEventListener('pointerout', endPointer);
     score = 0; combo = 0; lastSliceAt = 0; mode = MODE_NORMAL; coinCount = 0; ffaEndsAt = 0; coinFx.length = 0;
     // Reset FFA state at the beginning of a round
     mode = MODE_NORMAL; coinCount = 0; ffaEndsAt = 0; coinFx.length = 0;
+    try { coinCounterEl.textContent = 'Coins: 0'; coinCounterEl.style.display = 'none'; countdownEl.style.display = 'none'; } catch {}
+    updateCoinBankUI();
     scoreEl.textContent = '0';
     stageIndex = 0;
     setStage(stageIndex);
@@ -1461,9 +1679,18 @@ canvas.addEventListener('pointerout', endPointer);
         scheduleNext = function(){
           const t = Math.min(1, (performance.now()-spawnStartTime)/(roundSeconds*1000));
           const msBase = Math.round(spawnMsStart + (spawnMsEnd - spawnMsStart) * t);
-          const ms = Math.max(50, Math.round(msBase / Math.max(0.5, speedScale)));
-          spawn();
-          if (diffSpawnExtra() && Math.random() < 0.5) spawn();
+          const rateBoost = (mode === MODE_FFA) ? Math.max(1, ffaSpawnRateBoost) : 1;
+          // Speed toggle should affect bubble motion/dispersion, not the timer cadence
+          const ms = Math.max(40, Math.round(msBase / rateBoost));
+          // Spawn density
+          if (mode === MODE_FFA) {
+            spawn();
+            // Keep density high during bonus
+            if (Math.random() < 0.8) spawn();
+          } else {
+            spawn();
+            if (diffSpawnExtra() && Math.random() < 0.5) spawn();
+          }
           nextSpawnDelay = ms;
           spawnScheduledAt = performance.now();
           spawnHandle = setTimeout(scheduleNext, ms);
@@ -1472,10 +1699,7 @@ canvas.addEventListener('pointerout', endPointer);
       } else {
         startQuiz();
       }
-      timerInterval = setInterval(() => {
-        timerEl.textContent = --timer;
-        if (timer <= 0) endGame();
-      }, 1000);
+      startTimerTicker();
     };
     if (memoryCue) {
       pauseForStage();
@@ -1510,8 +1734,10 @@ canvas.addEventListener('pointerout', endPointer);
     } else {
       overlay.classList.add('hidden');
     }
+    // persist bank on game end
+    updateCoinBankUI();
   }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); overlay.classList.add('hidden'); });
+  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); updateCoinBankUI(); overlay.classList.add('hidden'); });
 
   // show modal & kick off ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ensure sizing runs after it becomes visible
   overlay.classList.remove('hidden');

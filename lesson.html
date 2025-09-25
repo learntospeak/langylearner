@@ -773,7 +773,7 @@
 </div>
 
 <script type="module">
-  import { initNinjaSlice } from './modules/ninjaSlice.js?v=8';
+  import { initNinjaSlice } from './modules/ninjaSlice.js?v=9';
   const by = (sel, root=document) => root.querySelector(sel);
   const overlay = by('#slice-overlay');
   const btnOpen = by('#openSlice');
@@ -842,8 +842,8 @@
       quizChoices: 4,
       memoryCue: true,
       sequenceMode: true,
-      // Free‑for‑All coin bonus (feature flag only; logic added later)
-      freeForAllEnabled: false,
+      // Free-for-All coin bonus
+      freeForAllEnabled: true,
       ffaSeconds: 5,
       ffaSpawnRateBoost: 2.0,
       ffaBombs: false,
