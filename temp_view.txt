@@ -1,4 +1,4 @@
-﻿// modules/ninjaSlice.js
+// modules/ninjaSlice.js
 
 export function initNinjaSlice(config) {
   const {
@@ -91,7 +91,7 @@ export function initNinjaSlice(config) {
   }
   function getCueHoldMs(){
     // Longer hold for slower speeds, shorter for faster
-    // Base ~1600ms at Normal; clamp between 600–2400ms
+    // Base ~1600ms at Normal; clamp between 600�2400ms
     const base = 1600;
     const hold = Math.round(base / Math.max(0.5, speedScale));
     return Math.max(600, Math.min(2400, hold));
@@ -414,7 +414,7 @@ export function initNinjaSlice(config) {
   const normalizeStage = (entry = {}) => {
     const raw = (entry.phrase || entry.jp || '').trim();
     if (!raw) return null;
-    const cleaned = raw.replace(/[ã€‚ï¼Ž.]+$/u, '');
+    const cleaned = raw.replace(/[。．.]+$/u, '');
     const phraseClean = cleaned || raw;
     let romajiText = (entry.romaji || entry.romaji_full || entry.romajiFull || '').trim();
     if (!romajiText && typeof window !== 'undefined' && window.wanakana) {
@@ -448,7 +448,7 @@ export function initNinjaSlice(config) {
     const stage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
     const phraseText = (stage.phrase || '').toString();
     // Strip full stops (Japanese/ASCII) from phrase used for slicing to avoid blocking progression
-    const phraseForPlay = phraseText.replace(/[。．\.]/g, '');
+    const phraseForPlay = phraseText.replace(/[?.\.]/g, '');
     chars = Array.from(phraseForPlay);
     original = chars.map((ch, i) => ({ char: ch, index: i }));
     sliced = new Set();
@@ -973,7 +973,7 @@ export function initNinjaSlice(config) {
 
   // ---------- Quiz Burst helpers ----------
   function setQuizPrompt(text){ if (quizPromptEl) quizPromptEl.textContent = text || ''; }
-  const KANA_FALLBACKS = ['ã‚','ã„','ã†','ãˆ','ãŠ','ã‹','ã','ã','ã‘','ã“','ã•','ã—','ã™','ã›','ã','ãª','ã«','ã¬','ã­','ã®','ã¯','ã²','ãµ','ã¸','ã»','ã¾','ã¿','ã‚€','ã‚','ã‚‚','ã‚„','ã‚†','ã‚ˆ','ã‚‰','ã‚Š','ã‚‹','ã‚Œ','ã‚','ã‚','ã‚“','ãŸ','ã¡','ã¤','ã¦','ã¨'];
+  const KANA_FALLBACKS = ['あ','い','う','え','お','か','き','く','け','こ','さ','し','す','せ','そ','な','に','ぬ','ね','の','は','ひ','ふ','へ','ほ','ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','ん','た','ち','つ','て','と'];
   function unique(arr){ return Array.from(new Set(arr)); }
   function groupToText(g){ return (g || []).map(i => chars[i] || '').join(''); }
   function otherGroupTexts(excludeText){
@@ -1197,228 +1197,5 @@ function drawTrails() {
     trails.length = 0;
     trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
   };
-
-canvas.addEventListener("pointerdown", e => {
-  pointerIsDown = true;
-  const pointerType = (e.pointerType || '').toLowerCase();
-  if (pointerType === 'mouse') {
-    activeClickPad = CLICK_PAD + 18;
-    activeSlicePad = SLICE_PAD + 28;
-  } else if (pointerType === 'pen') {
-    activeClickPad = CLICK_PAD + 8;
-    activeSlicePad = SLICE_PAD + 18;
-  } else {
-    activeClickPad = CLICK_PAD + 6;
-    activeSlicePad = SLICE_PAD + 14;
-  }
-  if (canvas.setPointerCapture) {
-    try { canvas.setPointerCapture(e.pointerId); } catch {}
-  }
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top);
-  clearTrails();
-  const now = Date.now();
-  trails.push([{ x, y, time: now }]);
-  try {
-    if (_ac && _ac.state === 'suspended') { _ac.resume(); }
-    else if (AudioCtx && !_ac) { _ac = new AudioCtx(); }
-  } catch {}
-
-  // click slice point
-  for (let i = tiles.length - 1; i >= 0; i--) {
-    const t = tiles[i];
-    if (!t) continue;
-    const baseRadius = (typeof t.radius === 'number') ? t.radius : (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
-    const clickRadius = baseRadius + activeClickPad + 8;
-    if (Math.hypot(t.x - x, t.y - y) < clickRadius) { tiles.splice(i,1); sliceKana(t); break; }
-  }
-});
-
-  canvas.addEventListener('pointermove', e => {
-  if (!pointerIsDown && e.buttons === 0) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left);
-  const y = (e.clientY - rect.top );
-  if (!trails.length) return; // guard if move occurs before down
-  const current = trails[trails.length - 1];
-  const now = Date.now();
-  const lastPoint = current[current.length - 1];
-  if (!lastPoint || (now - lastPoint.time) > 18) {
-    current.push({ x, y, time: now });
-    if (current.length > 6) {
-      current.splice(0, current.length - 6);
-    }
-  }
-  // Slice detection along latest segment
-  const p0 = current[current.length-2];
-  const p1 = current[current.length-1];
-  const hasSegment = !!(p0 && p1);
-  let speedBoost = 0;
-  if (hasSegment){
-    const dxSeg = p1.x - p0.x;
-    const dySeg = p1.y - p0.y;
-    const distSeg = Math.hypot(dxSeg, dySeg);
-    if (distSeg > 60) { try { SFX('swish'); } catch {} }
-    speedBoost = Math.min(32, distSeg * 0.7);
-  }
-  for (let i = tiles.length - 1; i >= 0; i--) {
-    const t = tiles[i];
-    if (!t) continue;
-    const baseRadius = (typeof t.radius === 'number') ? t.radius : (t.type === 'bomb' ? BOMB_RADIUS : KANA_RADIUS);
-    const sweepRadius = baseRadius + activeSlicePad + speedBoost;
-    const pointerRadius = sweepRadius + 6;
-    let hit = Math.hypot(t.x - x, t.y - y) < pointerRadius;
-    if (!hit && hasSegment){
-      const maxSegments = Math.min(current.length - 1, 4);
-      for (let s = 0; s < maxSegments; s++) {
-        const idx2 = current.length - 1 - s;
-        const idx1 = idx2 - 1;
-        if (idx1 < 0) break;
-        const segStart = current[idx1];
-        const segEnd = current[idx2];
-        if (!segStart || !segEnd) break;
-        if (hitSegmentCircle(segStart.x,segStart.y,segEnd.x,segEnd.y,t.x,t.y,sweepRadius + 8)) { hit = true; break; }
-      }
-    }
-    if (hit) {
-      tiles.splice(i,1);
-      sliceKana(t);
-      continue;
-    }
-  }
-  drawTrails();
-});
-
-  const endPointer = e => {
-    pointerIsDown = false;
-    clearTrails();
-    activeClickPad = CLICK_PAD;
-    activeSlicePad = SLICE_PAD;
-    trails.length = 0;
-    if (canvas.releasePointerCapture && e) {
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
-    }
-  };
-
-
-
-// clear everything on pointerup so no ghost trails remain
-canvas.addEventListener('pointerup', endPointer);
-canvas.addEventListener('pointercancel', endPointer);
-canvas.addEventListener('pointerleave', endPointer);
-canvas.addEventListener('pointerout', endPointer);
-
-  // start the round
-  function startRound() {
-    tiles = [];
-    popFx.length = 0;
-    score = 0; combo = 0; lastSliceAt = 0;
-    scoreEl.textContent = '0';
-    stageIndex = 0;
-    setStage(stageIndex);
-    timer = roundSeconds;
-    timerEl.textContent = timer;
-    roundActive = true;
-    applySwordCursor();
-    try { const help = document.getElementById('slice-instructions'); if (help) { help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); } } catch {}
-
-    draw();
-    const kick = () => {
-      // dynamic spawn rate over time (track timing for pause/resume) or Quiz mode
-      if (!quizMode) {
-        spawnStartTime = performance.now();
-        scheduleNext = function(){
-          const t = Math.min(1, (performance.now()-spawnStartTime)/(roundSeconds*1000));
-          const msBase = Math.round(spawnMsStart + (spawnMsEnd - spawnMsStart) * t);
-          const ms = Math.max(50, Math.round(msBase / Math.max(0.5, speedScale)));
-          spawn();
-          if (diffSpawnExtra() && Math.random() < 0.5) spawn();
-          nextSpawnDelay = ms;
-          spawnScheduledAt = performance.now();
-          spawnHandle = setTimeout(scheduleNext, ms);
-        };
-        scheduleNext();
-      } else {
-        startQuiz();
-      }
-      timerInterval = setInterval(() => {
-        timerEl.textContent = --timer;
-        if (timer <= 0) endGame();
-      }, 1000);
-    };
-    if (memoryCue) {
-      pauseForStage();
-      presentMemoryCue(() => { resumeFromPause(); kick(); });
-    } else {
-      kick();
-    }
-  }
-
-  // clean up and show game-over panel or close
-  function endGame(reason = 'timeout') {
-    clearTimeout(spawnHandle);
-    clearInterval(timerInterval);
-    cancelAnimationFrame(animateId);
-    stopComboMeter();
-    resetComboBadge();
-    resetSwordCursor();
-    popFx.length = 0;
-    clearTrails();
-    roundActive = false;
-    // Ensure no pending pause resumes after ending
-    cancelActivePause({ skipResume: true, skipCallbacks: true });
-    if (quizMode) setQuizPrompt('');
-    if (overPanel) {
-      const t = document.getElementById('slice-over-title');
-      const r = document.getElementById('slice-over-reason');
-      if (t) t.textContent = (reason === 'clear') ? 'All Done!' : 'Game Over';
-      if (r) r.textContent = (reason === 'bomb') ? 'You hit a bomb.' : (reason === 'timeout' ? 'Time up.' : 'Great job!');
-      overPanel.classList.remove('hidden');
-      if (tryBtn) tryBtn.onclick = () => { overPanel.classList.add('hidden'); startRound(); };
-      if (finishBtn) finishBtn.onclick = () => { overPanel.classList.add('hidden'); overlay.classList.add('hidden'); };
-    } else {
-      overlay.classList.add('hidden');
-    }
-  }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); overlay.classList.add('hidden'); });
-
-  // show modal & kick off â€” ensure sizing runs after it becomes visible
-  overlay.classList.remove('hidden');
-  requestAnimationFrame(() => { resize(); startRound(); });
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
