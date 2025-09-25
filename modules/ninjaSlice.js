@@ -48,12 +48,25 @@
   if (speakCtl) speakCtl.addEventListener("change", ()=>{ speakOnSlice = !!speakCtl.checked; });
   const comboMeter = document.getElementById('slice-combo-meter');
   const comboMeterFill = comboMeter ? document.getElementById('slice-combo-meter-fill') : null;
+  const feverLabel = document.getElementById('slice-fever-label');
   const holder = canvas.parentElement || container;
   if (holder && holder.style && (!holder.style.position || holder.style.position === '')) {
     holder.style.position = 'relative';
   }
-  const KANA_RADIUS = 42;
-  const BOMB_RADIUS = 32;
+  function computeUiScale(){
+    try{
+      const r = holder.getBoundingClientRect();
+      const w = Math.max(0, Math.floor(r.width || window.innerWidth || 0));
+      if (w <= 360) return 0.62;
+      if (w <= 420) return 0.7;
+      if (w <= 520) return 0.8;
+      if (w <= 768) return 0.9;
+      return 1.0;
+    }catch{ return 1.0; }
+  }
+  let uiScale = computeUiScale();
+  let KANA_RADIUS = Math.round(42 * uiScale);
+  let BOMB_RADIUS = Math.round(32 * uiScale);
   let stageIndex = 0;
   let stageData = [];
   let roundActive = false;
@@ -478,7 +491,8 @@ function groupForIndex(idx){
   holder.appendChild(pauseOverlay);
 
   // Prompt UI (top-center) for quiz/sequence targets
-  let quizPromptEl = document.createElement('div');
+  let quizPromptEl = document.getElementById('slice-quiz-prompt') || document.createElement('div');
+  quizPromptEl.id = 'slice-quiz-prompt';
   quizPromptEl.style.position = 'absolute';
   // Position centrally; dynamic Y computed below to avoid overlapping the top bar
   quizPromptEl.style.top = '72px';
@@ -492,10 +506,10 @@ function groupForIndex(idx){
   quizPromptEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
   quizPromptEl.style.font = '700 18px system-ui, sans-serif';
   quizPromptEl.style.letterSpacing = '.02em';
-  quizPromptEl.style.zIndex = '10';
+  quizPromptEl.style.zIndex = '30';
   quizPromptEl.style.pointerEvents = 'none';
   quizPromptEl.textContent = '';
-  holder.appendChild(quizPromptEl);
+  if (!quizPromptEl.parentElement) holder.appendChild(quizPromptEl);
 
   // Add a subtle pulse animation for extra prominence
   (function addPromptPulse(){
@@ -520,6 +534,57 @@ function groupForIndex(idx){
         const y = Math.max(40, Math.round(bottom - rHolder.top + pad));
         quizPromptEl.style.top = y + 'px';
       }
+    }catch{}
+  }
+
+  function positionInstructions(){
+    try{
+      const el = document.getElementById('slice-instructions');
+      if (!el) return;
+      const rHolder = holder.getBoundingClientRect();
+      const status = document.getElementById('slice-status');
+      const closeBtn = document.getElementById('slice-close');
+      const controlsWrap = closeBtn ? closeBtn.parentElement : null;
+      let bottom = 0;
+      if (status){ const r1 = status.getBoundingClientRect(); bottom = Math.max(bottom, r1.bottom); }
+      if (controlsWrap){ const r2 = controlsWrap.getBoundingClientRect(); bottom = Math.max(bottom, r2.bottom); }
+      const pad = 36; // push well below bars/prompt for visibility
+      if (bottom > 0){
+        const y = Math.max(48, Math.round(bottom - rHolder.top + pad));
+        el.style.top = y + 'px';
+        el.style.zIndex = '60'; // above prompt (30) and below fever toast (70)
+        el.style.pointerEvents = 'none';
+      }
+    }catch{}
+  }
+
+  // Fever toast (Stage 2)
+  let feverToast = document.getElementById('slice-fever-toast') || document.createElement('div');
+  feverToast.id = 'slice-fever-toast';
+  feverToast.style.position = 'absolute';
+  feverToast.style.left = '50%';
+  feverToast.style.top = '96px';
+  feverToast.style.transform = 'translateX(-50%)';
+  feverToast.style.padding = '10px 16px';
+  feverToast.style.borderRadius = '9999px';
+  feverToast.style.background = 'linear-gradient(90deg,#f59e0b,#f43f5e)';
+  feverToast.style.color = '#fff';
+  feverToast.style.font = '800 18px system-ui, sans-serif';
+  feverToast.style.letterSpacing = '.03em';
+  feverToast.style.boxShadow = '0 10px 28px rgba(0,0,0,0.25)';
+  feverToast.style.opacity = '0';
+  feverToast.style.pointerEvents = 'none';
+  feverToast.textContent = 'FEVER x2!';
+  feverToast.style.zIndex = '70';
+  if (!feverToast.parentElement) holder.appendChild(feverToast);
+  (function addFeverToastAnim(){ try{ const st=document.createElement('style'); st.textContent='@keyframes feverPop{0%{opacity:0;transform:translateX(-50%) scale(.9)}15%{opacity:1;transform:translateX(-50%) scale(1.05)}60%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1)} }'; (document.head||holder||document.body).appendChild(st);}catch{}})();
+  let feverToastTimer=null;
+  function showFeverToast(){
+    try{
+      clearTimeout(feverToastTimer);
+      feverToast.style.opacity='1';
+      feverToast.style.animation='feverPop 1200ms ease-out 1';
+      feverToastTimer=setTimeout(()=>{feverToast.style.opacity='0'; feverToast.style.animation='';}, 1200);
     }catch{}
   }
 
@@ -857,6 +922,13 @@ function groupForIndex(idx){
         g1.gain.exponentialRampToValueAtTime(0.0008, now + 0.12);
         o1.connect(g1); g1.connect(ctx.destination);
         o1.start(now); o1.stop(now + 0.12);
+      } else if (type === 'fever'){
+        const now = ctx.currentTime;
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type='sawtooth'; o.frequency.setValueAtTime(440, now);
+        g.gain.setValueAtTime(0.04, now);
+        g.gain.exponentialRampToValueAtTime(0.0008, now + 0.25);
+        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(now + 0.25);
       }
     }catch{}
   }
@@ -874,6 +946,10 @@ function groupForIndex(idx){
     canvas.style.height = h + 'px';
     canvas.width = w;
     canvas.height = h;
+    // Recompute UI scale and radii for mobile sizing
+    uiScale = computeUiScale();
+    KANA_RADIUS = Math.round(42 * uiScale);
+    BOMB_RADIUS = Math.round(32 * uiScale);
     trailCanvas.style.width = w + 'px';
     trailCanvas.style.height = h + 'px';
     trailCanvas.width = w;
@@ -904,6 +980,9 @@ function groupForIndex(idx){
     window.addEventListener('resize', positionQuizPrompt);
     if ('ResizeObserver' in window) new ResizeObserver(()=>positionQuizPrompt()).observe(holder);
     setTimeout(positionQuizPrompt, 0);
+    window.addEventListener('resize', positionInstructions);
+    if ('ResizeObserver' in window) new ResizeObserver(()=>positionInstructions()).observe(holder);
+    setTimeout(positionInstructions, 0);
   } catch {}
   resize();
 
@@ -917,6 +996,34 @@ function groupForIndex(idx){
   let lastSliceAt = 0, combo = 0;
   // Track swipe vigor for perfect effects
   let lastSwipeDist = 0;
+  // Fever meter (Stage 2)
+  const feverEnabled = (config && config.feverEnabled) !== false; // default on
+  let fever = 0;                 // 0..1 charge
+  let feverActive = false;
+  let feverEndsAt = 0;
+  const FEVER_DURATION_MS = Number((config && config.feverDurationMs) ?? 8000);
+  const FEVER_MULTIPLIER = Number((config && config.feverMultiplier) ?? 2.0);
+  const FEVER_DECAY_PER_SEC = Number((config && config.feverDecayPerSec) ?? 0.12); // slower decay by default
+  const FEVER_CHARGE_SLICE = Number((config && config.feverChargeSlice) ?? 0.18);
+  const FEVER_SEQ_CHARGE_BOOST = Number((config && config.feverSeqChargeBoost) ?? 1.6);
+  let lastFrameAt = performance.now();
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  function setFever(v){ fever = clamp01(v); updateFeverUI(); }
+  function addFever(d){ if (!feverEnabled || feverActive) return; setFever(fever + d); if (fever >= 1) startFever(); }
+  function startFever(){
+    if (!feverEnabled) return;
+    feverActive = true; feverEndsAt = performance.now() + FEVER_DURATION_MS;
+    try { SFX('fever'); } catch {}
+    showFeverToast();
+    updateFeverUI(true);
+  }
+  function endFever(){ feverActive = false; if (feverEnabled) setFever(0.35); updateFeverUI(false); }
+  function updateFeverTick(now){
+    const dt = Math.max(0, (now - lastFrameAt) / 1000);
+    if (feverEnabled && !feverActive && fever > 0){ setFever(fever - FEVER_DECAY_PER_SEC * dt); }
+    if (feverActive && now >= feverEndsAt) { endFever(); }
+    lastFrameAt = now;
+  }
 
   let comboDecayHandle = null;
 
@@ -939,6 +1046,8 @@ function groupForIndex(idx){
 
   function tickComboMeter() {
     if (!comboMeterFill) return;
+    // During FEVER we keep the bar under FEVER control
+    if (feverActive) { updateFeverUI(); return; }
     const windowMs = Math.max(1, comboWindowMs || 1);
     const progress = 1 - ((performance.now() - lastSliceAt) / windowMs);
     if (progress <= 0 || combo <= 1) {
@@ -947,6 +1056,31 @@ function groupForIndex(idx){
     }
     setComboMeter(progress);
     comboDecayHandle = requestAnimationFrame(tickComboMeter);
+  }
+  // Fever UI
+  function updateFeverUI(isStart){
+    if (!comboMeter || !comboMeterFill) return;
+    if (!feverEnabled) { comboMeterFill.style.background = '#10b981'; return; }
+    try {
+      comboMeter.classList.remove('opacity-0');
+      const pct = feverActive ? 100 : Math.round((fever||0)*100);
+      comboMeterFill.style.width = pct + '%';
+      comboMeterFill.style.background = feverActive ? '#f43f5e' /*rose-500*/ : '#f59e0b' /*amber-500*/;
+      comboMeter.style.opacity = '1';
+      if (feverLabel){
+        if (feverActive) {
+          feverLabel.textContent = 'Fever x2';
+          feverLabel.classList.remove('hidden');
+          feverLabel.style.color = '#be123c'; // rose-700
+        } else if (fever > 0.01) {
+          feverLabel.textContent = 'Fever';
+          feverLabel.classList.remove('hidden');
+          feverLabel.style.color = '#b45309'; // amber-700
+        } else {
+          feverLabel.classList.add('hidden');
+        }
+      }
+    } catch {}
   }
 
   function primeComboMeter() {
@@ -1105,9 +1239,26 @@ function groupForIndex(idx){
     currentPauseState = state;
   }
 
+  // micro-shake (Stage 2)
+  let shakeUntil = 0, shakeMag = 0, shakeDur = 0;
+  function triggerShake(ms=90, mag=4){
+    const now = performance.now(); shakeUntil = now + Math.max(10, ms); shakeMag = Math.max(0, mag); shakeDur = Math.max(1, ms);
+  }
+  function applyShake(now){
+    if (now >= shakeUntil) { canvas.style.transform = ''; trailCanvas.style.transform = ''; return; }
+    const t = (shakeUntil - now) / shakeDur;
+    const m = shakeMag * t;
+    const dx = (Math.random()*2-1) * m;
+    const dy = (Math.random()*2-1) * m;
+    canvas.style.transform = `translate(${dx}px, ${dy}px)`;
+    trailCanvas.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+
   function draw() {
     const now = performance.now();
+    updateFeverTick(now);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    applyShake(now);
     // FFA countdown UI and guard
     if (mode === MODE_FFA && ffaEndsAt > 0) {
       const msLeft = Math.max(0, Math.floor(ffaEndsAt - now));
@@ -1229,8 +1380,18 @@ function groupForIndex(idx){
         ctx.lineWidth = 2.4;
         ctx.arc(0, 0, radius-1, 0, Math.PI*2); ctx.stroke();
 
-        // Glow effect when streak is active
-        if (typeof glowUntil === 'number' && performance.now() < glowUntil) {
+        // Glow effect during fever or streaks
+        if (feverActive) {
+          ctx.save();
+          ctx.shadowColor = 'rgba(245, 158, 11, 0.85)';
+          ctx.shadowBlur = 18;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius+2, 0, Math.PI*2);
+          ctx.strokeStyle = 'rgba(245,158,11,0.8)';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        } else if (typeof glowUntil === 'number' && performance.now() < glowUntil) {
           ctx.save();
           ctx.shadowColor = 'rgba(255,215,0,0.85)';
           ctx.shadowBlur = 16;
@@ -1568,6 +1729,20 @@ function groupForIndex(idx){
             const rTxt = toRomaStr(want) || want;
             showRomaAt(t.x || 0, yHint, rTxt);
             if (speakOnSlice && want) speakKana(want);
+
+            // Sequence-mode scoring + feedback + fever charge
+            try { popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS }); } catch {}
+            try { SFX('slice'); } catch {}
+            const nowS = performance.now();
+            combo = (nowS - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
+            lastSliceAt = nowS;
+            const baseS = 100 * combo;
+            score += Math.round(baseS * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
+            scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}${feverActive ? ' ✨x2' : ''}`;
+            if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
+            const seqCharge = (FEVER_CHARGE_SLICE + Math.min(0.08, (lastSwipeDist-60) * 0.0015)) * FEVER_SEQ_CHARGE_BOOST;
+            addFever(seqCharge);
+
             seqIndex = (typeof seqIndex === 'number') ? (seqIndex + 1) : 1;
             updateProgressUI();
             ensurePromptForSequence && ensurePromptForSequence();
@@ -1595,9 +1770,13 @@ function groupForIndex(idx){
           const nowQ = performance.now();
           combo = (nowQ - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
           lastSliceAt = nowQ;
-          score += 200 * Math.max(1, combo);
-          scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}`;
+          const baseQ = 200 * Math.max(1, combo);
+          score += Math.round(baseQ * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
+          scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}${feverActive ? ' ✨x2' : ''}`;
           if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
+          // Charge fever more with higher combos; boost in sequence mode
+          const chargeQ = (FEVER_CHARGE_SLICE + Math.min(0.1, (combo-1)*0.03)) * (sequenceMode ? FEVER_SEQ_CHARGE_BOOST : 1);
+          addFever(chargeQ);
           try { (t.indices || []).forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s){ s.textContent = chars[i] || ''; s.classList.add('text-emerald-600','font-semibold','underline'); } }); } catch {}
           // remove the whole wave
           const waveId = t.waveId;
@@ -1619,6 +1798,7 @@ function groupForIndex(idx){
       // Perfect slice ring if swipe was vigorous
       if (lastSwipeDist > 80) {
         popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || KANA_RADIUS) + 6, kind: 'perfect' });
+        try { triggerShake(80, 3); } catch {}
       }
       const group = groupForIndex(t.index);
       group.forEach(i=>sliced.add(i));
@@ -1626,9 +1806,10 @@ function groupForIndex(idx){
       const now = performance.now();
       combo = (now - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
       lastSliceAt = now;
-      score += 100 * combo;
+      const base = 100 * combo;
+      score += Math.round(base * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
       const comboSuffix = combo > 1 ? ` x${combo}` : '';
-      scoreEl.textContent = `${score}${comboSuffix}`;
+      scoreEl.textContent = `${score}${comboSuffix}${feverActive ? ' ✨x2' : ''}`;
       if (combo > 1) {
         flashCombo();
         primeComboMeter();
@@ -1637,6 +1818,9 @@ function groupForIndex(idx){
         stopComboMeter();
       }
       try { SFX('slice'); } catch {}
+      // Fever charge: base plus small bonus for fast swipes; boost in sequence mode
+      const charge = (FEVER_CHARGE_SLICE + Math.min(0.08, (lastSwipeDist-60) * 0.0015)) * (sequenceMode ? FEVER_SEQ_CHARGE_BOOST : 1);
+      addFever(charge);
       // highlight sliced kana(s) and show combined romaji bubble near the sliced tile
       try { group.forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s){ s.textContent = chars[i] || ''; s.classList.add('text-emerald-600','font-semibold','underline'); } }); } catch {}
       const kanaText = group.map(i => (typeof i === 'number' && chars[i] !== undefined) ? chars[i] : '').join('');
@@ -1659,6 +1843,7 @@ function groupForIndex(idx){
       // penalty: end game or restart stage
       scoreEl.textContent = `BOOM!`;
       try { SFX('bomb'); } catch {}
+      try { triggerShake(140, 6); } catch {}
       if (bombEndsRound) {
         endGame('bomb');
       } else {
@@ -1850,6 +2035,8 @@ canvas.addEventListener('pointerout', endPointer);
     mode = MODE_NORMAL; coinCount = 0; ffaEndsAt = 0; coinFx.length = 0;
     try { coinCounterEl.textContent = 'Coins: 0'; coinCounterEl.style.display = 'none'; countdownEl.style.display = 'none'; } catch {}
     updateCoinBankUI();
+    // Reset fever state at round start
+    feverActive = false; fever = 0; updateFeverUI(false);
     scoreEl.textContent = '0';
     stageIndex = 0;
     setStage(stageIndex);

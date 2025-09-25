@@ -694,8 +694,8 @@
     <div class="bg-white rounded shadow w-[80vw] max-w-[1100px] p-3 relative">
       <div class="relative pt-24 pb-16">
         <!-- Unified top bar: status + controls + close -->
-        <div class="pointer-events-none absolute top-4 left-4 right-4 flex items-center justify-between gap-3">
-          <div id="slice-status" class="ui-panel pointer-events-auto flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
+        <div class="pointer-events-none absolute top-4 left-4 right-4 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+          <div id="slice-status" class="ui-panel pointer-events-auto w-full flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
             <div class="flex flex-col gap-1">
               <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Score</span>
               <span id="slice-score" class="font-semibold text-lg tracking-wide">0</span>
@@ -704,11 +704,12 @@
               <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Time</span>
               <span id="slice-timer" class="font-semibold text-lg tracking-wide">60</span>
             </div>
-            <div id="slice-combo-meter" class="pointer-events-none w-32 h-1.5 bg-white/60 rounded-full overflow-hidden opacity-0 transition-opacity">
-              <div id="slice-combo-meter-fill" class="h-full bg-emerald-500" style="width:0%"></div>
+            <div id="slice-combo-meter" class="pointer-events-none w-40 h-2.5 bg-white/70 rounded-full overflow-hidden opacity-0 transition-opacity">
+              <div id="slice-combo-meter-fill" class="h-full bg-amber-500" style="width:0%"></div>
             </div>
+            <span id="slice-fever-label" class="text-[10px] uppercase tracking-wide text-amber-700 hidden">Fever</span>
           </div>
-          <div class="slice-toolbar ui-panel pointer-events-auto flex items-center gap-2 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900">
+          <div class="slice-toolbar ui-panel pointer-events-auto w-full flex items-center gap-2 md:gap-2 bg-white/90 px-3 md:px-4 py-2 rounded-lg shadow border border-amber-200 text-slate-900 flex-wrap md:flex-nowrap overflow-visible">
             <label class="flex items-center gap-1">
               <span class="text-xs">Speed</span>
               <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
@@ -738,7 +739,7 @@
               <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
               <span class="text-xs">Romaji bubbles</span>
             </label>
-            <button id="slice-close" class="ml-2 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
+            <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
           </div>
         </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
@@ -789,6 +790,38 @@
       border: 1px solid var(--slice-border) !important;
       border-radius: var(--slice-radius) !important;
       box-shadow: var(--slice-shadow) !important;
+      overflow: visible !important;
+    }
+    /* Allow vertical scroll within overlay */
+    #slice-overlay{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #slice-wrap{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    /* Mobile tweaks */
+    @media (max-width: 768px){
+      #slice-wrap .ui-panel{ padding: 8px 10px !important; }
+      #slice-status span.text-[11px]{ font-size: 10px; }
+      #slice-wrap .slice-toolbar{ row-gap: 6px; }
+      #slice-wrap .slice-toolbar label{ margin-right: 6px; }
+    }
+    @media (max-width: 480px){
+      /* Compact bottom kana chips */
+      #slice-wrap .kana-ch{ transform: scale(0.85); margin: 0 1px !important; }
+      #slice-progressbar{ height: 6px !important; }
+      /* Put Close on its own line to avoid clipping */
+      #slice-close{ width: 100% !important; margin-left: 0 !important; margin-top: 6px; text-align: center; }
+      #slice-wrap .slice-toolbar{ padding-right: 10px !important; }
+      /* Make example phrase (kana chips) horizontally scrollable to prevent cut-off */
+      #slice-kana{
+        display: block;
+        white-space: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px 10px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.92);
+        margin: 0 2px;
+      }
+      #slice-kana::-webkit-scrollbar{ height: 6px; }
+      #slice-kana::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.2); border-radius: 6px; }
     }
     /* Animated background for the play area */
     #slice-wrap{
@@ -883,6 +916,13 @@
       // New behavior toggles
       timerPerStage: true,
       bombEndsRound: false,
+      // Fever tuning (can be adjusted later)
+      feverEnabled: true,
+      feverDurationMs: 7000,
+      feverMultiplier: 2.0,
+      feverDecayPerSec: 0.09,
+      feverChargeSlice: 0.22,
+      feverSeqChargeBoost: 1.8,
     });
   }
   btnOpen?.addEventListener('click', launchSlice);
