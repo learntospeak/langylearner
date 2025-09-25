@@ -841,7 +841,13 @@
       quizMode: false,
       quizChoices: 4,
       memoryCue: true,
-      sequenceMode: false,
+      sequenceMode: true,
+      // Free‑for‑All coin bonus (feature flag only; logic added later)
+      freeForAllEnabled: false,
+      ffaSeconds: 5,
+      ffaSpawnRateBoost: 2.0,
+      ffaBombs: false,
+      coinPerKana: 1,
     });
   }
   btnOpen?.addEventListener('click', launchSlice);
