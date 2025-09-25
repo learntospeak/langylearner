@@ -837,6 +837,9 @@
       bombChance: 0.08,
       launchBoost: 1.8,
       gravity: 0.015,
+      // Visual: spin bubbles but keep kana upright
+      bubbleSpinStyle: 'upright', // 'upright' | 'flip' | 'none'
+      bubbleSpinSpeed: 1.0,
       // Enable Quiz Burst mode
       quizMode: false,
       quizChoices: 4,
@@ -848,6 +851,9 @@
       ffaSpawnRateBoost: 2.0,
       ffaBombs: false,
       coinPerKana: 1,
+      // New behavior toggles
+      timerPerStage: true,
+      bombEndsRound: false,
     });
   }
   btnOpen?.addEventListener('click', launchSlice);
