@@ -1,11 +1,10 @@
-﻿// modules/ninjaSlice.js
-
 export function initNinjaSlice(config) {
   const {
     containerId,
     canvasId,
     closeBtnId,
     overlayId,
+
     scoreElId,
     timerElId,
     kanaContainerId,
@@ -43,6 +42,10 @@ export function initNinjaSlice(config) {
   const bubblesToggle = config.bubblesToggleId ? document.getElementById(config.bubblesToggleId) : null;
   const progressEl = config.progressElId ? document.getElementById(config.progressElId) : null;
   const progressBar = config.progressBarId ? document.getElementById(config.progressBarId) : null;
+  // Speak toggle
+  const speakCtl = document.getElementById("slice-speak");
+  let speakOnSlice = speakCtl ? !!speakCtl.checked : true;
+  if (speakCtl) speakCtl.addEventListener("change", ()=>{ speakOnSlice = !!speakCtl.checked; });
   const comboMeter = document.getElementById('slice-combo-meter');
   const comboMeterFill = comboMeter ? document.getElementById('slice-combo-meter-fill') : null;
   const holder = canvas.parentElement || container;
@@ -91,7 +94,7 @@ export function initNinjaSlice(config) {
   }
   function getCueHoldMs(){
     // Longer hold for slower speeds, shorter for faster
-    // Base ~1600ms at Normal; clamp between 600–2400ms
+    // Base ~1600ms at Normal; clamp between 600ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ2400ms
     const base = 1600;
     const hold = Math.round(base / Math.max(0.5, speedScale));
     return Math.max(600, Math.min(2400, hold));
@@ -148,11 +151,13 @@ export function initNinjaSlice(config) {
   function buildKanaDisplay(){
     try{
       kanaEl.innerHTML = chars.map((ch, i) => {
+        // map item
         const done = sliced && sliced.has ? sliced.has(i) : false;
-        const cls = done ? 'text-emerald-600 font-semibold underline' : '';
-        return `<span data-idx="${i}" class="kana-ch ${cls}" style="transition:color .2s">${ch}</span>`;
-      }).join('');
-    }catch{ kanaEl.textContent = chars.join(''); }
+        const cls = done ? "text-emerald-600 font-semibold underline" : "";
+        const content = done ? ch : "_";
+        return `<span data-idx="${i}" class="kana-ch ${cls}" style="display:inline-block; min-width:1.6em; text-align:center; border:1px solid #e5e7eb; border-radius:6px; padding:2px 4px; margin:0 2px; transition: all .18s">${content}</span>`;
+      }).join("");
+    }catch{ kanaEl.textContent = chars.join(""); }
   }
   // Simple TTS helper (pronounce kana using ja-JP voice if available)
   function speakKana(text) {
@@ -166,9 +171,29 @@ export function initNinjaSlice(config) {
       window.speechSynthesis.speak(u);
     } catch {}
   }
-  function toRomaStr(s){ try { return (window.wanakana ? wanakana.toRomaji(s) : ''); } catch { return ''; } }
-  const SMALL_YOON = new Set(['\u3083','\u3085','\u3087','\u30E3','\u30E5','\u30E7']);
-  function groupForIndex(idx){
+  // Briefly emphasize the full mapping (romaji + English) with a glow/scale
+  function flashFullMapping(){
+    try {
+      const els = [romajiEl, englishEl];
+      els.forEach(el => {
+        if (!el) return;
+        el.style.transition = "transform .25s ease, box-shadow .25s ease, opacity .25s ease";
+        el.style.opacity = "1";
+        el.style.boxShadow = "0 0 0px rgba(0,0,0,0)";
+        el.style.transform = "scale(1.06)";
+      });
+      setTimeout(()=>{
+        els.forEach(el => {
+          if (!el) return;
+          el.style.transform = "scale(1)";
+          el.style.boxShadow = "";
+        });
+      }, 260);
+    } catch {}
+  }
+    function toRomaStr(s){ try { return (window.wanakana ? wanakana.toRomaji(s) : ''); } catch { return ''; } }
+  const SMALL_YOON = new Set(["\u3083","\u3085","\u3087","\u30E3","\u30E5","\u30E7"]);
+function groupForIndex(idx){
     const c = chars[idx];
     const prev = chars[idx-1];
     const next = chars[idx+1];
@@ -382,7 +407,7 @@ export function initNinjaSlice(config) {
     if (btn) {
       btn.onclick = () => { try { window.speechSynthesis?.cancel(); } catch{} proceed(); };
     }
-    speakJA(completedStage.phrase || '').then(() => setTimeout(proceed, 400));
+    speakJA(completedStage.phrase || '');
   }
   let bubblesOn = true;
   if (bubblesToggle) {
@@ -414,7 +439,7 @@ export function initNinjaSlice(config) {
   const normalizeStage = (entry = {}) => {
     const raw = (entry.phrase || entry.jp || '').trim();
     if (!raw) return null;
-    const cleaned = raw.replace(/[ã€‚ï¼Ž.]+$/u, '');
+    const cleaned = raw.replace(/[ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½.]+$/u, '');
     const phraseClean = cleaned || raw;
     let romajiText = (entry.romaji || entry.romaji_full || entry.romajiFull || '').trim();
     if (!romajiText && typeof window !== 'undefined' && window.wanakana) {
@@ -448,7 +473,7 @@ export function initNinjaSlice(config) {
     const stage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
     const phraseText = (stage.phrase || '').toString();
     // Strip full stops (Japanese/ASCII) from phrase used for slicing to avoid blocking progression
-    const phraseForPlay = phraseText.replace(/[。．\.]/g, '');
+    const phraseForPlay = phraseText.replace(/[\u3002\uFF0E\.]/g, '');
     chars = Array.from(phraseForPlay);
     original = chars.map((ch, i) => ({ char: ch, index: i }));
     sliced = new Set();
@@ -886,7 +911,7 @@ export function initNinjaSlice(config) {
 
         ctx.save();
         ctx.fillStyle = '#111';
-        ctx.font = '52px system-ui, sans-serif';
+        ctx.font = "52px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const sumoGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
@@ -933,12 +958,24 @@ export function initNinjaSlice(config) {
 
         ctx.save();
         ctx.fillStyle = '#111';
-        ctx.font = '56px system-ui, sans-serif';
+        ctx.font = "56px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
         const bubbleYOffset = radius * 0.06;
         if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
+        
+        if (difficulty === 'easy') {
+          try {
+            const roma = toRomaStr(bubbleGlyph) || '';
+            if (roma) {
+              ctx.font = '12px system-ui, sans-serif';
+              ctx.fillStyle = '#334155';
+              ctx.textBaseline = 'top';
+              ctx.fillText(roma, 0, radius * 0.55);
+            }
+          } catch {}
+        }
         ctx.restore();
       }
       ctx.restore();
@@ -973,7 +1010,7 @@ export function initNinjaSlice(config) {
 
   // ---------- Quiz Burst helpers ----------
   function setQuizPrompt(text){ if (quizPromptEl) quizPromptEl.textContent = text || ''; }
-  const KANA_FALLBACKS = ['ã‚','ã„','ã†','ãˆ','ãŠ','ã‹','ã','ã','ã‘','ã“','ã•','ã—','ã™','ã›','ã','ãª','ã«','ã¬','ã­','ã®','ã¯','ã²','ãµ','ã¸','ã»','ã¾','ã¿','ã‚€','ã‚','ã‚‚','ã‚„','ã‚†','ã‚ˆ','ã‚‰','ã‚Š','ã‚‹','ã‚Œ','ã‚','ã‚','ã‚“','ãŸ','ã¡','ã¤','ã¦','ã¨'];
+  const KANA_FALLBACKS = ['ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¹Ã…â€œ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Âº','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âª','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â«','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â®','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â»','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Â¹ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â ','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦','ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¨'];
   function unique(arr){ return Array.from(new Set(arr)); }
   function groupToText(g){ return (g || []).map(i => chars[i] || '').join(''); }
   function otherGroupTexts(excludeText){
@@ -990,8 +1027,8 @@ export function initNinjaSlice(config) {
     const romajiText = toRomaStr(kanaText) || '';
     setQuizPrompt(`Slice: ${romajiText || kanaText}`);
     // Speak the kana once per wave
-    if (kanaText) speakKana(kanaText);
-    // Build options
+    // Speak the kana once per wave
+    if (speakOnSlice && kanaText) speakKana(kanaText);
     const options = [];
     const waveId = ++quizWaveId;
     // Target first
@@ -1076,20 +1113,20 @@ export function initNinjaSlice(config) {
           const romajiTextQ = toRomaStr(kanaTextQ) || '';
           const yAboveQ = t.y - ((t.radius || KANA_RADIUS) + 16);
           showRomaAt(t.x, yAboveQ, romajiTextQ || kanaTextQ);
-          if (kanaTextQ) speakKana(kanaTextQ);
-          // scoring
+
+          if (speakOnSlice && kanaTextQ) speakKana(kanaTextQ);
           const nowQ = performance.now();
           combo = (nowQ - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
           lastSliceAt = nowQ;
           score += 200 * Math.max(1, combo);
           scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}`;
           if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
-          try { (t.indices || []).forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s) s.classList.add('text-emerald-600','font-semibold','underline'); }); } catch {}
+          try { (t.indices || []).forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s){ s.textContent = chars[i] || ''; s.classList.add('text-emerald-600','font-semibold','underline'); } }); } catch {}
           // remove the whole wave
           const waveId = t.waveId;
           for (let j = tiles.length - 1; j >= 0; j--) { if (tiles[j] && tiles[j].waveId === waveId) tiles.splice(j, 1); }
           updateProgressUI();
-          if (sliced.size === original.length) {
+          if (sliced.size === original.length) { flashFullMapping();
             completeStage();
           } else {
             pauseSliceMoment('', null);
@@ -1119,19 +1156,19 @@ export function initNinjaSlice(config) {
       }
       try { SFX('slice'); } catch {}
       // highlight sliced kana(s) and show combined romaji bubble near the sliced tile
-      try { group.forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s) s.classList.add('text-emerald-600','font-semibold','underline'); }); } catch {}
+      try { group.forEach(i=>{ const s = kanaEl.querySelector(`[data-idx="${i}"]`); if (s){ s.textContent = chars[i] || ''; s.classList.add('text-emerald-600','font-semibold','underline'); } }); } catch {}
       const kanaText = group.map(i => (typeof i === 'number' && chars[i] !== undefined) ? chars[i] : '').join('');
       const romajiText = toRomaStr(kanaText) || '';
       // place bubble slightly above the sliced tile position
       const yAbove = t.y - ((t.radius || KANA_RADIUS) + 16);
       showRomaAt(t.x, yAbove, romajiText || kanaText);
-      if (kanaText) speakKana(kanaText);
-      // Pause briefly so the romaji bubble can be read
+
+      if (speakOnSlice && kanaText) speakKana(kanaText);
       pauseSliceMoment('', null);
       // remove partner tile(s) if present
       for (let j = tiles.length - 1; j >= 0; j--) { if (group.includes(tiles[j].index) && tiles[j].index !== t.index) { tiles.splice(j,1); } }
       // persistent progress: show last romaji + count and update bar      updateProgressUI();
-      if (sliced.size === original.length) {
+      if (sliced.size === original.length) { flashFullMapping();
         completeStage();
       }
     } else if (t.type === 'bomb') {
@@ -1383,10 +1420,18 @@ canvas.addEventListener('pointerout', endPointer);
   }
   closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); overlay.classList.add('hidden'); });
 
-  // show modal & kick off â€” ensure sizing runs after it becomes visible
+  // show modal & kick off ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ensure sizing runs after it becomes visible
   overlay.classList.remove('hidden');
   requestAnimationFrame(() => { resize(); startRound(); });
 }
+
+
+
+
+
+
+
+
 
 
 
