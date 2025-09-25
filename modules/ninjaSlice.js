@@ -646,19 +646,23 @@ function groupForIndex(idx){
       memoryOverlay.innerHTML = '';
       const wrap = document.createElement('div');
       wrap.style.display = 'flex';
-      wrap.style.gap = '10px';
-      wrap.style.padding = '12px 16px';
+      wrap.style.gap = Math.round(10 * Math.max(0.7, uiScale)).toString() + 'px';
+      wrap.style.padding = Math.round(12 * Math.max(0.7, uiScale)) + 'px ' + Math.round(16 * Math.max(0.7, uiScale)) + 'px';
       wrap.style.borderRadius = '12px';
       wrap.style.background = 'rgba(255,255,255,0.9)';
       wrap.style.boxShadow = '0 12px 30px rgba(0,0,0,0.25)';
       memoryOverlay.appendChild(wrap);
       const tiles = [];
+      const s = Math.max(0.6, Math.min(1.0, uiScale * 0.95));
+      const tw = Math.round(42 * s) + 'px';
+      const th = Math.round(56 * s) + 'px';
+      const tf = Math.round(28 * s) + 'px';
       for (let i = 0; i < chars.length; i++) {
         const tile = document.createElement('div');
         tile.textContent = chars[i];
-        tile.style.width = '42px'; tile.style.height = '56px';
+        tile.style.width = tw; tile.style.height = th;
         tile.style.display = 'flex'; tile.style.alignItems = 'center'; tile.style.justifyContent = 'center';
-        tile.style.font = '700 28px system-ui, sans-serif'; tile.style.color = '#111827';
+        tile.style.font = `700 ${tf} system-ui, sans-serif`; tile.style.color = '#111827';
         tile.style.background = '#fde68a'; tile.style.border = '2px solid #b45309'; tile.style.borderRadius = '10px';
         tile.style.transform = 'scale(0.6) rotateX(90deg)'; tile.style.opacity = '0';
         tile.style.transition = 'transform 220ms ease, opacity 220ms ease';
@@ -2044,7 +2048,14 @@ canvas.addEventListener('pointerout', endPointer);
     timerEl.textContent = timer;
     roundActive = true;
     applySwordCursor();
-    try { const help = document.getElementById('slice-instructions'); if (help) { help.textContent = 'Slice kana. Red circles are bombs — avoid them. Swipe for combos.'; help.style.opacity = '1'; setTimeout(()=>help.style.opacity='0', 3000); } } catch {}
+    try {
+      const help = document.getElementById('slice-instructions');
+      if (help) {
+        help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
+        help.style.opacity = '1';
+        setTimeout(()=>help.style.opacity='0', 3000);
+      }
+    } catch {}
 
     draw();
     const kick = () => {
