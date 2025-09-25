@@ -695,7 +695,7 @@
       <div class="relative pt-24 pb-16">
         <!-- Unified top bar: status + controls + close -->
         <div class="pointer-events-none absolute top-4 left-4 right-4 flex items-center justify-between gap-3">
-          <div id="slice-status" class="pointer-events-auto flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
+          <div id="slice-status" class="ui-panel pointer-events-auto flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
             <div class="flex flex-col gap-1">
               <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Score</span>
               <span id="slice-score" class="font-semibold text-lg tracking-wide">0</span>
@@ -708,7 +708,7 @@
               <div id="slice-combo-meter-fill" class="h-full bg-emerald-500" style="width:0%"></div>
             </div>
           </div>
-          <div class="pointer-events-auto flex items-center gap-2 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900">
+          <div class="slice-toolbar ui-panel pointer-events-auto flex items-center gap-2 bg-white/90 px-3 py-2 rounded-lg shadow border border-amber-200 text-slate-900">
             <label class="flex items-center gap-1">
               <span class="text-xs">Speed</span>
               <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
@@ -772,6 +772,32 @@
   </div>
   <style>
     #slice-overlay.hidden{ display:none; }
+  </style>
+  <style>
+    /* Theme tokens */
+    :root{
+      --slice-primary: #f59e0b; /* amber-500 */
+      --slice-accent:  #10b981; /* emerald-500 */
+      --slice-panel-bg: rgba(255,255,255,0.92);
+      --slice-border:  rgba(245,158,11,0.5);
+      --slice-shadow:  0 8px 24px rgba(0,0,0,0.18);
+      --slice-radius:  12px;
+    }
+    /* Unified panel styling */
+    #slice-wrap .ui-panel{
+      background: var(--slice-panel-bg) !important;
+      border: 1px solid var(--slice-border) !important;
+      border-radius: var(--slice-radius) !important;
+      box-shadow: var(--slice-shadow) !important;
+    }
+    /* Animated background for the play area */
+    #slice-wrap{
+      background: linear-gradient(120deg, #fff7ed 0%, #fde68a 50%, #fff 100%);
+      background-size: 200% 200%;
+      animation: sliceBgPan 18s ease-in-out infinite;
+      position: relative;
+    }
+    @keyframes sliceBgPan{ 0%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } 100%{ background-position: 0% 50%; } }
   </style>
 </div>
 
