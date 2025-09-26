@@ -109,6 +109,7 @@
   let ffaEndsAt = 0;             // timestamp when FFA ends
   let ffaReadyAt = 0;            // until this time, input is gated
   const coinFx = [];             // coin particles (rendered later via fxCanvas)
+  let lastFFAAward = 0;          // used for stage banner summary
   // Persistent coin bank across rounds (page-level)
   let coinBank = 0;
   try { const saved = Number(localStorage.getItem('sliceCoinBank') || '0'); coinBank = isFinite(saved) ? Math.max(0, Math.floor(saved)) : 0; } catch {}
@@ -261,6 +262,7 @@
     } catch {}
     // Run a quick swoop animation to the top-right, then tally + stage banner
     const award = Math.max(0, Math.floor(coinCount));
+    lastFFAAward = award;
     launchCoinSwoop(award, () => {
       try { coinCounterEl.style.display = 'none'; } catch {}
       // add to persistent bank and update UI
@@ -609,6 +611,7 @@ function groupForIndex(idx){
       <div id="slice-stage-phrase" style="font-size:22px;font-weight:700;color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.6);"></div>
       <div id="slice-stage-romaji" style="font-size:16px;color:#fde68a; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
       <div id="slice-stage-en" style="font-size:15px;color:#e5e7eb; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
+      <div id="slice-stage-coins" style="font-size:15px;color:#fde68a; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
       <button id="slice-stage-next" class="btn btn-primary" style="margin-top:.25rem;">Continue</button>
     </div>`;
   holder.appendChild(stageOverlay);
@@ -618,10 +621,12 @@ function groupForIndex(idx){
       const phEl = stageOverlay.querySelector('#slice-stage-phrase');
       const roEl = stageOverlay.querySelector('#slice-stage-romaji');
       const enEl = stageOverlay.querySelector('#slice-stage-en');
+      const coEl = stageOverlay.querySelector('#slice-stage-coins');
       if (numEl) numEl.textContent = String(number);
       if (phEl) phEl.textContent = phraseText || '';
       if (roEl) roEl.textContent = romajiText || '';
       if (enEl) enEl.textContent = englishText || '';
+      if (coEl) coEl.textContent = lastFFAAward > 0 ? `Coins +${lastFFAAward}` : '';
       stageOverlay.style.display = 'flex';
     }catch{}
   }
@@ -1454,13 +1459,102 @@ function groupForIndex(idx){
           // cancel current rotation so text is upright
           ctx.rotate(- (t.rot || 0));
         }
-        ctx.fillStyle = '#111';
-        ctx.font = "56px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
-        const bubbleYOffset = radius * 0.06;
-        if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
+        // Draw glyph or a stylized coin during FFA
+        if (mode === MODE_FFA && t && t.ffa) {
+          // Vertical-axis spin illusion by scaling X with cos(rot)
+          const cr = Math.max(6, radius * 0.46);
+          const rot = (t.rot || 0);
+          const sx = Math.max(0.28, 0.28 + 0.72 * Math.abs(Math.cos(rot))); // 0.28..1.0
+
+          // Body
+          ctx.save();
+          ctx.scale(sx, 1);
+          const bodyGrad = ctx.createRadialGradient(0, -cr*0.3, cr*0.1, 0, 0, cr);
+          bodyGrad.addColorStop(0, '#fff8cc');
+          bodyGrad.addColorStop(0.55, '#f7bf3c');
+          bodyGrad.addColorStop(1, '#e59e0b');
+          ctx.beginPath();
+          ctx.fillStyle = bodyGrad;
+          ctx.arc(0, 0, cr, 0, Math.PI*2);
+          ctx.fill();
+          // Rim
+          ctx.lineWidth = Math.max(1.2, 2.2 * (0.5 + 0.5*sx));
+          ctx.strokeStyle = '#9a5b0e';
+          ctx.beginPath();
+          ctx.arc(0, 0, cr-1, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.restore();
+
+          // Edge shading (darker edges when turned)
+          const edgeAlpha = Math.max(0, 0.6 - sx*0.6);
+          if (edgeAlpha > 0.01) {
+            ctx.save();
+            ctx.globalAlpha = edgeAlpha;
+            ctx.fillStyle = 'rgba(154,91,14,0.6)';
+            ctx.fillRect(-cr, -cr, cr*2*(1-sx), cr*2);
+            ctx.restore();
+          }
+
+          // Sparkle/glint sweeping across the face
+          const sparkle = Math.max(0, (sx - 0.85) / 0.15); // only near face-on
+          if (sparkle > 0) {
+            ctx.save();
+            const glintR = cr * (0.25 + 0.1 * sparkle);
+            ctx.globalAlpha = 0.5 + 0.5 * sparkle;
+            const gx = -cr * 0.25;
+            const gy = -cr * 0.15;
+            const gl = ctx.createRadialGradient(gx, gy, 0.1, gx, gy, glintR);
+            gl.addColorStop(0, 'rgba(255,255,255,0.95)');
+            gl.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gl;
+            ctx.beginPath();
+            ctx.arc(gx, gy, glintR, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+
+            // Rainbow sheen overlay (screen blend) across the coin when face-on
+            ctx.save();
+            ctx.globalAlpha = 0.35 * sparkle;
+            const prevOp = ctx.globalCompositeOperation;
+            ctx.globalCompositeOperation = 'screen';
+            // Tie rainbow sweep to coin rotation (phase from -1..1)
+            const phase = Math.sin((t.rot || 0) * 2);
+            const off = cr * 0.9 * phase;
+            const lg = ctx.createLinearGradient(-cr + off, -cr*0.15, cr + off, cr*0.15);
+            lg.addColorStop(0.00, 'hsl(0, 85%, 60%)');    // red
+            lg.addColorStop(0.20, 'hsl(30, 85%, 60%)');   // orange
+            lg.addColorStop(0.36, 'hsl(60, 85%, 60%)');   // yellow
+            lg.addColorStop(0.52, 'hsl(120, 70%, 55%)');  // green
+            lg.addColorStop(0.68, 'hsl(200, 80%, 60%)');  // cyan/blue
+            lg.addColorStop(0.84, 'hsl(260, 80%, 62%)');  // indigo
+            lg.addColorStop(1.00, 'hsl(300, 80%, 65%)');  // violet
+            ctx.fillStyle = lg;
+            ctx.beginPath();
+            ctx.arc(0, 0, cr*0.92, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalCompositeOperation = prevOp;
+            ctx.restore();
+          }
+
+          // Small face details (engraving) that compress with sx
+          ctx.save();
+          ctx.scale(sx, 1);
+          ctx.strokeStyle = 'rgba(124,45,18,0.55)';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(-cr*0.28, -cr*0.45); ctx.lineTo(-cr*0.28, cr*0.45);
+          ctx.moveTo(cr*0.28, -cr*0.45); ctx.lineTo(cr*0.28, cr*0.45);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#111';
+          ctx.font = "56px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
+          const bubbleYOffset = radius * 0.06;
+          if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
+        }
 
         if (difficulty === 'easy') {
           try {
@@ -1664,7 +1758,7 @@ function groupForIndex(idx){
         x: Math.random()*viewW, y: viewH+20,
         vx:(Math.random()*2-1) * (1.6 * Math.max(1, speedScale)),
         vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1.15, launchBoost*1.1) * Math.max(1, speedScale) * diffVyBoost(),
-        rot:0, spin:(Math.random()*2-1)*0.06
+        rot:0, spin:(Math.random()*2-1)*0.18
       });
       return;
     }
@@ -1699,8 +1793,16 @@ function groupForIndex(idx){
     // Bonus Free-for-All: collect coins only, no quiz/sequence checks
     if (mode === MODE_FFA && t && t.type === 'kana') {
       try {
-        coinCount += Math.max(0, coinPerKana);
-        coinCounterEl.textContent = `Coins: ${coinCount}`;
+        // Chain multiplier for rapid coins
+        const CHAIN_WINDOW = 450;
+        const nowC = performance.now();
+        window.__ffaChain = window.__ffaChain || { n:1, last:0 };
+        if (nowC - (window.__ffaChain.last||0) <= CHAIN_WINDOW) { window.__ffaChain.n = Math.min(9, (window.__ffaChain.n||1) + 1); }
+        else { window.__ffaChain.n = 1; }
+        window.__ffaChain.last = nowC;
+        const mult = Math.max(1, window.__ffaChain.n||1);
+        coinCount += Math.max(0, coinPerKana * mult);
+        coinCounterEl.textContent = `Coins: ${coinCount} ${mult>1?`(x${mult})`:''}`;
         // coin particle
         coinFx.push({
           kind: 'coin',
@@ -1960,6 +2062,17 @@ canvas.addEventListener("pointerdown", e => {
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left);
   const y = (e.clientY - rect.top );
+  // Gentle magnet during FFA toward pointer
+  if (mode === MODE_FFA) {
+    try {
+      for (let i = 0; i < tiles.length; i++) {
+        const tt = tiles[i];
+        if (!tt || !tt.ffa) continue;
+        const dxm = x - tt.x, dym = y - tt.y; const dm = Math.hypot(dxm, dym);
+        if (dm < 140) { tt.vx += (dxm / Math.max(1, dm)) * 0.8; tt.vy += (dym / Math.max(1, dm)) * 0.8; }
+      }
+    } catch {}
+  }
   if (!trails.length) return; // guard if move occurs before down
   const current = trails[trails.length - 1];
   const now = Date.now();
