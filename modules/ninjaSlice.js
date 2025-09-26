@@ -612,6 +612,7 @@ function groupForIndex(idx){
       <div id="slice-stage-romaji" style="font-size:16px;color:#fde68a; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
       <div id="slice-stage-en" style="font-size:15px;color:#e5e7eb; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
       <div id="slice-stage-coins" style="font-size:15px;color:#fde68a; text-shadow:0 1px 6px rgba(0,0,0,.6);"></div>
+      <div id="slice-stage-stats" style="font-size:14px;color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.65);"></div>
       <button id="slice-stage-next" class="btn btn-primary" style="margin-top:.25rem;">Continue</button>
     </div>`;
   holder.appendChild(stageOverlay);
@@ -622,11 +623,18 @@ function groupForIndex(idx){
       const roEl = stageOverlay.querySelector('#slice-stage-romaji');
       const enEl = stageOverlay.querySelector('#slice-stage-en');
       const coEl = stageOverlay.querySelector('#slice-stage-coins');
+      const stEl = stageOverlay.querySelector('#slice-stage-stats');
       if (numEl) numEl.textContent = String(number);
       if (phEl) phEl.textContent = phraseText || '';
       if (roEl) roEl.textContent = romajiText || '';
       if (enEl) enEl.textContent = englishText || '';
       if (coEl) coEl.textContent = lastFFAAward > 0 ? `Coins +${lastFFAAward}` : '';
+      if (stEl) {
+        const tLeft = Math.max(0, Math.floor(timer));
+        const feverTxt = feverSeen ? 'Fever ✓' : '';
+        const comboTxt = maxCombo > 1 ? `Best Combo x${maxCombo}` : 'Best Combo x1';
+        stEl.textContent = `${comboTxt} • Time Left ${tLeft}s${feverTxt?` • ${feverTxt}`:''}`;
+      }
       stageOverlay.style.display = 'flex';
     }catch{}
   }
@@ -811,6 +819,7 @@ function groupForIndex(idx){
     if (typeof tiles !== 'undefined') { tiles.length = 0; }
     if (typeof popFx !== 'undefined') { popFx.length = 0; }
     buildKanaDisplay();
+    maxCombo = 0; feverSeen = false; // reset per-stage stats
     const romajiText = stage.romaji || ((typeof window !== 'undefined' && window.wanakana && phraseForPlay) ? window.wanakana.toRomaji(phraseForPlay) : '');
     romajiEl.textContent = romajiText || '';
     englishEl.textContent = stage.english || '';
@@ -1003,6 +1012,7 @@ function groupForIndex(idx){
   let timer = roundSeconds;
   let spawnHandle = null, animateId = null, timerInterval = null;
   let lastSliceAt = 0, combo = 0;
+  let maxCombo = 0;               // per-stage best combo
   // Track swipe vigor for perfect effects
   let lastSwipeDist = 0;
   // Fever meter (Stage 2)
@@ -1010,6 +1020,7 @@ function groupForIndex(idx){
   let fever = 0;                 // 0..1 charge
   let feverActive = false;
   let feverEndsAt = 0;
+  let feverSeen = false;          // per-stage: whether fever was triggered
   const FEVER_DURATION_MS = Number((config && config.feverDurationMs) ?? 8000);
   const FEVER_MULTIPLIER = Number((config && config.feverMultiplier) ?? 2.0);
   const FEVER_DECAY_PER_SEC = Number((config && config.feverDecayPerSec) ?? 0.12); // slower decay by default
@@ -1024,6 +1035,7 @@ function groupForIndex(idx){
     feverActive = true; feverEndsAt = performance.now() + FEVER_DURATION_MS;
     try { SFX('fever'); } catch {}
     showFeverToast();
+    try { feverSeen = true; } catch{}
     updateFeverUI(true);
   }
   function endFever(){ feverActive = false; if (feverEnabled) setFever(0.35); updateFeverUI(false); }
@@ -1485,13 +1497,23 @@ function groupForIndex(idx){
           ctx.stroke();
           ctx.restore();
 
-          // Edge shading (darker edges when turned)
+          // Edge shading (darker edges when turned) — clipped to ellipse
           const edgeAlpha = Math.max(0, 0.6 - sx*0.6);
           if (edgeAlpha > 0.01) {
             ctx.save();
+            // Clip to coin ellipse
+            ctx.save(); ctx.scale(sx, 1); ctx.beginPath(); ctx.arc(0, 0, cr, 0, Math.PI*2); ctx.restore(); ctx.clip();
             ctx.globalAlpha = edgeAlpha;
-            ctx.fillStyle = 'rgba(154,91,14,0.6)';
-            ctx.fillRect(-cr, -cr, cr*2*(1-sx), cr*2);
+            // Left edge gradient
+            let lgL = ctx.createLinearGradient(-cr, 0, -cr*0.5, 0);
+            lgL.addColorStop(0, 'rgba(154,91,14,0.55)');
+            lgL.addColorStop(1, 'rgba(154,91,14,0.0)');
+            ctx.fillStyle = lgL; ctx.fillRect(-cr, -cr, cr*0.6, cr*2);
+            // Right edge gradient
+            let lgR = ctx.createLinearGradient(cr*0.5, 0, cr, 0);
+            lgR.addColorStop(0, 'rgba(154,91,14,0.0)');
+            lgR.addColorStop(1, 'rgba(154,91,14,0.55)');
+            ctx.fillStyle = lgR; ctx.fillRect(cr*0.4, -cr, cr*0.6, cr*2);
             ctx.restore();
           }
 
@@ -1514,13 +1536,17 @@ function groupForIndex(idx){
 
             // Rainbow sheen overlay (screen blend) across the coin when face-on
             ctx.save();
-            ctx.globalAlpha = 0.35 * sparkle;
+            // Clip to ellipse so the sweep never looks rectangular
+            ctx.save(); ctx.scale(sx, 1); ctx.beginPath(); ctx.arc(0, 0, cr*0.98, 0, Math.PI*2); ctx.restore(); ctx.clip();
+            ctx.globalAlpha = 0.28 + 0.22 * sparkle;
             const prevOp = ctx.globalCompositeOperation;
             ctx.globalCompositeOperation = 'screen';
-            // Tie rainbow sweep to coin rotation (phase from -1..1)
+            // Tie sweep to rotation; also angle a bit with rotation
             const phase = Math.sin((t.rot || 0) * 2);
-            const off = cr * 0.9 * phase;
-            const lg = ctx.createLinearGradient(-cr + off, -cr*0.15, cr + off, cr*0.15);
+            const off = cr * 0.8 * phase;
+            ctx.save();
+            ctx.rotate((t.rot || 0) * 0.25);
+            const lg = ctx.createLinearGradient(-cr + off, 0, cr + off, 0);
             lg.addColorStop(0.00, 'hsl(0, 85%, 60%)');    // red
             lg.addColorStop(0.20, 'hsl(30, 85%, 60%)');   // orange
             lg.addColorStop(0.36, 'hsl(60, 85%, 60%)');   // yellow
@@ -1529,9 +1555,9 @@ function groupForIndex(idx){
             lg.addColorStop(0.84, 'hsl(260, 80%, 62%)');  // indigo
             lg.addColorStop(1.00, 'hsl(300, 80%, 65%)');  // violet
             ctx.fillStyle = lg;
-            ctx.beginPath();
-            ctx.arc(0, 0, cr*0.92, 0, Math.PI*2);
-            ctx.fill();
+            // Fill a band across the coin; clip ensures circular result
+            ctx.fillRect(-cr, -cr, cr*2, cr*2);
+            ctx.restore();
             ctx.globalCompositeOperation = prevOp;
             ctx.restore();
           }
@@ -1880,6 +1906,7 @@ function groupForIndex(idx){
           score += Math.round(baseQ * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
           scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}${feverActive ? ' ✨x2' : ''}`;
           if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
+          if (combo > maxCombo) maxCombo = combo;
           // Charge fever more with higher combos; boost in sequence mode
           const chargeQ = (FEVER_CHARGE_SLICE + Math.min(0.1, (combo-1)*0.03)) * (sequenceMode ? FEVER_SEQ_CHARGE_BOOST : 1);
           addFever(chargeQ);
@@ -1923,6 +1950,7 @@ function groupForIndex(idx){
         resetComboBadge();
         stopComboMeter();
       }
+      if (combo > maxCombo) maxCombo = combo;
       try { SFX('slice'); } catch {}
       // Fever charge: base plus small bonus for fast swipes; boost in sequence mode
       const charge = (FEVER_CHARGE_SLICE + Math.min(0.08, (lastSwipeDist-60) * 0.0015)) * (sequenceMode ? FEVER_SEQ_CHARGE_BOOST : 1);
