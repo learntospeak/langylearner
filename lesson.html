@@ -739,10 +739,6 @@
               <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
               <span class="text-xs">Romaji bubbles</span>
             </label>
-            <label class="flex items-center gap-1 ml-2">
-              <input type="checkbox" id="slice-quiz" class="accent-teal-600" />
-              <span class="text-xs">Quiz mode</span>
-            </label>
             <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
           </div>
         </div>
@@ -882,8 +878,6 @@
     if (!phrase) { alert('Pick a phrase first, then try Slice.'); return; }
     const romaji = data?.romaji || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : '') || 'konnichiwa';
     const english = data?.english || '';
-    const quizCtl = by('#slice-quiz');
-    const quizOn = !!(quizCtl && quizCtl.checked);
     initNinjaSlice({
       containerId: 'slice-wrap',
       canvasId: 'slice-canvas',
@@ -904,8 +898,9 @@
       phrases: Array.isArray(data?.stages) ? data.stages : [],
       phrase, romaji, english,
       heightRatio: 0.55,
-      spawnMsStart: 900,
-      spawnMsEnd: 400,
+      // Faster spawn for higher challenge
+      spawnMsStart: 650,
+      spawnMsEnd: 280,
       roundSeconds: 45,
       bombChance: 0.08,
       launchBoost: 1.8,
@@ -913,13 +908,15 @@
       // Visual: spin bubbles but keep kana upright
       bubbleSpinStyle: 'upright', // 'upright' | 'flip' | 'none'
       bubbleSpinSpeed: 1.0,
-      // Enable Quiz Burst mode
-      quizMode: quizOn,
-      quizShowPrompt: quizOn ? false : true,
+      // Quiz mode disabled (scrapped)
+      quizMode: false,
+      quizShowPrompt: true,
       quizChoices: 4,
       memoryCue: true,
-      // If Quiz mode is on, disable sequenceMode for clarity
-      sequenceMode: quizOn ? false : true,
+      sequenceMode: true,
+      // Distractors (noise) in normal play
+      noiseSpawnChance: 0.18,
+      noisePenalty: 50,
       // Free-for-All coin bonus
       freeForAllEnabled: true,
       ffaSeconds: 5,

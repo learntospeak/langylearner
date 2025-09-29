@@ -86,6 +86,7 @@
   const bubbleSpinSpeed = Math.max(0, Number((config && config.bubbleSpinSpeed) ?? 1.0));
   // Quiz Burst config
   const quizMode = !!(config && config.quizMode);
+  const quizShowPrompt = (config && Object.prototype.hasOwnProperty.call(config,'quizShowPrompt')) ? !!config.quizShowPrompt : true;
   const quizChoices = Math.max(2, Math.min(6, Number((config && config.quizChoices) ?? 4)));
   // Memory mode (speak + flipping tiles before stage)
   const memoryCue = !!(config && config.memoryCue);
@@ -97,6 +98,12 @@
   const ffaSpawnRateBoost = Math.max(1, Number((config && config.ffaSpawnRateBoost) ?? 2.0));
   const ffaBombs = !!(config && config.ffaBombs);
   const coinPerKana = Math.max(0, Number((config && config.coinPerKana) ?? 1));
+  // Normal-mode distractors (noise) — increase challenge without quiz mode
+  const noiseSpawnChance = Math.max(0, Math.min(0.6, Number((config && config.noiseSpawnChance) ?? 0.12)));
+  const noisePenalty = Math.max(0, Number((config && config.noisePenalty) ?? 50));
+  const NOISE_KANA = (config && Array.isArray(config.noiseKana) && config.noiseKana.length)
+    ? config.noiseKana
+    : ['あ','い','う','え','お','か','き','く','け','こ','さ','し','す','せ','そ','た','ち','つ','て','と','な','に','ぬ','ね','の','は','ひ','ふ','へ','ほ','ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を','ん'];
   // Power-ups (Stage 4)
   const powerUpsEnabled = (config && config.powerUpsEnabled) !== false;
   const powerSpawnChance = Math.max(0, Math.min(0.4, Number((config && config.powerSpawnChance) ?? 0.07)));
@@ -1461,6 +1468,17 @@ function groupForIndex(idx){
           ctx.font = `${Math.round(radius*0.7)}px system-ui, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('×2',0,0);
         }
         ctx.restore();
+      } else if (t.type === 'noise') {
+        const radius = t.radius || KANA_RADIUS;
+        const bubbleGradient = ctx.createRadialGradient(0, -radius * 0.25, radius * 0.1, 0, 0, radius);
+        bubbleGradient.addColorStop(0, 'rgba(241, 245, 249, 0.95)'); // slate-100
+        bubbleGradient.addColorStop(1, 'rgba(148, 163, 184, 0.25)'); // slate-400
+        ctx.beginPath(); ctx.fillStyle = bubbleGradient; ctx.arc(0,0,radius,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.lineWidth=2.2; ctx.strokeStyle='rgba(100,116,139,0.85)'; ctx.arc(0,0,radius-1,0,Math.PI*2); ctx.stroke();
+        // glyph
+        ctx.save(); ctx.fillStyle='#1f2937'; ctx.font = "56px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+        const g = (typeof t.char==='string'&&t.char.trim())?t.char:''; if (g) ctx.fillText(g,0,radius*0.06);
+        ctx.restore();
       } else {
         const radius = t.radius || KANA_RADIUS;
         const bubbleGradient = ctx.createRadialGradient(0, -radius * 0.25, radius * 0.1, 0, 0, radius);
@@ -1871,6 +1889,15 @@ function groupForIndex(idx){
       tiles.push({ type:'power', kind: pick, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.06 });
       return;
     }
+    // Normal mode: distractor kana that do not advance progress
+    if (noiseSpawnChance > 0 && Math.random() < noiseSpawnChance) {
+      // Prefer a kana not in current phrase
+      let pool = NOISE_KANA.filter(k => !chars.includes(k));
+      if (!pool.length) pool = NOISE_KANA.slice(0);
+      const ch = pool[Math.floor(Math.random()*pool.length)] || 'あ';
+      tiles.push({ type:'noise', char: ch, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
+      return;
+    }
     const wantBomb = Math.random() < bombChance;
     if (wantBomb && !(mode === MODE_FFA && !ffaBombs)) {
       tiles.push({ type:'bomb', radius: BOMB_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1) * (1.2 * Math.max(1, speedScale)), vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * Math.max(1, speedScale) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.05 });
@@ -2079,6 +2106,12 @@ function groupForIndex(idx){
       else if (t.kind === 'double') { doubleUntil = Math.max(doubleUntil, performance.now() + powerDoubleMs); }
       else if (t.kind === 'shield') { shieldCount = Math.min(3, shieldCount + 1); }
       updatePowerUI();
+      return;
+    } else if (t.type === 'noise') {
+      // Distractor: remove and apply small score penalty
+      popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS });
+      score = Math.max(0, score - noisePenalty);
+      scoreEl.textContent = `${score}`;
       return;
     }
   }
