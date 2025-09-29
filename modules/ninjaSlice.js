@@ -97,6 +97,12 @@
   const ffaSpawnRateBoost = Math.max(1, Number((config && config.ffaSpawnRateBoost) ?? 2.0));
   const ffaBombs = !!(config && config.ffaBombs);
   const coinPerKana = Math.max(0, Number((config && config.coinPerKana) ?? 1));
+  // Power-ups (Stage 4)
+  const powerUpsEnabled = (config && config.powerUpsEnabled) !== false;
+  const powerSpawnChance = Math.max(0, Math.min(0.4, Number((config && config.powerSpawnChance) ?? 0.07)));
+  const powerFreezeMs = Math.max(1000, Number((config && config.powerFreezeMs) ?? 6000));
+  const powerDoubleMs = Math.max(1000, Number((config && config.powerDoubleMs) ?? 8000));
+  const powerWeights = Object.assign({ freeze: 1, shield: 1, double: 1 }, (config && config.powerWeights) || {});
   // Timer + failure handling
   const timerPerStage = !!(config && config.timerPerStage);
   const bombEndsRound = !!(config && config.bombEndsRound);
@@ -108,6 +114,10 @@
   let coinCount = 0;             // coins collected (incremented during FFA)
   let ffaEndsAt = 0;             // timestamp when FFA ends
   let ffaReadyAt = 0;            // until this time, input is gated
+  // Power-up effect timers
+  let freezeUntil = 0;           // slow gravity/spawns until
+  let doubleUntil = 0;           // double points until
+  let shieldCount = 0;           // number of shield charges
   const coinFx = [];             // coin particles (rendered later via fxCanvas)
   let lastFFAAward = 0;          // used for stage banner summary
   // Persistent coin bank across rounds (page-level)
@@ -179,6 +189,21 @@
       statusBar.appendChild(bankWrap);
       statusBar.appendChild(coinCounterEl);
       statusBar.appendChild(countdownEl);
+      // Power-up badges
+      const badge = (id, text, bg, color) => {
+        const el = document.createElement('div');
+        el.id = id; el.textContent = text;
+        el.style.padding = '2px 8px'; el.style.borderRadius = '9999px';
+        el.style.marginLeft = '6px'; el.style.font = '700 11px system-ui, sans-serif';
+        el.style.background = bg; el.style.color = color; el.style.border = '1px solid rgba(0,0,0,0.1)';
+        el.style.display = 'none'; return el;
+      };
+      window.__freezeBadge = badge('slice-freeze-badge', 'Freeze', '#e0f2fe', '#0c4a6e');
+      window.__doubleBadge = badge('slice-double-badge', 'x2', '#fee2e2', '#7f1d1d');
+      window.__shieldBadge = badge('slice-shield-badge', 'Shield', '#dcfce7', '#064e3b');
+      statusBar.appendChild(window.__freezeBadge);
+      statusBar.appendChild(window.__doubleBadge);
+      statusBar.appendChild(window.__shieldBadge);
     } else {
       // fallback: pin to top-left in holder
       bankEl.style.position = 'absolute';
@@ -197,6 +222,12 @@
       holder.appendChild(bankReset);
       holder.appendChild(coinCounterEl);
       holder.appendChild(countdownEl);
+      // badges fallback top-left
+      const place = (el, x, y) => { el.style.position='absolute'; el.style.left=x; el.style.top=y; holder.appendChild(el); };
+      window.__freezeBadge = document.createElement('div'); window.__freezeBadge.textContent='Freeze'; place(window.__freezeBadge,'12px','58px');
+      window.__doubleBadge = document.createElement('div'); window.__doubleBadge.textContent='x2'; place(window.__doubleBadge,'80px','58px');
+      window.__shieldBadge = document.createElement('div'); window.__shieldBadge.textContent='Shield'; place(window.__shieldBadge,'110px','58px');
+      [window.__freezeBadge, window.__doubleBadge, window.__shieldBadge].forEach(el=>{ el.style.display='none'; el.style.padding='2px 8px'; el.style.border='1px solid rgba(0,0,0,0.1)'; el.style.borderRadius='9999px'; el.style.background='#fff'; el.style.font='700 11px system-ui, sans-serif'; });
     }
   } catch {}
 
@@ -947,6 +978,10 @@ function groupForIndex(idx){
         g.gain.setValueAtTime(0.04, now);
         g.gain.exponentialRampToValueAtTime(0.0008, now + 0.25);
         o.connect(g); g.connect(ctx.destination); o.start(); o.stop(now + 0.25);
+      } else if (type === 'power'){
+        const now = ctx.currentTime; const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type='triangle'; o.frequency.setValueAtTime(660, now); g.gain.setValueAtTime(0.05, now);
+        g.gain.exponentialRampToValueAtTime(0.0009, now + 0.18); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(now + 0.18);
       }
     }catch{}
   }
@@ -1102,6 +1137,21 @@ function groupForIndex(idx){
         }
       }
     } catch {}
+  }
+
+  function updatePowerUI(nowTs){
+    try{
+      const now = nowTs || performance.now();
+      // Freeze
+      if (freezeUntil > now){ window.__freezeBadge.style.display=''; window.__freezeBadge.textContent = `Freeze ${Math.ceil((freezeUntil-now)/1000)}s`; }
+      else if (window.__freezeBadge){ window.__freezeBadge.style.display='none'; }
+      // Double
+      if (doubleUntil > now){ window.__doubleBadge.style.display=''; window.__doubleBadge.textContent = `x2 ${Math.ceil((doubleUntil-now)/1000)}s`; }
+      else if (window.__doubleBadge){ window.__doubleBadge.style.display='none'; }
+      // Shield
+      if (shieldCount > 0){ window.__shieldBadge.style.display=''; window.__shieldBadge.textContent = `Shield x${shieldCount}`; }
+      else if (window.__shieldBadge){ window.__shieldBadge.style.display='none'; }
+    }catch{}
   }
 
   function primeComboMeter() {
@@ -1280,6 +1330,7 @@ function groupForIndex(idx){
     updateFeverTick(now);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     applyShake(now);
+    updatePowerUI(now);
     // FFA countdown UI and guard
     if (mode === MODE_FFA && ffaEndsAt > 0) {
       const msLeft = Math.max(0, Math.floor(ffaEndsAt - now));
@@ -1290,7 +1341,8 @@ function groupForIndex(idx){
       // integrate
       t.x += t.vx * timeScale;
       t.y += t.vy * timeScale;
-      t.vy += gravity * timeScale; // gravity
+      const freezeScale = (freezeUntil > now) ? 0.4 : 1;
+      t.vy += gravity * timeScale * freezeScale; // gravity (freeze slows)
       if (t.spin) t.rot += t.spin * Math.max(0, bubbleSpinSpeed || 0);
 
       // bounce off walls slightly
@@ -1385,6 +1437,29 @@ function groupForIndex(idx){
         if (sumoGlyph) ctx.fillText(sumoGlyph, 0, sumoYOffset);
         ctx.restore();
 
+        ctx.restore();
+      } else if (t.type === 'power') {
+        const radius = t.radius || KANA_RADIUS;
+        // power bubble background
+        ctx.save();
+        let base = '#e0f2fe', edge='#0284c7';
+        if (t.kind==='shield'){ base='#dcfce7'; edge='#059669'; }
+        if (t.kind==='double'){ base='#fee2e2'; edge='#e11d48'; }
+        const bubbleGradient = ctx.createRadialGradient(0, -radius * 0.25, radius * 0.1, 0, 0, radius);
+        bubbleGradient.addColorStop(0, base);
+        bubbleGradient.addColorStop(1, 'rgba(255,255,255,0.0)');
+        ctx.beginPath(); ctx.fillStyle = bubbleGradient; ctx.arc(0,0,radius,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.lineWidth=2.4; ctx.strokeStyle=edge; ctx.arc(0,0,radius-1,0,Math.PI*2); ctx.stroke();
+        // icon
+        ctx.fillStyle = edge; ctx.strokeStyle=edge;
+        if (t.kind==='freeze'){
+          // snowflake
+          ctx.lineWidth=2; for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,radius*0.55); ctx.stroke(); ctx.rotate(Math.PI/3); }
+        } else if (t.kind==='shield'){
+          ctx.beginPath(); ctx.moveTo(0,-radius*0.5); ctx.quadraticCurveTo(radius*0.65,-radius*0.2,0,radius*0.6); ctx.quadraticCurveTo(-radius*0.65,-radius*0.2,0,-radius*0.5); ctx.fill();
+        } else { // double
+          ctx.font = `${Math.round(radius*0.7)}px system-ui, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('×2',0,0);
+        }
         ctx.restore();
       } else {
         const radius = t.radius || KANA_RADIUS;
@@ -1699,6 +1774,7 @@ function groupForIndex(idx){
   // ---------- Quiz Burst helpers ----------
   function setQuizPrompt(text){
     if (!quizPromptEl) return;
+    if (!quizShowPrompt) { quizPromptEl.textContent = ''; quizPromptEl.style.animation = ''; return; }
     const t = (text || '').trim();
     quizPromptEl.textContent = t;
     // Pulse when visible
@@ -1724,7 +1800,7 @@ function groupForIndex(idx){
     const targetG = quizGroups[quizIndex] || [];
     const kanaText = groupToText(targetG);
     const romajiText = toRomaStr(kanaText) || '';
-    setQuizPrompt(`Slice: ${romajiText || kanaText}`);
+    if (quizShowPrompt) setQuizPrompt(`Slice: ${romajiText || kanaText}`); else setQuizPrompt('');
     // Speak the kana once per wave
     // Speak the kana once per wave
     if (speakOnSlice && kanaText) speakKana(kanaText);
@@ -1786,6 +1862,13 @@ function groupForIndex(idx){
         vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1.15, launchBoost*1.1) * Math.max(1, speedScale) * diffVyBoost(),
         rot:0, spin:(Math.random()*2-1)*0.18
       });
+      return;
+    }
+    // Normal mode: occasional power-ups
+    if (powerUpsEnabled && Math.random() < powerSpawnChance) {
+      const totalW = (powerWeights.freeze||0)+(powerWeights.shield||0)+(powerWeights.double||0); const r = Math.random()*Math.max(1,totalW);
+      let pick='freeze'; let acc=powerWeights.freeze||0; if (r>acc){ acc+=powerWeights.shield||0; pick = (r<=acc)?'shield':'double'; }
+      tiles.push({ type:'power', kind: pick, radius: KANA_RADIUS, x: Math.random()*viewW, y: viewH+20, vx:(Math.random()*2-1)*1.2, vy: - (speedMin + Math.random()*(speedMax-speedMin)) * Math.max(1, launchBoost) * diffVyBoost(), rot:0, spin:(Math.random()*2-1)*0.06 });
       return;
     }
     const wantBomb = Math.random() < bombChance;
@@ -1853,7 +1936,7 @@ function groupForIndex(idx){
             ? t.indices.map(i => (chars[i] || '')).join('')
             : (typeof t.char === 'string' ? t.char : '');
           if (want) {
-            if (got !== want) { setQuizPrompt(`Slice: ${toRomaStr(want) || want}`); return; }
+            if (got !== want) { if (quizShowPrompt) setQuizPrompt(`Slice: ${toRomaStr(want) || want}`); return; }
             // correct: mark sliced, show hint bubble, advance index
             (wantG || []).forEach(i => { if (typeof i === 'number') sliced.add(i); });
             try { buildKanaDisplay(); } catch {}
@@ -1973,6 +2056,7 @@ function groupForIndex(idx){
     } else if (t.type === 'bomb') {
       // During FFA, bombs are inert: remove and ignore
       if (mode === MODE_FFA) { try { /* visual pop without penalty */ popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 4, isBomb: false }); } catch {} return; }
+      if (shieldCount > 0) { shieldCount = Math.max(0, shieldCount - 1); updatePowerUI(); try { triggerShake(80,4); } catch {} return; }
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 6, isBomb: true });
       // penalty: end game or restart stage
       scoreEl.textContent = `BOOM!`;
@@ -1988,6 +2072,14 @@ function groupForIndex(idx){
           // Timer will restart on resumeFromPause via startTimerTicker if it was running when paused
         });
       }
+    } else if (t.type === 'power') {
+      // Apply power-up effects
+      try { SFX('slice'); } catch {}
+      if (t.kind === 'freeze') { freezeUntil = Math.max(freezeUntil, performance.now() + powerFreezeMs); }
+      else if (t.kind === 'double') { doubleUntil = Math.max(doubleUntil, performance.now() + powerDoubleMs); }
+      else if (t.kind === 'shield') { shieldCount = Math.min(3, shieldCount + 1); }
+      updatePowerUI();
+      return;
     }
   }
 
@@ -2204,11 +2296,12 @@ canvas.addEventListener('pointerout', endPointer);
       if (!quizMode) {
         spawnStartTime = performance.now();
         scheduleNext = function(){
-          const t = Math.min(1, (performance.now()-spawnStartTime)/(roundSeconds*1000));
+          const now = performance.now();
+          const t = Math.min(1, (now-spawnStartTime)/(roundSeconds*1000));
           const msBase = Math.round(spawnMsStart + (spawnMsEnd - spawnMsStart) * t);
           const rateBoost = (mode === MODE_FFA) ? Math.max(1, ffaSpawnRateBoost) : 1;
-          // Speed toggle should affect bubble motion/dispersion, not the timer cadence
-          const ms = Math.max(40, Math.round(msBase / rateBoost));
+          const freezeSlow = (freezeUntil > now) ? 1.6 : 1; // Freeze slows cadence a bit
+          const ms = Math.max(40, Math.round(msBase / rateBoost * freezeSlow));
           // Spawn density
           if (mode === MODE_FFA) {
             spawn();
@@ -2219,7 +2312,7 @@ canvas.addEventListener('pointerout', endPointer);
             if (diffSpawnExtra() && Math.random() < 0.5) spawn();
           }
           nextSpawnDelay = ms;
-          spawnScheduledAt = performance.now();
+          spawnScheduledAt = now;
           spawnHandle = setTimeout(scheduleNext, ms);
         };
         scheduleNext();
