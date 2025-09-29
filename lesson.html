@@ -739,6 +739,10 @@
               <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
               <span class="text-xs">Romaji bubbles</span>
             </label>
+            <label class="flex items-center gap-1 ml-2">
+              <input type="checkbox" id="slice-quiz" class="accent-teal-600" />
+              <span class="text-xs">Quiz mode</span>
+            </label>
             <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
           </div>
         </div>
@@ -878,6 +882,8 @@
     if (!phrase) { alert('Pick a phrase first, then try Slice.'); return; }
     const romaji = data?.romaji || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : '') || 'konnichiwa';
     const english = data?.english || '';
+    const quizCtl = by('#slice-quiz');
+    const quizOn = !!(quizCtl && quizCtl.checked);
     initNinjaSlice({
       containerId: 'slice-wrap',
       canvasId: 'slice-canvas',
@@ -908,10 +914,12 @@
       bubbleSpinStyle: 'upright', // 'upright' | 'flip' | 'none'
       bubbleSpinSpeed: 1.0,
       // Enable Quiz Burst mode
-      quizMode: false,
+      quizMode: quizOn,
+      quizShowPrompt: quizOn ? false : true,
       quizChoices: 4,
       memoryCue: true,
-      sequenceMode: true,
+      // If Quiz mode is on, disable sequenceMode for clarity
+      sequenceMode: quizOn ? false : true,
       // Free-for-All coin bonus
       freeForAllEnabled: true,
       ffaSeconds: 5,
