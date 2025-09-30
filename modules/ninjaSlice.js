@@ -1526,89 +1526,34 @@ function groupForIndex(idx){
       if (t.rot) ctx.rotate(t.rot);
       if (t.type === 'bomb') {
         ctx.save();
-        const bodyRadius = (t.radius || BOMB_RADIUS) * 0.9;
-        const bodyGradient = ctx.createLinearGradient(0, -bodyRadius, 0, bodyRadius * 1.2);
-        bodyGradient.addColorStop(0, '#fde7d9');
-        bodyGradient.addColorStop(1, '#f2b190');
-        ctx.beginPath();
-        ctx.fillStyle = bodyGradient;
-        ctx.ellipse(0, bodyRadius * 0.1, bodyRadius * 0.95, bodyRadius * 1.05, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-        ctx.ellipse(0, bodyRadius * 0.32, bodyRadius * 0.55, bodyRadius * 0.45, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(-bodyRadius * 0.95, bodyRadius * 0.12, bodyRadius * 1.9, bodyRadius * 0.48);
-        ctx.fillRect(-bodyRadius * 0.28, bodyRadius * 0.12, bodyRadius * 0.56, bodyRadius * 0.88);
-
-        const clothGradient = ctx.createLinearGradient(0, bodyRadius * 0.12, 0, bodyRadius * 0.9);
-        clothGradient.addColorStop(0, 'rgba(255,255,255,0.2)');
-        clothGradient.addColorStop(1, 'rgba(17,24,39,0.65)');
-        ctx.fillStyle = clothGradient;
-        ctx.fillRect(-bodyRadius * 0.25, bodyRadius * 0.16, bodyRadius * 0.5, bodyRadius * 0.7);
-
-        const headRadius = bodyRadius * 0.44;
-        const headGradient = ctx.createLinearGradient(0, -bodyRadius * 1.35, 0, -bodyRadius * 0.4);
-        headGradient.addColorStop(0, '#fdd9c2');
-        headGradient.addColorStop(1, '#f4b28c');
-        ctx.beginPath();
-        ctx.fillStyle = headGradient;
-        ctx.arc(0, -bodyRadius * 0.92, headRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.fillStyle = '#111827';
-        ctx.arc(0, -bodyRadius * 1.08, headRadius * 0.78, Math.PI * 0.95, Math.PI * 2.05);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(0, -bodyRadius * 1.24, headRadius * 0.36, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.fillStyle = '#111';
-        ctx.arc(-headRadius * 0.36, -bodyRadius * 0.95, headRadius * 0.14, 0, Math.PI * 2);
-        ctx.arc(headRadius * 0.36, -bodyRadius * 0.95, headRadius * 0.14, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.beginPath();
+        const r = (t.radius || BOMB_RADIUS) * 0.9;
+        // Bomb body (dark gradient circle)
+        const g = ctx.createRadialGradient(-r*0.3,-r*0.3,r*0.2,0,0,r);
+        g.addColorStop(0,'#4b5563'); // gray-600
+        g.addColorStop(1,'#111827'); // gray-900
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+        // Specular highlight
+        ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,0.16)';
+        ctx.ellipse(-r*0.3,-r*0.3,r*0.35,r*0.22,-0.4,0,Math.PI*2); ctx.fill();
+        // Fuse
         ctx.strokeStyle = '#b45309';
-        ctx.lineWidth = headRadius * 0.18;
+        ctx.lineWidth = Math.max(2, r*0.12);
         ctx.lineCap = 'round';
-        ctx.arc(0, -bodyRadius * 0.74, headRadius * 0.48, Math.PI * 0.15, Math.PI * 0.85);
-        ctx.stroke();
-
-        const armColor = '#f3b48f';
         ctx.beginPath();
-        ctx.strokeStyle = armColor;
-        ctx.lineWidth = bodyRadius * 0.32;
-        ctx.lineCap = 'round';
-        ctx.moveTo(-bodyRadius * 0.92, -bodyRadius * 0.08);
-        ctx.lineTo(-bodyRadius * 0.38, bodyRadius * 0.46);
+        ctx.moveTo(r*0.25, -r*0.75);
+        ctx.quadraticCurveTo(r*0.65, -r*1.05, r*0.95, -r*1.25);
         ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(bodyRadius * 0.92, -bodyRadius * 0.08);
-        ctx.lineTo(bodyRadius * 0.38, bodyRadius * 0.46);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.fillStyle = armColor;
-        ctx.arc(-bodyRadius * 0.78, bodyRadius * 0.68, bodyRadius * 0.22, 0, Math.PI * 2);
-        ctx.arc(bodyRadius * 0.78, bodyRadius * 0.68, bodyRadius * 0.22, 0, Math.PI * 2);
-        ctx.fill();
-
+        // Spark at fuse tip
         ctx.save();
-        ctx.fillStyle = '#111';
-        ctx.font = "52px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const sumoGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
-        const sumoYOffset = bodyRadius * 0.18;
-        if (sumoGlyph) ctx.fillText(sumoGlyph, 0, sumoYOffset);
+        const sx = r*0.95, sy = -r*1.25;
+        ctx.translate(sx, sy);
+        ctx.fillStyle = '#f59e0b'; // amber
+        ctx.beginPath(); ctx.arc(0,0,r*0.18,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#fbbf24'; // amber-300
+        ctx.lineWidth = r*0.06;
+        for (let i=0;i<8;i++){ ctx.rotate(Math.PI/4); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(r*0.3,0); ctx.stroke(); }
         ctx.restore();
-
         ctx.restore();
       } else if (t.type === 'power') {
         const radius = t.radius || KANA_RADIUS;
