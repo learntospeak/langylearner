@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>KanaReader</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111111">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+
+<body class="min-h-screen flex items-center justify-center bg-gray-50">
+  <main class="text-center">
+    <h1 class="text-3xl font-bold mb-6">KanaReader</h1>
+
+    <!-- Button that opens lesson.html with a lesson ID -->
+    <form action="lesson.html" method="get" target="_blank">
+      <input type="hidden" name="lesson" value="greetings-001" />
+      <button type="submit" class="px-6 py-3 rounded bg-blue-600 text-white hover:bg-blue-700">
+        Start Lesson
+      </button>
+    </form>
+    <p>Copyright (c) 2025 <Jellcap>. All rights reserved.
+Unauthorized copying, modification, or distribution is prohibited.
+</p>
+  </main>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js?v=4')
+      .catch(console.error);
+  });
+}
+</script>
+
+
+</body>
+
+</html>
+

@@ -10,173 +10,45 @@
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
     <style type="text/tailwindcss">
-        .btn { @apply px-3 py-2 rounded font-medium transition focus:outline-none focus:ring; }
-  .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-300; }
-  .btn-amber   { @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-300; }
-  .btn-dark    { @apply bg-gray-900 text-white hover:bg-black focus:ring-gray-400; }
-  .btn-ghost   { @apply bg-gray-200 hover:bg-gray-300 text-gray-900 focus:ring-gray-300; }
-</style>
-    <style type="text/tailwindcss">
-        .field {
-    @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner
-           focus:outline-none focus:ring-2 focus:ring-blue-400;
-  }
-  .field.ok  { @apply border-green-400 ring-green-300; }
-  .field.bad { @apply border-red-400   ring-red-300; }
-</style>
-    <!--blah-->
-    <style>
-        html,
-        body {
-            height: 100%;
-        }
-
-        body {
-            -webkit-overflow-scrolling: touch;
-            overflow-x: hidden;
-        }
-    </style>
-
-    <style>
-        .guide-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-        }
-
-        .guide-row .chip {
-            padding: 2px 8px;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            font-size: 0.95rem;
-        }
-
-        .guide-row .done {
-            background: #dcfce7;
-            border-color: #86efac;
-        }
-
-        .guide-row .next {
-            background: #fff7ed;
-            border-color: #fdba74;
-        }
-
-        .guide-row .todo {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-
-        .guide-foot {
-            font-size: 0.85rem;
-            color: #6b7280;
-            margin-top: 2px;
-        }
-    </style>
-
-    <style>
-        /* If your three containers are wrapped in #lesson-wrap, use that. */
-        /* If not, set the parent you want to anchor to as position:relative. */
-        #lesson-wrap {
-            position: relative;
-        }
-
-              /* OR overlay top-right inside #lesson-wrap (uncomment these 3 lines and place #mascot inside #lesson-wrap)
-  #lesson-wrap #mascot { position:absolute; top:8px; right:8px; width:56px; height:72px; }
-  */
-
-        /* Animations (mouth talks when class mascot-talk is set by JS) */
-        #mascot .mouth {
-            transform-origin: 50% 60%;
-        }
-
-        #mascot.mascot-idle {
-            animation: float 3s ease-in-out infinite;
-        }
-
-        #mascot.mascot-talk .mouth {
-            animation: talk 0.25s ease-in-out infinite;
-        }
-
-        #mascot.mascot-celebrate {
-            animation: celebrate 0.6s ease-in-out 0s 2;
-        }
-
-        #mascot.mascot-confused {
-            animation: shake 0.4s ease-in-out 0s 2;
-        }
-
-        @keyframes float {
-            0% {
-                transform: translateY(0)
-            }
-
-            50% {
-                transform: translateY(-4px)
-            }
-
-            100% {
-                transform: translateY(0)
-            }
-        }
-
-        @keyframes talk {
-
-            0%,
-            100% {
-                transform: scaleY(0.6)
-            }
-
-            50% {
-                transform: scaleY(1.2)
-            }
-        }
-
-        @keyframes celebrate {
-            0% {
-                transform: translateY(0) scale(1)
-            }
-
-            50% {
-                transform: translateY(-8px) scale(1.05)
-            }
-
-            100% {
-                transform: translateY(0) scale(1)
-            }
-        }
-
-        @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0)
-            }
-
-            25% {
-                transform: translateX(-3px)
-            }
-
-            75% {
-                transform: translateX(3px)
-            }
-        }
+      .btn { @apply px-3 py-2 rounded font-medium transition focus:outline-none focus:ring; }
+      .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-300; }
+      .btn-amber   { @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-300; }
+      .btn-dark    { @apply bg-gray-900 text-white hover:bg-black focus:ring-gray-400; }
+      .btn-ghost   { @apply bg-gray-200 hover:bg-gray-300 text-gray-900 focus:ring-gray-300; }
+      .field { @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400; }
+      .field.ok  { @apply border-green-400 ring-green-300; }
+      .field.bad { @apply border-red-400   ring-red-300; }
     </style>
     <style>
-        .morxrow {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        input.mora {
-            width: 2.2rem;
-            text-align: center;
-        }
+      html, body { height: 100%; }
+      body { -webkit-overflow-scrolling: touch; overflow-x: hidden; }
     </style>
-
-
-</head>
+    <style>
+      .guide-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+      .guide-row .chip { padding:2px 8px; border-radius:8px; border:1px solid #e5e7eb; font-size:0.95rem; }
+      .guide-row .done { background:#dcfce7; border-color:#86efac; }
+      .guide-row .next { background:#fff7ed; border-color:#fdba74; }
+      .guide-row .todo { background:#f3f4f6; color:#6b7280; }
+      .guide-foot { font-size:0.85rem; color:#6b7280; margin-top:2px; }
+    </style>
+    <style>
+      /* Layout helpers + mascot animations */
+      #lesson-wrap { position: relative; }
+      #footer-controls { touch-action: pan-y; }
+      #page { padding-bottom: 7rem; }
+      #mascot .mouth { transform-origin: 50% 60%; }
+      @keyframes float { 0%{transform:translateY(0)} 50%{transform:translateY(-4px)} 100%{transform:translateY(0)} }
+      @keyframes talk { 0%,100%{transform:scaleY(0.6)} 50%{transform:scaleY(1.2)} }
+      @keyframes celebrate { 0%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.05)} 100%{transform:translateY(0) scale(1)} }
+      @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+    </style>
+    <style>
+      .morxrow { display:flex; flex-wrap:wrap; gap:8px; }
+      input.mora { width:2.2rem; text-align:center; }
+      /* Ensure gear is clickable above overlays */
+      #slice-settings-btn { pointer-events:auto; z-index:10050; }
+    </style>
+  </head>
 
 <body class="bg-white">
     <div id="page" class="container mx-auto p-6">
@@ -241,7 +113,8 @@
             #page {
                 padding-bottom: 7rem;
             }
-        </style>
+            /* Ensure gear always receives clicks */
+
 
 
         <style>
@@ -293,7 +166,8 @@
             #lesson-wrap #mascot.mascot-confused {
                 animation: shake 0.4s ease-in-out 0s 2;
             }
-        </style>
+            /* Ensure gear always receives clicks */
+
     </div>
      <!-- Bottom toolbar (fixed, wraps on small screens) -->
         <div id="footer-controls" class="fixed bottom-0 inset-x-0 z-50
@@ -681,16 +555,18 @@
 
 <style>
   body[datxstep="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
-</style>
+    /* Ensure gear always receives clicks */
+
 <style>
   body[datxstep="dialogue"] #page { scroll-padding-bottom: 7rem; }
-</style>
+    /* Ensure gear always receives clicks */
+
 
 
 </body>
 <!-- Ninja Slice Overlay -->
-<div id="slice-overlay" class="fixed inset-0 bg-black/80 hidden z-[9999]">
-  <div id="slice-wrap" class="absolute inset-0 flex flex-col items-center justify-center p-4">
+<div id="slice-overlay" class="fixed inset-0 bg-black/60 hidden z-[9999]">
+  <div id="slice-wrap" class="absolute inset-0 flex flex-col items-center justify-center p-0 md:p-4">
     <div class="bg-white rounded shadow w-[80vw] max-w-[1100px] p-3 relative">
       <div class="relative pt-24 pb-16">
         <!-- Unified top bar: status + controls + close -->
@@ -735,12 +611,36 @@
               <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
               <span class="text-xs">Speak on slice</span>
             </label>
-            <label class="flex items-center gap-1 ml-2">
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
               <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
               <span class="text-xs">Romaji bubbles</span>
             </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-reduced" class="accent-teal-600" />
+              <span class="text-xs">Reduced motion</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-mute-sfx" class="accent-teal-600" />
+              <span class="text-xs">Mute SFX</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-speak-romaji" class="accent-teal-600" />
+              <span class="text-xs">Speak romaji</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-skip-reveal" class="accent-teal-600" checked />
+              <span class="text-xs">Tap to skip reveal</span>
+            </label>
             <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
           </div>
+          <!-- Floating Settings Button (desktop) + Backdrop for modalized toolbar -->
+          <button id="slice-settings-btn" title="Settings" aria-label="Settings" class="flex items-center justify-center w-12 h-12 md:w-10 md:h-10 rounded-full bg-white shadow border border-amber-200 text-amber-700 hover:bg-white fixed md:absolute bottom-3 right-3 md:bottom-auto md:right-2 md:top-1/2 md:-translate-y-1/2 z-[10005] cursor-pointer select-none" onclick="window.__toggleSliceSettings && window.__toggleSliceSettings(event)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.39 1.26 1 1.51H21a2 2 0 1 1 0 4h-.09c-.61.25-1 .85-1 1.49z"/>
+            </svg>
+          </button>
+          <div id="slice-settings-backdrop" class="hidden fixed inset-0 bg-black/40 z-[10000] pointer-events-none"></div>
         </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
         <div id="slice-instructions" class="absolute inset-x-0 top-32 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
@@ -773,7 +673,8 @@
   </div>
   <style>
     #slice-overlay.hidden{ display:none; }
-  </style>
+      /* Ensure gear always receives clicks */
+
   <style>
     /* Theme tokens */
     :root{
@@ -830,6 +731,9 @@
       animation: sliceBgPan 18s ease-in-out infinite;
       position: relative;
     }
+    #slice-canvas{ touch-action: none; }
+    /* Ensure gear is always clickable above overlays */
+    #slice-settings-btn{ pointer-events: auto; z-index: 10050; }
     @keyframes sliceBgPan{ 0%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } 100%{ background-position: 0% 50%; } }
     /* Make bottom kana tiles span full modal and center-wrap; place romaji/english below */
     #slice-kana {
@@ -854,7 +758,24 @@
     @media (max-width: 480px){
       #slice-kana{ white-space: normal !important; overflow-x: visible !important; }
     }
-  </style>
+    /* Mobile simplification: hide advanced controls */
+    @media (max-width: 768px){
+      #slice-wrap .mobile-advanced{ display:none !important; }
+      #slice-wrap .slice-toolbar{ display:none !important; }
+      #slice-wrap.settings-open .slice-toolbar{ display:flex !important; position:fixed; left:0; right:0; bottom:0; top:auto; transform:none; width:100vw; z-index:10010; border-radius:16px 16px 0 0; }
+      #slice-settings-backdrop{ display:none; }
+      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; pointer-events:auto !important; }
+      /* Full-bleed play area */
+      #slice-wrap{ background:#ffffff !important; padding:0 !important; overflow:hidden !important; }
+    }
+    /* Desktop: hide inline toolbar; show as modal when settings-open */
+    @media (min-width: 768px){
+      #slice-wrap .slice-toolbar{ display:none !important; }
+      #slice-wrap.settings-open .slice-toolbar{ display:flex !important; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:min(92vw, 640px); z-index:10010; }
+      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; pointer-events:auto !important; }
+    }
+      /* Ensure gear always receives clicks */
+
 </div>
 
   <script type="module">
@@ -864,6 +785,22 @@
   const btnOpen = by('#openSlice');
   const btnOpenFooter = by('#openSliceFooter');
   const btnClose = by('#slice-close');
+  // Settings modal (toggle toolbar as modal)
+  const wrapEl = by('#slice-wrap');
+  const settingsBtn = by('#slice-settings-btn');
+  const settingsBackdrop = by('#slice-settings-backdrop');
+  function toggleSettings(e){ try { e?.preventDefault(); e?.stopPropagation(); } catch {} wrapEl?.classList.toggle('settings-open'); }
+  function closeSettings(e){ try { e?.preventDefault(); e?.stopPropagation(); } catch {} wrapEl?.classList.remove('settings-open'); }
+  ;['click','pointerdown','touchstart'].forEach(evt => settingsBtn?.addEventListener(evt, toggleSettings, { passive:false }));
+  ;['click','pointerdown','touchstart'].forEach(evt => settingsBackdrop?.addEventListener(evt, closeSettings, { passive:false }));
+  // Fallback delegation in case the button is re-rendered
+  document.addEventListener('click', (ev) => {
+    const t = ev.target && (ev.target.closest ? ev.target.closest('#slice-settings-btn') : null);
+    if (t) { toggleSettings(ev); }
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { wrapEl?.classList.remove('settings-open'); } });
+  // Expose togglers for inline onclick fallback
+  try { window.__toggleSliceSettings = toggleSettings; window.__closeSliceSettings = closeSettings; } catch {}
   // Ensure intro instructions reflect current visuals (sumo bombs)
   try {
     const help = by('#slice-instructions');
@@ -955,6 +892,11 @@
       // Stage banner: cascading reveal of phrase/romaji
       stageCascadeRevealEnabled: true,
       stageCascadeStepMs: 60,
+      // UX toggles
+      reducedMotionEnabled: false,
+      sfxEnabled: true,
+      speakRomajiInstead: false,
+      enableSkipRevealTap: true,
       // New behavior toggles
       timerPerStage: true,
       bombEndsRound: false,
@@ -973,7 +915,6 @@
 </script>
 
 </html>
-
 
 
 

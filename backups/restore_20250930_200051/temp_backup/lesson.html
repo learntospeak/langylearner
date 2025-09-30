@@ -237,7 +237,7 @@
                 touch-action: pan-y;
             }
 
-            /* Fallback padding in case JS doesnâ€™t run */
+            /* Fallback padding in case JS doesn’t run */
             #page {
                 padding-bottom: 7rem;
             }
@@ -311,14 +311,11 @@
                 class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
             <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">Speak</button>
 
-            <!-- Fallback Slice launcher (always visible on mobile) -->
-            <button id="openSliceFooter" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-purple-600 text-white">Slice</button>
-
             <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
                 w-full sm:w-auto justify-center">
                 Speed
                 <input id="lsSpeed" type="range" min="0.6" max="1.4" step="0.1" value="1" class="w-32" />
-                <span id="lsSpeedVal">1.0Ã—</span>
+                <span id="lsSpeedVal">1.0×</span>
             </label>
         </div>
     <!-- Kana Reference Modal -->
@@ -331,7 +328,7 @@
             class="relative mx-auto my-8 w-[min(95vw,1000px)] max-h-[85vh] overflow-hidden rounded-xl bg-white shadow-xl">
             <header class="flex items-center justify-between px-4 py-3 border-b">
                 <h2 id="kanaTitle" class="text-lg font-semibold">Kana Reference</h2>
-                <button id="closeKanaModal" class="btn btn-ghost" arixlabel="Close">âœ•</button>
+                <button id="closeKanaModal" class="btn btn-ghost" arixlabel="Close">✕</button>
             </header>
 
             <!-- Tabs -->
@@ -360,87 +357,87 @@
                         <tbody>
                             <tr>
                                 <th class="p-2 border">-</th>
-                                <td class="p-2 border">ã‚</td>
-                                <td class="p-2 border">ã„</td>
-                                <td class="p-2 border">ã†</td>
-                                <td class="p-2 border">ãˆ</td>
-                                <td class="p-2 border">ãŠ</td>
+                                <td class="p-2 border">あ</td>
+                                <td class="p-2 border">い</td>
+                                <td class="p-2 border">う</td>
+                                <td class="p-2 border">え</td>
+                                <td class="p-2 border">お</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">k</th>
-                                <td class="p-2 border">ã‹</td>
-                                <td class="p-2 border">ã</td>
-                                <td class="p-2 border">ã</td>
-                                <td class="p-2 border">ã‘</td>
-                                <td class="p-2 border">ã“</td>
+                                <td class="p-2 border">か</td>
+                                <td class="p-2 border">き</td>
+                                <td class="p-2 border">く</td>
+                                <td class="p-2 border">け</td>
+                                <td class="p-2 border">こ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">s</th>
-                                <td class="p-2 border">ã•</td>
-                                <td class="p-2 border">ã—</td>
-                                <td class="p-2 border">ã™</td>
-                                <td class="p-2 border">ã›</td>
-                                <td class="p-2 border">ã</td>
+                                <td class="p-2 border">さ</td>
+                                <td class="p-2 border">し</td>
+                                <td class="p-2 border">す</td>
+                                <td class="p-2 border">せ</td>
+                                <td class="p-2 border">そ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">t</th>
-                                <td class="p-2 border">ãŸ</td>
-                                <td class="p-2 border">ã¡</td>
-                                <td class="p-2 border">ã¤</td>
-                                <td class="p-2 border">ã¦</td>
-                                <td class="p-2 border">ã¨</td>
+                                <td class="p-2 border">た</td>
+                                <td class="p-2 border">ち</td>
+                                <td class="p-2 border">つ</td>
+                                <td class="p-2 border">て</td>
+                                <td class="p-2 border">と</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">n</th>
-                                <td class="p-2 border">ãª</td>
-                                <td class="p-2 border">ã«</td>
-                                <td class="p-2 border">ã¬</td>
-                                <td class="p-2 border">ã­</td>
-                                <td class="p-2 border">ã®</td>
+                                <td class="p-2 border">な</td>
+                                <td class="p-2 border">に</td>
+                                <td class="p-2 border">ぬ</td>
+                                <td class="p-2 border">ね</td>
+                                <td class="p-2 border">の</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">h</th>
-                                <td class="p-2 border">ã¯</td>
-                                <td class="p-2 border">ã²</td>
-                                <td class="p-2 border">ãµ</td>
-                                <td class="p-2 border">ã¸</td>
-                                <td class="p-2 border">ã»</td>
+                                <td class="p-2 border">は</td>
+                                <td class="p-2 border">ひ</td>
+                                <td class="p-2 border">ふ</td>
+                                <td class="p-2 border">へ</td>
+                                <td class="p-2 border">ほ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">m</th>
-                                <td class="p-2 border">ã¾</td>
-                                <td class="p-2 border">ã¿</td>
-                                <td class="p-2 border">ã‚€</td>
-                                <td class="p-2 border">ã‚</td>
-                                <td class="p-2 border">ã‚‚</td>
+                                <td class="p-2 border">ま</td>
+                                <td class="p-2 border">み</td>
+                                <td class="p-2 border">む</td>
+                                <td class="p-2 border">め</td>
+                                <td class="p-2 border">も</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">y</th>
-                                <td class="p-2 border">ã‚„</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border">ã‚†</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border">ã‚ˆ</td>
+                                <td class="p-2 border">や</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border">ゆ</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border">よ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">r</th>
-                                <td class="p-2 border">ã‚‰</td>
-                                <td class="p-2 border">ã‚Š</td>
-                                <td class="p-2 border">ã‚‹</td>
-                                <td class="p-2 border">ã‚Œ</td>
-                                <td class="p-2 border">ã‚</td>
+                                <td class="p-2 border">ら</td>
+                                <td class="p-2 border">り</td>
+                                <td class="p-2 border">る</td>
+                                <td class="p-2 border">れ</td>
+                                <td class="p-2 border">ろ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">w</th>
-                                <td class="p-2 border">ã‚</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border">ã‚’</td>
+                                <td class="p-2 border">わ</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border">を</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">n</th>
-                                <td colspan="5" class="p-2 border">ã‚“</td>
+                                <td colspan="5" class="p-2 border">ん</td>
                             </tr>
                         </tbody>
                     </table>
@@ -462,87 +459,87 @@
                         <tbody>
                             <tr>
                                 <th class="p-2 border">-</th>
-                                <td class="p-2 border">ã‚¢</td>
-                                <td class="p-2 border">ã‚¤</td>
-                                <td class="p-2 border">ã‚¦</td>
-                                <td class="p-2 border">ã‚¨</td>
-                                <td class="p-2 border">ã‚ª</td>
+                                <td class="p-2 border">ア</td>
+                                <td class="p-2 border">イ</td>
+                                <td class="p-2 border">ウ</td>
+                                <td class="p-2 border">エ</td>
+                                <td class="p-2 border">オ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">k</th>
-                                <td class="p-2 border">ã‚«</td>
-                                <td class="p-2 border">ã‚­</td>
-                                <td class="p-2 border">ã‚¯</td>
-                                <td class="p-2 border">ã‚±</td>
-                                <td class="p-2 border">ã‚³</td>
+                                <td class="p-2 border">カ</td>
+                                <td class="p-2 border">キ</td>
+                                <td class="p-2 border">ク</td>
+                                <td class="p-2 border">ケ</td>
+                                <td class="p-2 border">コ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">s</th>
-                                <td class="p-2 border">ã‚µ</td>
-                                <td class="p-2 border">ã‚·</td>
-                                <td class="p-2 border">ã‚¹</td>
-                                <td class="p-2 border">ã‚»</td>
-                                <td class="p-2 border">ã‚½</td>
+                                <td class="p-2 border">サ</td>
+                                <td class="p-2 border">シ</td>
+                                <td class="p-2 border">ス</td>
+                                <td class="p-2 border">セ</td>
+                                <td class="p-2 border">ソ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">t</th>
-                                <td class="p-2 border">ã‚¿</td>
-                                <td class="p-2 border">ãƒ</td>
-                                <td class="p-2 border">ãƒ„</td>
-                                <td class="p-2 border">ãƒ†</td>
-                                <td class="p-2 border">ãƒˆ</td>
+                                <td class="p-2 border">タ</td>
+                                <td class="p-2 border">チ</td>
+                                <td class="p-2 border">ツ</td>
+                                <td class="p-2 border">テ</td>
+                                <td class="p-2 border">ト</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">n</th>
-                                <td class="p-2 border">ãƒŠ</td>
-                                <td class="p-2 border">ãƒ‹</td>
-                                <td class="p-2 border">ãƒŒ</td>
-                                <td class="p-2 border">ãƒ</td>
-                                <td class="p-2 border">ãƒŽ</td>
+                                <td class="p-2 border">ナ</td>
+                                <td class="p-2 border">ニ</td>
+                                <td class="p-2 border">ヌ</td>
+                                <td class="p-2 border">ネ</td>
+                                <td class="p-2 border">ノ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">h</th>
-                                <td class="p-2 border">ãƒ</td>
-                                <td class="p-2 border">ãƒ’</td>
-                                <td class="p-2 border">ãƒ•</td>
-                                <td class="p-2 border">ãƒ˜</td>
-                                <td class="p-2 border">ãƒ›</td>
+                                <td class="p-2 border">ハ</td>
+                                <td class="p-2 border">ヒ</td>
+                                <td class="p-2 border">フ</td>
+                                <td class="p-2 border">ヘ</td>
+                                <td class="p-2 border">ホ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">m</th>
-                                <td class="p-2 border">ãƒž</td>
-                                <td class="p-2 border">ãƒŸ</td>
-                                <td class="p-2 border">ãƒ </td>
-                                <td class="p-2 border">ãƒ¡</td>
-                                <td class="p-2 border">ãƒ¢</td>
+                                <td class="p-2 border">マ</td>
+                                <td class="p-2 border">ミ</td>
+                                <td class="p-2 border">ム</td>
+                                <td class="p-2 border">メ</td>
+                                <td class="p-2 border">モ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">y</th>
-                                <td class="p-2 border">ãƒ¤</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border">ãƒ¦</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border">ãƒ¨</td>
+                                <td class="p-2 border">ヤ</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border">ユ</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border">ヨ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">r</th>
-                                <td class="p-2 border">ãƒ©</td>
-                                <td class="p-2 border">ãƒª</td>
-                                <td class="p-2 border">ãƒ«</td>
-                                <td class="p-2 border">ãƒ¬</td>
-                                <td class="p-2 border">ãƒ­</td>
+                                <td class="p-2 border">ラ</td>
+                                <td class="p-2 border">リ</td>
+                                <td class="p-2 border">ル</td>
+                                <td class="p-2 border">レ</td>
+                                <td class="p-2 border">ロ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">w</th>
-                                <td class="p-2 border">ãƒ¯</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border text-gray-300">â€¢</td>
-                                <td class="p-2 border">ãƒ²</td>
+                                <td class="p-2 border">ワ</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border text-gray-300">•</td>
+                                <td class="p-2 border">ヲ</td>
                             </tr>
                             <tr>
                                 <th class="p-2 border">n</th>
-                                <td colspan="5" class="p-2 border">ãƒ³</td>
+                                <td colspan="5" class="p-2 border">ン</td>
                             </tr>
                         </tbody>
                     </table>
@@ -630,13 +627,13 @@
       : `${h + 16}px`;
   };
 
-  // âœ… expose to lesson-shim.js
+  // ✅ expose to lesson-shim.js
   window.__padFooter = apply;
 
   apply();
   addEventListener('load', apply, { once: true });
   addEventListener('resize', apply);
-  // âœ… fix rotation not applying
+  // ✅ fix rotation not applying
   window.addEventListener('orientationchange', () => setTimeout(apply, 60));
 
   if ('ResizeObserver' in window) new ResizeObserver(apply).observe(footer);
@@ -659,26 +656,6 @@
 </script>
 
 
-<script>
-  // Sanitize stray control characters in Kana modal cells (e.g., BEL \u0007)
-  (function sanitizeKanaModal(){
-    try {
-      const root = document.getElementById('kanaModal');
-      if (!root) return;
-      const bad = /[\u0000-\u001F\u007F]/g;
-      root.querySelectorAll('td, th').forEach(el => {
-        const txt = el.textContent;
-        if (typeof txt === 'string' && bad.test(txt)) {
-          const cleaned = txt.replace(bad, '').trim();
-          // keep placeholder look for disabled cells
-          el.textContent = cleaned || (el.classList.contains('text-gray-300') ? '\u00A0' : '');
-        }
-      });
-    } catch {}
-  })();
-  </script>
-
-
 <style>
   body[datxstep="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
 </style>
@@ -689,65 +666,27 @@
 
 </body>
 <!-- Ninja Slice Overlay -->
-<div id="slice-overlay" class="fixed inset-0 bg-black/80 hidden z-[9999]">
+<div id="slice-overlay" class="fixed inset-0 bg-black/60 hidden z-[9999]">
   <div id="slice-wrap" class="absolute inset-0 flex flex-col items-center justify-center p-4">
     <div class="bg-white rounded shadow w-[80vw] max-w-[1100px] p-3 relative">
-      <div class="relative pt-24 pb-16">
-        <!-- Unified top bar: status + controls + close -->
-        <div class="pointer-events-none absolute top-4 left-4 right-4 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-          <div id="slice-status" class="ui-panel pointer-events-auto w-full flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
-            <div class="flex flex-col gap-1">
-              <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Score</span>
-              <span id="slice-score" class="font-semibold text-lg tracking-wide">0</span>
-            </div>
-            <div class="flex flex-col gap-1 text-right">
-              <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Time</span>
-              <span id="slice-timer" class="font-semibold text-lg tracking-wide">60</span>
-            </div>
-            <div id="slice-combo-meter" class="pointer-events-none w-40 h-2.5 bg-white/70 rounded-full overflow-hidden opacity-0 transition-opacity">
-              <div id="slice-combo-meter-fill" class="h-full bg-amber-500" style="width:0%"></div>
-            </div>
-            <span id="slice-fever-label" class="text-[10px] uppercase tracking-wide text-amber-700 hidden">Fever</span>
-          </div>
-          <div class="slice-toolbar ui-panel pointer-events-auto w-full flex items-center gap-2 md:gap-2 bg-white/90 px-3 md:px-4 py-2 rounded-lg shadow border border-amber-200 text-slate-900 flex-wrap md:flex-nowrap overflow-visible">
-            <label class="flex items-center gap-1">
-              <span class="text-xs">Speed</span>
-              <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
-                <option value="0.85">Slow</option>
-                <option value="1.0" selected>Normal</option>
-                <option value="1.25">Fast</option>
-                <option value="1.5">Turbo</option>
-              </select>
-            </label>
-            <label class="flex items-center gap-1">
-              <span class="text-xs">Difficulty</span>
-              <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
-                <option value="hard">Hard</option>
-              </select>
-            </label>
-            <label class="flex items-center gap-1">
-              <input type="checkbox" id="slice-showphrase" class="accent-teal-600" checked />
-              <span class="text-xs">Show phrase</span>
-            </label>
-            <label class="flex items-center gap-1">
-              <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
-              <span class="text-xs">Speak on slice</span>
-            </label>
-            <label class="flex items-center gap-1 ml-2">
-              <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
-              <span class="text-xs">Romaji bubbles</span>
-            </label>
-            <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
-          </div>
+      <button id="slice-close" class="absolute top-2 right-2 btn btn-ghost">Close</button>
+      <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+        <div class="flex items-center gap-3">
+          <div id="slice-score">Score: 0</div>
+          <div id="slice-timer">60</div>
         </div>
+        <label class="inline-flex items-center gap-1">
+          <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
+          <span>Romaji bubbles</span>
+        </label>
+      </div>
+      <div class="relative">
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
-        <div id="slice-instructions" class="absolute inset-x-0 top-32 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
-          Slice kana. Red circles are bombs â€” avoid them. Swipe for combos.
+        <div id="slice-instructions" class="absolute inset-x-0 top-2 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
+          Slice kana. Red circles are bombs — avoid them. Swipe for combos.
         </div>
-        <div id="slice-progress" class="mt-1 text-center text-sm text-gray-700"></div>
-        <div class="mt-0.5 h-2 bg-gray-200 rounded overflow-hidden">
+        <div id="slice-progress" class="mt-2 text-center text-sm text-gray-700"></div>
+        <div class="mt-2 h-2 bg-gray-200 rounded overflow-hidden">
           <div id="slice-progressbar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
         </div>
         <div id="slice-combo" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-6 text-2xl font-extrabold text-emerald-600 drop-shadow opacity-0 transition-opacity">x1</div>
@@ -764,8 +703,8 @@
           </div>
         </div>
       </div>
-      <div class="mt-1.5 grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-2 text-center">
-        <div id="slice-kana" class="text-2xl">ã“ã‚“ã«ã¡ã¯</div>
+      <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div id="slice-kana" class="text-2xl">こんにちは</div>
         <div id="slice-romaji" class="text-gray-600">konnichiwa</div>
         <div id="slice-en" class="text-gray-600">Hello</div>
       </div>
@@ -774,133 +713,28 @@
   <style>
     #slice-overlay.hidden{ display:none; }
   </style>
-  <style>
-    /* Theme tokens */
-    :root{
-      --slice-primary: #f59e0b; /* amber-500 */
-      --slice-accent:  #10b981; /* emerald-500 */
-      --slice-panel-bg: rgba(255,255,255,0.92);
-      --slice-border:  rgba(245,158,11,0.5);
-      --slice-shadow:  0 8px 24px rgba(0,0,0,0.18);
-      --slice-radius:  12px;
-    }
-    /* Unified panel styling */
-    #slice-wrap .ui-panel{
-      background: var(--slice-panel-bg) !important;
-      border: 1px solid var(--slice-border) !important;
-      border-radius: var(--slice-radius) !important;
-      box-shadow: var(--slice-shadow) !important;
-      overflow: visible !important;
-    }
-    /* Allow vertical scroll within overlay */
-    #slice-overlay{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    #slice-wrap{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    /* Mobile tweaks */
-    @media (max-width: 768px){
-      #slice-wrap .ui-panel{ padding: 8px 10px !important; }
-      #slice-status span.text-[11px]{ font-size: 10px; }
-      #slice-wrap .slice-toolbar{ row-gap: 6px; }
-      #slice-wrap .slice-toolbar label{ margin-right: 6px; }
-    }
-    @media (max-width: 480px){
-      /* Compact bottom kana chips */
-      #slice-wrap .kana-ch{ transform: scale(0.85); margin: 0 1px !important; }
-      #slice-progressbar{ height: 6px !important; }
-      /* Put Close on its own line to avoid clipping */
-      #slice-close{ width: 100% !important; margin-left: 0 !important; margin-top: 6px; text-align: center; }
-      #slice-wrap .slice-toolbar{ padding-right: 10px !important; }
-      /* Make example phrase (kana chips) horizontally scrollable to prevent cut-off */
-      #slice-kana{
-        display: block;
-        white-space: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 6px 10px;
-        border-radius: 10px;
-        background: rgba(255,255,255,0.92);
-        margin: 0 2px;
-      }
-      #slice-kana::-webkit-scrollbar{ height: 6px; }
-      #slice-kana::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.2); border-radius: 6px; }
-    }
-    /* Animated background for the play area */
-    #slice-wrap{
-      background: linear-gradient(120deg, #fff7ed 0%, #fde68a 50%, #fff 100%);
-      background-size: 200% 200%;
-      animation: sliceBgPan 18s ease-in-out infinite;
-      position: relative;
-    }
-    @keyframes sliceBgPan{ 0%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } 100%{ background-position: 0% 50%; } }
-    /* Make bottom kana tiles span full modal and center-wrap; place romaji/english below */
-    #slice-kana {
-      grid-column: 1 / -1; /* span all grid columns */
-      display: flex !important;
-      flex-wrap: wrap !important;
-      justify-content: center !important;
-      gap: 8px 6px !important;
-      width: 100%;
-    }
-    #slice-romaji, #slice-en {
-      grid-column: 1 / -1; /* ensure on a new row under kana */
-    }
-    /* Enlarge kana chips for focus */
-    #slice-wrap .kana-ch {
-      font-size: clamp(22px, 4vw, 34px) !important;
-      min-width: 2.2em !important;
-      padding: 6px 8px !important;
-      margin: 3px 3px !important;
-    }
-    /* Override previous mobile horizontal scroll for kana; wrap instead */
-    @media (max-width: 480px){
-      #slice-kana{ white-space: normal !important; overflow-x: visible !important; }
-    }
-  </style>
 </div>
 
-  <script type="module">
-  import { initNinjaSlice } from './modules/ninjaSlice.js?v=9';
+<script type="module">
+  import { initNinjaSlice } from './modules/ninjaSlice.js';
   const by = (sel, root=document) => root.querySelector(sel);
   const overlay = by('#slice-overlay');
   const btnOpen = by('#openSlice');
-  const btnOpenFooter = by('#openSliceFooter');
   const btnClose = by('#slice-close');
-  // Ensure intro instructions reflect current visuals (sumo bombs)
-  try {
-    const help = by('#slice-instructions');
-    if (help) help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
-  } catch {}
   function currentPhraseFromPage(){
     try {
-      const cached = window.__kanaSliceSource;
-      if (cached && cached.phrase) {
-        const phrase = (cached.phrase || '').trim();
-        const english = (cached.english || '').trim() || 'Hello';
-        const romajiCached = (cached.romaji || '').trim();
-        const romaji = romajiCached || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa');
-        const stages = Array.isArray(cached.stages) ? cached.stages : [];
-        if (phrase) {
-          return { phrase, romaji, english, stages };
-          }
-      }
-    } catch {}
-    try {
       const list = document.querySelector('#jp-text');
+      // Grab the first visible .jp text as the phrase
       const jpEl = list?.querySelector('.jp');
       const enEl = list?.querySelector('.en');
-      const phrase = (jpEl?.textContent || '').trim() || '\\u3053\\u3093\\u306B\\u3061\\u306F';
+      const phrase = (jpEl?.textContent || '').trim() || 'こんにちは';
       const english = (enEl?.textContent || '').trim() || 'Hello';
       const romaji = (window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa';
-      return { phrase, romaji, english, stages: [] };
-    } catch {
-      return { phrase:'ã“ã‚“ã«ã¡ã¯', romaji:'konnichiwa', english:'Hello' , stages: [] };
-    }
+      return { phrase, romaji, english };
+    } catch { return { phrase:'こんにちは', romaji:'konnichiwa', english:'Hello' } }
   }
   function launchSlice(){
-    const data = currentPhraseFromPage();
-    const phrase = (data?.phrase || '').trim();
-    if (!phrase) { alert('Pick a phrase first, then try Slice.'); return; }
-    const romaji = data?.romaji || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : '') || 'konnichiwa';
-    const english = data?.english || '';
+    const { phrase, romaji, english } = currentPhraseFromPage();
     initNinjaSlice({
       containerId: 'slice-wrap',
       canvasId: 'slice-canvas',
@@ -917,68 +751,19 @@
       bubblesToggleId: 'slice-bubbles',
       progressElId: 'slice-progress',
       progressBarId: 'slice-progressbar',
-      statsElId: 'slice-over-stats',
-      phrases: Array.isArray(data?.stages) ? data.stages : [],
       phrase, romaji, english,
       heightRatio: 0.55,
-      // Faster spawn for higher challenge
-      spawnMsStart: 650,
-      spawnMsEnd: 280,
+      spawnMsStart: 900,
+      spawnMsEnd: 400,
       roundSeconds: 45,
       bombChance: 0.08,
       launchBoost: 1.8,
       gravity: 0.015,
-      // Visual: spin bubbles but keep kana upright
-      bubbleSpinStyle: 'upright', // 'upright' | 'flip' | 'none'
-      bubbleSpinSpeed: 1.0,
-      // Quiz mode disabled (scrapped)
-      quizMode: false,
-      quizShowPrompt: true,
-      quizChoices: 4,
-      memoryCue: true,
-      sequenceMode: true,
-      // Distractors (noise) in normal play
-      noiseSpawnChance: 0.18,
-      noisePenalty: 50,
-      // Free-for-All coin bonus
-      freeForAllEnabled: true,
-      ffaSeconds: 5,
-      ffaSpawnRateBoost: 2.0,
-      ffaBombs: false,
-      coinPerKana: 1,
-      // Coin face styling in FFA
-      coinFaceStyle: 'embossed',
-      // Normal kana face styling
-      bubbleFaceStyle: 'embossed',
-      // Slice showcase (zoom/coin/speak)
-      sliceShowcaseEnabled: true,
-      // Stage banner: cascading reveal of phrase/romaji
-      stageCascadeRevealEnabled: true,
-      stageCascadeStepMs: 60,
-      // New behavior toggles
-      timerPerStage: true,
-      bombEndsRound: false,
-      // Fever tuning (can be adjusted later)
-      feverEnabled: true,
-      feverDurationMs: 7000,
-      feverMultiplier: 2.0,
-      feverDecayPerSec: 0.09,
-      feverChargeSlice: 0.22,
-      feverSeqChargeBoost: 1.8,
     });
   }
   btnOpen?.addEventListener('click', launchSlice);
-  btnOpenFooter?.addEventListener('click', launchSlice);
   btnClose?.addEventListener('click', () => overlay.classList.add('hidden'));
 </script>
 
 </html>
-
-
-
-
-
-
-
-
 

@@ -1,0 +1,26 @@
+  const romaBubble = document.createElement('div');
+  romaBubble.className = 'absolute pointer-events-none bg-black text-white text-xs px-2 py-1 rounded opacity-0 transition-opacity duration-300';
+  holder.appendChild(romaBubble);
+  let bubblesOn = true;
+  if (bubblesToggle) {
+    bubblesOn = !!bubblesToggle.checked;
+    bubblesToggle.addEventListener('change', ()=>{ bubblesOn = !!bubblesToggle.checked; romaBubble.style.opacity = '0'; });
+  }
+  function showRomaForGroup(indices){
+    if (!bubblesOn) return;
+    try{
+      const anchorIdx = indices[indices.length-1];
+      const span = kanaEl.querySelector(`[data-idx="${anchorIdx}"]`);
+      if (!span) return;
+      const text = indices.map(i=>chars[i]).join('');
+      const roma = toRomaStr(text);
+      const r1 = span.getBoundingClientRect();
+      const r0 = holder.getBoundingClientRect();
+      romaBubble.textContent = roma;
+      romaBubble.style.left = (r1.left - r0.left + r1.width/2) + 'px';
+      romaBubble.style.top  = (r1.top - r0.top - 18) + 'px';
+      romaBubble.style.opacity = '1';
+      setTimeout(()=>{ romaBubble.style.opacity = '0'; }, 700);
+    }catch{}
+  }
+
