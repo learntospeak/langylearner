@@ -46,6 +46,11 @@
   const speakCtl = document.getElementById("slice-speak");
   let speakOnSlice = speakCtl ? !!speakCtl.checked : true;
   if (speakCtl) speakCtl.addEventListener("change", ()=>{ speakOnSlice = !!speakCtl.checked; });
+  // Extra UX toggles
+  const reducedCtl = document.getElementById('slice-reduced');
+  const muteSfxCtl = document.getElementById('slice-mute-sfx');
+  const speakRomaCtl = document.getElementById('slice-speak-romaji');
+  const skipRevealCtl = document.getElementById('slice-skip-reveal');
   const comboMeter = document.getElementById('slice-combo-meter');
   const comboMeterFill = comboMeter ? document.getElementById('slice-combo-meter-fill') : null;
   const feverLabel = document.getElementById('slice-fever-label');
@@ -106,6 +111,19 @@
   const sliceShowcaseEnabled = (config && config.sliceShowcaseEnabled) !== false; // default on
   const sliceShowcasePronounceRomaji = !!(config && config.sliceShowcasePronounceRomaji); // default off
   const sliceShowcaseDurationMs = Math.max(400, Number((config && config.sliceShowcaseDurationMs) ?? 900));
+  // Reduced motion and SFX/voice controls
+  let reducedMotion = (config && ("reducedMotionEnabled" in config))
+    ? !!config.reducedMotionEnabled
+    : (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  let sfxEnabled = (config && ("sfxEnabled" in config)) ? !!config.sfxEnabled : true;
+  let speakRomaji = !!(config && config.speakRomajiInstead);
+  let skipRevealOnTap = (config && ("enableSkipRevealTap" in config)) ? !!config.enableSkipRevealTap : true;
+  try {
+    if (reducedCtl) { reducedCtl.checked = !!reducedMotion; reducedCtl.addEventListener('change', ()=>{ reducedMotion = !!reducedCtl.checked; }); }
+    if (muteSfxCtl) { muteSfxCtl.checked = !sfxEnabled ? true : false; muteSfxCtl.addEventListener('change', ()=>{ sfxEnabled = !muteSfxCtl.checked; }); }
+    if (speakRomaCtl) { speakRomaCtl.checked = !!speakRomaji; speakRomaCtl.addEventListener('change', ()=>{ speakRomaji = !!speakRomaCtl.checked; }); }
+    if (skipRevealCtl) { skipRevealCtl.checked = !!skipRevealOnTap; skipRevealCtl.addEventListener('change', ()=>{ skipRevealOnTap = !!skipRevealCtl.checked; }); }
+  } catch {}
   // Stage banner cascade reveal
   const stageCascadeRevealEnabled = (config && config.stageCascadeRevealEnabled) !== false; // default on
   const stageCascadeStepMs = Math.max(20, Number((config && config.stageCascadeStepMs) ?? 60));
@@ -293,7 +311,7 @@
         const startAt = now + delay;
         coinFx.push({ mode:'swoop', sx: Math.random()*viewW, sy: (viewH*0.5) + Math.random()*(viewH*0.5), tx, ty, born: startAt, dur: 600 });
       }
-      setTimeout(()=>{ try { SFX('coin'); } catch {}; onDone && onDone(); }, Math.round((n*60) + 620));
+      setTimeout(()=>{ try { playSFX('coin'); } catch {}; onDone && onDone(); }, Math.round((n*60) + 620));
     } catch { onDone && onDone(); }
   }
   function finishFreeForAll(){
@@ -488,6 +506,18 @@ function groupForIndex(idx){
       targetPulseStyleAdded = true;
     } catch {}
   }
+  // Choose kana vs romaji speech based on toggle
+  function speakChoice(kanaText, romajiText) {
+    try {
+      if (!speakOnSlice) return;
+      const roma = (romajiText || (typeof toRomaStr === 'function' ? (toRomaStr(kanaText || '') || '') : ''));
+      if (speakRomaji && roma) { speakJA(roma); }
+      else if (kanaText) { speakKana(kanaText); }
+    } catch {}
+  }
+  // SFX wrapper with mute support
+  function playSFX(name){ if (!sfxEnabled) return; try { SFX(name); } catch {} }
+  function getShowcaseDur(){ const base = sliceShowcaseDurationMs; return reducedMotion ? Math.min(500, Math.round(base*0.5)) : base; }
   function updateBottomTargetHighlight(){
     try{
       const spans = kanaEl.querySelectorAll('.kana-ch');
@@ -716,8 +746,8 @@ function groupForIndex(idx){
       const cascade = (el, text, stepMs) => {
         if (!el) return 0;
         const t = (text || '').toString();
-        // If disabled, just set text and return minimal time
-        if (!stageCascadeRevealEnabled || !t) { el.textContent = t; return 300; }
+        // If disabled or reduced motion, just set text and return minimal time
+        if (!stageCascadeRevealEnabled || reducedMotion || !t) { el.textContent = t; return 200; }
         el.textContent = '';
         const frag = document.createDocumentFragment();
         const chars = Array.from(t);
@@ -728,7 +758,8 @@ function groupForIndex(idx){
           span.style.display = 'inline-block';
           span.style.transform = 'translateY(14px)';
           span.style.transition = 'opacity 320ms ease, transform 320ms ease';
-          span.style.transitionDelay = String(i * Math.max(10, stepMs)) + 'ms';
+          const step = Math.max(10, stepMs);
+          span.style.transitionDelay = String(i * (reducedMotion ? Math.min(30, Math.round(step*0.5)) : step)) + 'ms';
           frag.appendChild(span);
         }
         el.appendChild(frag);
@@ -736,7 +767,8 @@ function groupForIndex(idx){
           const spans = el.querySelectorAll('span');
           spans.forEach(s => { s.style.opacity = '1'; s.style.transform = 'translateY(0)'; });
         });
-        return (chars.length ? (chars.length - 1) * Math.max(10, stepMs) + 380 : 300);
+        const stepEff = reducedMotion ? Math.min(30, Math.round(Math.max(10, stepMs)*0.5)) : Math.max(10, stepMs);
+        return (chars.length ? (chars.length - 1) * stepEff + (reducedMotion ? 220 : 380) : (reducedMotion ? 200 : 300));
       };
 
       revealOverlay.style.display = 'flex';
@@ -744,12 +776,21 @@ function groupForIndex(idx){
       const tPhrase = cascade(phraseEl, phrase, Math.round(stageCascadeStepMs * 1.1));
       const tRoma = cascade(romaEl, romaText, Math.round(stageCascadeStepMs * 0.9));
 
-      // Start speech while revealing
-      try { speakJA(phrase).catch(()=>{}); } catch {}
+      // Start speech while revealing (kana or romaji based on toggle)
+      try {
+        const toSay = speakRomaji && romaText ? romaText : phrase;
+        speakJA(toSay).catch(()=>{});
+      } catch {}
 
-      const hold = 600; // short hold after reveal completes
+      const hold = reducedMotion ? 250 : 600; // short hold after reveal completes
       const total = Math.max(tPhrase, tRoma) + hold;
-      setTimeout(() => { revealOverlay.style.display = 'none'; onDone && onDone(); }, total);
+      let done = false;
+      const finish = () => { if (done) return; done = true; revealOverlay.style.display = 'none'; onDone && onDone(); };
+      let timerId = setTimeout(finish, total);
+      if (skipRevealOnTap) {
+        const onClick = () => { try { clearTimeout(timerId); } catch {} finish(); };
+        revealOverlay.addEventListener('click', onClick, { once: true });
+      }
     } catch { onDone && onDone(); }
   }
   function showStageBanner(number, phraseText, romajiText, englishText){
@@ -1202,7 +1243,7 @@ function groupForIndex(idx){
   function startFever(){
     if (!feverEnabled) return;
     feverActive = true; feverEndsAt = performance.now() + FEVER_DURATION_MS;
-    try { SFX('fever'); } catch {}
+    try { playSFX('fever'); } catch {}
     showFeverToast();
     try { feverSeen = true; } catch{}
     updateFeverUI(true);
@@ -1992,12 +2033,9 @@ function groupForIndex(idx){
         fx.spoken = true;
         try {
           if (speakOnSlice) {
-            if (sliceShowcasePronounceRomaji) {
-              const r = (fx.romaji || (typeof toRomaStr === 'function' ? (toRomaStr(fx.char || '') || '') : ''));
-              if (r) speakJA(r);
-            } else {
-              if (fx.char) speakKana(fx.char);
-            }
+            const r = (fx.romaji || (typeof toRomaStr === 'function' ? (toRomaStr(fx.char || '') || '') : ''));
+            if ((sliceShowcasePronounceRomaji || speakRomaji) && r) speakJA(r);
+            else if (fx.char) speakKana(fx.char);
           }
         } catch {}
       }
@@ -2237,7 +2275,7 @@ function groupForIndex(idx){
         });
         // bright gold ring highlight tied to coin slice
         popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || KANA_RADIUS) + 8, kind: 'coinring' });
-        try { SFX('coin'); } catch {}
+        try { playSFX('coin'); } catch {}
       } catch {}
       return;
     }
@@ -2263,14 +2301,14 @@ function groupForIndex(idx){
               const tx = viewW * 0.5, ty = viewH * 0.45;
               coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
               popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
-              sliceFx.push({ kind:'show', char: want, romaji: rTxt, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+              sliceFx.push({ kind:'show', char: want, romaji: rTxt, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: getShowcaseDur(), spin: true, spoken: false });
             } else {
-              if (speakOnSlice && want) speakKana(want);
+              speakChoice(want, rTxt);
             }
 
             // Sequence-mode scoring + feedback + fever charge
             try { popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS }); } catch {}
-            try { SFX('slice'); } catch {}
+            try { playSFX('slice'); } catch {}
             const nowS = performance.now();
             combo = (nowS - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
             lastSliceAt = nowS;
@@ -2307,9 +2345,9 @@ function groupForIndex(idx){
             const tx = viewW * 0.5, ty = viewH * 0.45;
             coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
             popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
-            sliceFx.push({ kind:'show', char: kanaTextQ, romaji: romajiTextQ, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+            sliceFx.push({ kind:'show', char: kanaTextQ, romaji: romajiTextQ, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: getShowcaseDur(), spin: true, spoken: false });
           } else {
-            if (speakOnSlice && kanaTextQ) speakKana(kanaTextQ);
+            speakChoice(kanaTextQ, romajiTextQ);
           }
           const nowQ = performance.now();
           combo = (nowQ - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
@@ -2363,7 +2401,7 @@ function groupForIndex(idx){
         stopComboMeter();
       }
       if (combo > maxCombo) maxCombo = combo;
-      try { SFX('slice'); } catch {}
+      try { playSFX('slice'); } catch {}
       // Fever charge: base plus small bonus for fast swipes; boost in sequence mode
       const charge = (FEVER_CHARGE_SLICE + Math.min(0.08, (lastSwipeDist-60) * 0.0015)) * (sequenceMode ? FEVER_SEQ_CHARGE_BOOST : 1);
       addFever(charge);
@@ -2379,9 +2417,9 @@ function groupForIndex(idx){
         const tx = viewW * 0.5, ty = viewH * 0.45;
         coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
         popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
-        sliceFx.push({ kind:'show', char: kanaText, romaji: romajiText, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+        sliceFx.push({ kind:'show', char: kanaText, romaji: romajiText, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: getShowcaseDur(), spin: true, spoken: false });
       } else {
-        if (speakOnSlice && kanaText) speakKana(kanaText);
+      speakChoice(kanaText, romajiText);
         pauseSliceMoment('', null);
       }
       // remove partner tile(s) if present
@@ -2396,7 +2434,7 @@ function groupForIndex(idx){
       popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || BOMB_RADIUS) + 6, isBomb: true });
       // penalty: end game or restart stage
       scoreEl.textContent = `BOOM!`;
-      try { SFX('bomb'); } catch {}
+      try { playSFX('bomb'); } catch {}
       try { triggerShake(140, 6); } catch {}
       if (bombEndsRound) {
         endGame('bomb');
@@ -2410,7 +2448,7 @@ function groupForIndex(idx){
       }
     } else if (t.type === 'power') {
       // Apply power-up effects
-      try { SFX('slice'); } catch {}
+      try { playSFX('slice'); } catch {}
       if (t.kind === 'freeze') { freezeUntil = Math.max(freezeUntil, performance.now() + powerFreezeMs); }
       else if (t.kind === 'double') { doubleUntil = Math.max(doubleUntil, performance.now() + powerDoubleMs); }
       else if (t.kind === 'shield') { shieldCount = Math.min(3, shieldCount + 1); }
@@ -2554,7 +2592,7 @@ canvas.addEventListener("pointerdown", e => {
     const dxSeg = p1.x - p0.x;
     const dySeg = p1.y - p0.y;
     const distSeg = Math.hypot(dxSeg, dySeg);
-    if (distSeg > 60) { try { SFX('swish'); } catch {} }
+    if (distSeg > 60) { try { playSFX('swish'); } catch {} }
     speedBoost = Math.min(32, distSeg * 0.7);
     lastSwipeDist = distSeg;
   }

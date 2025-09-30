@@ -735,12 +735,33 @@
               <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
               <span class="text-xs">Speak on slice</span>
             </label>
-            <label class="flex items-center gap-1 ml-2">
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
               <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
               <span class="text-xs">Romaji bubbles</span>
             </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-reduced" class="accent-teal-600" />
+              <span class="text-xs">Reduced motion</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-mute-sfx" class="accent-teal-600" />
+              <span class="text-xs">Mute SFX</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-speak-romaji" class="accent-teal-600" />
+              <span class="text-xs">Speak romaji</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-skip-reveal" class="accent-teal-600" checked />
+              <span class="text-xs">Tap to skip reveal</span>
+            </label>
             <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
           </div>
+          <!-- Floating Settings Button (desktop) + Backdrop for modalized toolbar -->
+          <button id="slice-settings-btn" title="Settings" class="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white shadow border border-amber-200 text-amber-700 hover:bg-white absolute right-2 top-1/2 -translate-y-1/2 z-[10005]">
+            <span style="font-size:20px">⚙️</span>
+          </button>
+          <div id="slice-settings-backdrop" class="hidden md:block fixed inset-0 bg-black/40 z-[10000]"></div>
         </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
         <div id="slice-instructions" class="absolute inset-x-0 top-32 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
@@ -830,6 +851,7 @@
       animation: sliceBgPan 18s ease-in-out infinite;
       position: relative;
     }
+    #slice-canvas{ touch-action: none; }
     @keyframes sliceBgPan{ 0%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } 100%{ background-position: 0% 50%; } }
     /* Make bottom kana tiles span full modal and center-wrap; place romaji/english below */
     #slice-kana {
@@ -854,6 +876,16 @@
     @media (max-width: 480px){
       #slice-kana{ white-space: normal !important; overflow-x: visible !important; }
     }
+    /* Mobile simplification: hide advanced controls */
+    @media (max-width: 768px){
+      #slice-wrap .mobile-advanced{ display:none !important; }
+    }
+    /* Desktop: hide inline toolbar; show as modal when settings-open */
+    @media (min-width: 768px){
+      #slice-wrap .slice-toolbar{ display:none !important; }
+      #slice-wrap.settings-open .slice-toolbar{ display:flex !important; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:min(92vw, 640px); z-index:10010; }
+      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; }
+    }
   </style>
 </div>
 
@@ -864,6 +896,16 @@
   const btnOpen = by('#openSlice');
   const btnOpenFooter = by('#openSliceFooter');
   const btnClose = by('#slice-close');
+  // Settings modal (desktop): toggle toolbar as modal
+  const wrapEl = by('#slice-wrap');
+  const settingsBtn = by('#slice-settings-btn');
+  const settingsBackdrop = by('#slice-settings-backdrop');
+  settingsBtn?.addEventListener('click', () => {
+    wrapEl?.classList.toggle('settings-open');
+  });
+  settingsBackdrop?.addEventListener('click', () => {
+    wrapEl?.classList.remove('settings-open');
+  });
   // Ensure intro instructions reflect current visuals (sumo bombs)
   try {
     const help = by('#slice-instructions');
@@ -955,6 +997,11 @@
       // Stage banner: cascading reveal of phrase/romaji
       stageCascadeRevealEnabled: true,
       stageCascadeStepMs: 60,
+      // UX toggles
+      reducedMotionEnabled: false,
+      sfxEnabled: true,
+      speakRomajiInstead: false,
+      enableSkipRevealTap: true,
       // New behavior toggles
       timerPerStage: true,
       bombEndsRound: false,
