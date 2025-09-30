@@ -53,6 +53,61 @@
   if (holder && holder.style && (!holder.style.position || holder.style.position === '')) {
     holder.style.position = 'relative';
   }
+  // Intro shading disabled as per request — keep a no-op spotlight helper
+  const introDim = null;
+  function updateIntroSpotlight(){
+    try {
+      if (!container || !introDim) return; // no-op
+      const wrap = container.getBoundingClientRect();
+      const els = [];
+      // Prefer spotlight targets in this order
+      const elHelp = document.getElementById('slice-instructions');
+      if (elHelp) els.push(elHelp);
+      // Stage reveal overlay (large phrase at start)
+      const prebanner = document.getElementById('slice-prebanner-phrase');
+      if (prebanner) els.push(prebanner);
+      // Memory cue wrap (flipping tiles before stage)
+      const memWrap = document.getElementById('slice-memory-wrap');
+      if (memWrap) els.push(memWrap);
+      // Fallback to the static bottom kana row if nothing else
+      const bottomKana = document.getElementById('slice-kana');
+      if (els.length === 0 && bottomKana) els.push(bottomKana);
+      const holes = [];
+      els.forEach(el => {
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const padX = 10, padY = 10; // breathing room around highlights
+        const x = Math.max(0, (r.left - wrap.left) - padX);
+        const y = Math.max(0, (r.top  - wrap.top)  - padY);
+        const w = Math.min(wrap.width,  r.width  + padX*2);
+        const h = Math.min(wrap.height, r.height + padY*2);
+        holes.push({ x, y, w, h, rx: 12, ry: 12 });
+      });
+      const W = Math.max(1, Math.round(wrap.width));
+      const H = Math.max(1, Math.round(wrap.height));
+      const rects = holes.map(h => `<rect x="${Math.max(0, Math.round(h.x))}" y="${Math.max(0, Math.round(h.y))}" width="${Math.max(1, Math.round(h.w))}" height="${Math.max(1, Math.round(h.h))}" rx="${h.rx}" ry="${h.ry}" fill="black"/>`).join('');
+      const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+  <defs>
+    <mask id="introMask">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="white"/>
+      ${rects}
+    </mask>
+  </defs>
+  <rect x="0" y="0" width="${W}" height="${H}" fill="#000" opacity="0.80" mask="url(#introMask)"/>
+</svg>`;
+      // no-op: shading removed
+    } catch {}
+  }
+  // No shading; listener retained but function is no-op
+  try { window.addEventListener('resize', updateIntroSpotlight, { passive:true }); } catch {}
+  // Lift instructions + phrase above the dimmer
+  try {
+    const helpEl = document.getElementById('slice-instructions');
+    if (helpEl) { helpEl.style.position = 'relative'; helpEl.style.zIndex = '70'; }
+    const kanaElTop = document.getElementById('slice-kana');
+    if (kanaElTop) { kanaElTop.style.position = 'relative'; kanaElTop.style.zIndex = '70'; }
+  } catch {}
   function computeUiScale(){
     try{
       const r = holder.getBoundingClientRect();
@@ -669,6 +724,7 @@ function groupForIndex(idx){
   
   // Pre-banner phrase reveal overlay (full-screen blackout + big cascading phrase)
   const revealOverlay = document.createElement('div');
+  revealOverlay.id = 'slice-reveal-ov';
   revealOverlay.style.position = 'absolute';
   revealOverlay.style.inset = '0';
   revealOverlay.style.display = 'none';
@@ -740,6 +796,7 @@ function groupForIndex(idx){
       };
 
       revealOverlay.style.display = 'flex';
+      try { updateIntroSpotlight(); } catch {}
       const romaText = (romajiText || '').toString();
       const tPhrase = cascade(phraseEl, phrase, Math.round(stageCascadeStepMs * 1.1));
       const tRoma = cascade(romaEl, romaText, Math.round(stageCascadeStepMs * 0.9));
@@ -803,12 +860,14 @@ function groupForIndex(idx){
   }
   // Memory cue overlay (shows tiles flipping the phrase)
   const memoryOverlay = document.createElement('div');
+  memoryOverlay.id = 'slice-memory-ov';
   memoryOverlay.style.position = 'absolute';
   memoryOverlay.style.inset = '0';
   memoryOverlay.style.display = 'none';
   memoryOverlay.style.alignItems = 'center';
   memoryOverlay.style.justifyContent = 'center';
-  memoryOverlay.style.background = 'rgba(0,0,0,0.35)';
+  // Darken the memory intro backdrop so the tiles stand out
+  memoryOverlay.style.background = 'rgba(0,0,0,0.80)';
   memoryOverlay.style.zIndex = '50';
   holder.appendChild(memoryOverlay);
   function presentMemoryCue(onDone){
@@ -818,6 +877,7 @@ function groupForIndex(idx){
       // Build tiles container
       memoryOverlay.innerHTML = '';
       const wrap = document.createElement('div');
+      wrap.id = 'slice-memory-wrap';
       wrap.style.display = 'flex';
       wrap.style.gap = Math.round(10 * Math.max(0.7, uiScale)).toString() + 'px';
       wrap.style.padding = Math.round(12 * Math.max(0.7, uiScale)) + 'px ' + Math.round(16 * Math.max(0.7, uiScale)) + 'px';
@@ -842,6 +902,7 @@ function groupForIndex(idx){
         wrap.appendChild(tile); tiles.push(tile);
       }
       memoryOverlay.style.display = 'flex';
+      try { updateIntroSpotlight(); } catch {}
       // Speak full phrase; start flipping tiles in sequence
       speakJA(phraseText).catch(()=>{});
       const step = 140; // ms between flips
@@ -2624,11 +2685,13 @@ canvas.addEventListener('pointerout', endPointer);
     roundActive = true;
     applySwordCursor();
     try {
-      const help = document.getElementById('slice-instructions');
-      if (help) {
-        help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
-        help.style.opacity = '1';
-        setTimeout(()=>help.style.opacity='0', 3000);
+    const help = document.getElementById('slice-instructions');
+    if (help) {
+      help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
+      help.style.opacity = '1';
+        // Shading removed; just show/hide help text
+        updateIntroSpotlight();
+        setTimeout(()=>{ help.style.opacity='0'; }, 3000);
       }
     } catch {}
 
