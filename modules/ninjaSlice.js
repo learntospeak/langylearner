@@ -588,7 +588,7 @@ function groupForIndex(idx){
   quizPromptEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
   quizPromptEl.style.font = '700 18px system-ui, sans-serif';
   quizPromptEl.style.letterSpacing = '.02em';
-  quizPromptEl.style.zIndex = '30';
+  quizPromptEl.style.zIndex = '75';
   quizPromptEl.style.pointerEvents = 'none';
   quizPromptEl.textContent = '';
   if (!quizPromptEl.parentElement) holder.appendChild(quizPromptEl);
@@ -611,7 +611,13 @@ function groupForIndex(idx){
       let bottom = 0;
       if (status){ const r1 = status.getBoundingClientRect(); bottom = Math.max(bottom, r1.bottom); }
       if (controlsWrap){ const r2 = controlsWrap.getBoundingClientRect(); bottom = Math.max(bottom, r2.bottom); }
-      const pad = 8;
+      // Avoid overlapping fever toast if visible
+      try {
+        const ft = document.getElementById('slice-fever-toast');
+        const op = ft ? parseFloat(ft.style.opacity || '0') : 0;
+        if (ft && op > 0.05) { const r3 = ft.getBoundingClientRect(); bottom = Math.max(bottom, r3.bottom); }
+      } catch {}
+      const pad = 10;
       if (bottom > 0){
         const y = Math.max(40, Math.round(bottom - rHolder.top + pad));
         quizPromptEl.style.top = y + 'px';
@@ -645,21 +651,40 @@ function groupForIndex(idx){
   feverToast.id = 'slice-fever-toast';
   feverToast.style.position = 'absolute';
   feverToast.style.left = '50%';
-  feverToast.style.top = '96px';
+  feverToast.style.top = '76px';
   feverToast.style.transform = 'translateX(-50%)';
   feverToast.style.padding = '10px 16px';
-  feverToast.style.borderRadius = '9999px';
-  feverToast.style.background = 'linear-gradient(90deg,#f59e0b,#f43f5e)';
-  feverToast.style.color = '#fff';
-  feverToast.style.font = '800 18px system-ui, sans-serif';
+  feverToast.style.borderRadius = '16px';
+  feverToast.style.background = '#ffffff';
+  feverToast.style.border = '3px solid #f59e0b';
+  feverToast.style.color = '#111827';
+  feverToast.style.font = '900 18px system-ui, sans-serif';
   feverToast.style.letterSpacing = '.03em';
-  feverToast.style.boxShadow = '0 10px 28px rgba(0,0,0,0.25)';
+  feverToast.style.boxShadow = '0 8px 0 #b45309, 0 12px 26px rgba(0,0,0,0.25)';
   feverToast.style.opacity = '0';
   feverToast.style.pointerEvents = 'none';
   feverToast.textContent = 'FEVER x2!';
   feverToast.style.zIndex = '70';
   if (!feverToast.parentElement) holder.appendChild(feverToast);
-  (function addFeverToastAnim(){ try{ const st=document.createElement('style'); st.textContent='@keyframes feverPop{0%{opacity:0;transform:translateX(-50%) scale(.9)}15%{opacity:1;transform:translateX(-50%) scale(1.05)}60%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1)} }'; (document.head||holder||document.body).appendChild(st);}catch{}})();
+  // Add anime-style tail
+  try {
+    if (!document.getElementById('slice-fever-tail')){
+      const tail = document.createElement('div');
+      tail.id = 'slice-fever-tail';
+      tail.style.position = 'absolute';
+      tail.style.left = '50%';
+      tail.style.bottom = '-7px';
+      tail.style.width = '14px';
+      tail.style.height = '14px';
+      tail.style.transform = 'translateX(-50%) rotate(45deg)';
+      tail.style.background = '#ffffff';
+      tail.style.borderLeft = '3px solid #f59e0b';
+      tail.style.borderBottom = '3px solid #f59e0b';
+      tail.style.boxShadow = '4px 6px 0 #b45309';
+      feverToast.appendChild(tail);
+    }
+  } catch {}
+  (function addFeverToastAnim(){ try{ const st=document.createElement('style'); st.textContent='@keyframes feverPop{0%{opacity:0;transform:translateX(-50%) scale(.9)}20%{opacity:1;transform:translateX(-50%) scale(1.1)}60%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1)} }'; (document.head||holder||document.body).appendChild(st);}catch{}})();
   let feverToastTimer=null;
   function showFeverToast(){
     try{
