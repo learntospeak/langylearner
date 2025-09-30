@@ -721,6 +721,8 @@ function groupForIndex(idx){
       <button id="slice-stage-next" class="btn btn-primary" style="margin-top:.25rem;">Continue</button>
     </div>`;
   holder.appendChild(stageOverlay);
+  // Track whether a pre-stage memory cue is showing (suppress prompts)
+  let memoryCueActive = false;
   
   // Pre-banner phrase reveal overlay (full-screen blackout + big cascading phrase)
   const revealOverlay = document.createElement('div');
@@ -879,6 +881,8 @@ function groupForIndex(idx){
   holder.appendChild(memoryOverlay);
   function presentMemoryCue(onDone){
     try{
+      memoryCueActive = true; // suppress prompts while cue is visible
+      try { setQuizPrompt(''); } catch {}
       const phraseText = (chars || []).join('');
       if (!phraseText) { onDone && onDone(); return; }
       // Build tiles container
@@ -920,7 +924,12 @@ function groupForIndex(idx){
       // Hold on the full phrase; duration tied to Speed control
       const hold = getCueHoldMs();
       const total = tiles.length ? (tiles.length - 1) * step + 450 + hold : 350 + hold;
-      setTimeout(() => { memoryOverlay.style.display = 'none'; onDone && onDone(); }, total);
+      setTimeout(() => {
+        memoryOverlay.style.display = 'none';
+        memoryCueActive = false;
+        try { if (sequenceMode && quizShowPrompt) ensurePromptForSequence(); } catch {}
+        onDone && onDone();
+      }, total);
     } catch { onDone && onDone(); }
   }
 
@@ -2143,6 +2152,16 @@ function groupForIndex(idx){
   function setQuizPrompt(text){
     if (!quizPromptEl) return;
     if (!quizShowPrompt) { quizPromptEl.textContent = ''; quizPromptEl.style.animation = ''; return; }
+    // Suppress prompt while overlays are active (memory cue, reveal, banner)
+    try {
+      const revealShown = !!(revealOverlay && revealOverlay.style && revealOverlay.style.display !== 'none');
+      const bannerShown = !!(stageOverlay && stageOverlay.style && stageOverlay.style.display !== 'none');
+      if (memoryCueActive || revealShown || bannerShown) {
+        quizPromptEl.textContent = '';
+        quizPromptEl.style.animation = '';
+        return;
+      }
+    } catch {}
     const t = (text || '').trim();
     quizPromptEl.textContent = t;
     // Pulse when visible
