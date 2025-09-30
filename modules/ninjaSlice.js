@@ -946,6 +946,7 @@ function groupForIndex(idx){
     const completedStage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
     const thisStageNumber = stageIndex + 1;
     pauseForStage();
+    try { setQuizPrompt(''); } catch {}
     // Show pre-banner phrase reveal in the center, then banner
     setTimeout(() => {
       presentStageReveal(completedStage.phrase || '', (completedStage.romaji || ''), () => {
