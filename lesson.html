@@ -831,6 +831,29 @@
       position: relative;
     }
     @keyframes sliceBgPan{ 0%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } 100%{ background-position: 0% 50%; } }
+    /* Make bottom kana tiles span full modal and center-wrap; place romaji/english below */
+    #slice-kana {
+      grid-column: 1 / -1; /* span all grid columns */
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      gap: 8px 6px !important;
+      width: 100%;
+    }
+    #slice-romaji, #slice-en {
+      grid-column: 1 / -1; /* ensure on a new row under kana */
+    }
+    /* Enlarge kana chips for focus */
+    #slice-wrap .kana-ch {
+      font-size: clamp(22px, 4vw, 34px) !important;
+      min-width: 2.2em !important;
+      padding: 6px 8px !important;
+      margin: 3px 3px !important;
+    }
+    /* Override previous mobile horizontal scroll for kana; wrap instead */
+    @media (max-width: 480px){
+      #slice-kana{ white-space: normal !important; overflow-x: visible !important; }
+    }
   </style>
 </div>
 
