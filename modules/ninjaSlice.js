@@ -211,27 +211,17 @@
   holder.appendChild(bonusOverlay);
   // Coin counter + countdown inside the status bar if present
   const statusBar = document.getElementById('slice-status');
-  // Persistent bank display
+  // Persistent bank display (matches Score/Time styling)
   const bankEl = document.createElement('div');
   bankEl.id = 'slice-coin-bank';
   bankEl.style.display = '';
-  bankEl.style.padding = '4px 8px';
-  bankEl.style.borderRadius = '10px';
-  bankEl.style.background = 'rgba(255,255,255,0.9)';
-  bankEl.style.border = '1px solid rgba(16,185,129,0.35)';
-  bankEl.style.color = '#065f46';
-  bankEl.style.font = '700 13px system-ui, sans-serif';
-  bankEl.textContent = 'Total: 0';
-  const bankReset = document.createElement('button');
-  bankReset.type = 'button';
-  bankReset.textContent = 'Reset';
-  bankReset.style.marginLeft = '6px';
-  bankReset.style.font = '600 11px system-ui, sans-serif';
-  bankReset.style.padding = '2px 6px';
-  bankReset.style.borderRadius = '8px';
-  bankReset.style.border = '1px solid rgba(16,185,129,0.35)';
-  bankReset.style.background = 'rgba(236,253,245,0.9)';
-  bankReset.style.color = '#047857';
+  bankEl.style.background = 'transparent';
+  bankEl.style.padding = '0';
+  bankEl.style.border = 'none';
+  bankEl.innerHTML = '<div class="flex flex-col gap-1">\
+    <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Coins</span>\
+    <span id="slice-coin-bank-val" class="font-semibold text-lg tracking-wide">0</span>\
+  </div>';
   const coinCounterEl = document.createElement('div');
   coinCounterEl.id = 'slice-coin-counter';
   coinCounterEl.style.display = 'none';
@@ -254,13 +244,8 @@
   countdownEl.textContent = String(ffaSeconds);
   try {
     if (statusBar) {
-      // layout: score | time | combo | total | coins | countdown
-      const bankWrap = document.createElement('div');
-      bankWrap.style.display = 'flex';
-      bankWrap.style.alignItems = 'center';
-      bankWrap.appendChild(bankEl);
-      bankWrap.appendChild(bankReset);
-      statusBar.appendChild(bankWrap);
+      // layout: score | time | combo | bank | coins | countdown
+      statusBar.appendChild(bankEl);
       statusBar.appendChild(coinCounterEl);
       statusBar.appendChild(countdownEl);
       // Power-up badges
@@ -283,9 +268,6 @@
       bankEl.style.position = 'absolute';
       bankEl.style.left = '12px';
       bankEl.style.top = '8px';
-      bankReset.style.position = 'absolute';
-      bankReset.style.left = '90px';
-      bankReset.style.top = '8px';
       coinCounterEl.style.position = 'absolute';
       coinCounterEl.style.left = '12px';
       coinCounterEl.style.top = '38px';
@@ -293,7 +275,6 @@
       countdownEl.style.right = '12px';
       countdownEl.style.top = '8px';
       holder.appendChild(bankEl);
-      holder.appendChild(bankReset);
       holder.appendChild(coinCounterEl);
       holder.appendChild(countdownEl);
       // badges fallback top-left
@@ -306,17 +287,18 @@
   } catch {}
 
   function updateCoinBankUI(){
-    try { bankEl.textContent = `Total: ${coinBank}`; } catch {}
+    try { const v = document.getElementById('slice-coin-bank-val'); if (v) v.textContent = String(coinBank); } catch {}
     try { localStorage.setItem('sliceCoinBank', String(Math.max(0, coinBank|0))); } catch {}
   }
+  // Hook reset action from menu when present
   try {
-    bankReset.addEventListener('click', () => {
+    const menuReset = document.getElementById('slice-bank-reset');
+    menuReset?.addEventListener('click', () => {
       try {
         const ok = window.confirm ? window.confirm('Reset total coins?') : true;
         if (!ok) return;
       } catch {}
-      coinBank = 0;
-      updateCoinBankUI();
+      coinBank = 0; updateCoinBankUI();
     });
   } catch {}
   function startFreeForAll(){
@@ -600,23 +582,32 @@ function groupForIndex(idx){
   // Prompt UI (top-center) for quiz/sequence targets
   let quizPromptEl = document.getElementById('slice-quiz-prompt') || document.createElement('div');
   quizPromptEl.id = 'slice-quiz-prompt';
-  quizPromptEl.style.position = 'absolute';
-  // Position centrally; dynamic Y computed below to avoid overlapping the top bar
-  quizPromptEl.style.top = '72px';
-  quizPromptEl.style.left = '50%';
-  quizPromptEl.style.transform = 'translateX(-50%)';
+  // Inline pill, placed in the header row (left side)
+  quizPromptEl.style.position = 'static';
+  // Constrain so it sits neatly to the left of the icons
+  quizPromptEl.style.maxWidth = 'calc(100% - 88px)'; // ~ two 36px icons + gaps
+  quizPromptEl.style.whiteSpace = 'nowrap';
+  quizPromptEl.style.overflow = 'hidden';
+  quizPromptEl.style.textOverflow = 'ellipsis';
   quizPromptEl.style.background = 'rgba(255,255,255,0.92)';
   quizPromptEl.style.color = '#111827';
-  quizPromptEl.style.padding = '10px 16px';
-  quizPromptEl.style.borderRadius = '12px';
+  quizPromptEl.style.padding = '6px 10px';
+  quizPromptEl.style.borderRadius = '10px';
   quizPromptEl.style.border = '1px solid rgba(245,158,11,0.5)';
-  quizPromptEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
-  quizPromptEl.style.font = '700 18px system-ui, sans-serif';
+  quizPromptEl.style.boxShadow = '0 6px 16px rgba(0,0,0,0.14)';
+  quizPromptEl.style.font = '700 14px system-ui, sans-serif';
   quizPromptEl.style.letterSpacing = '.02em';
-  quizPromptEl.style.zIndex = '30';
   quizPromptEl.style.pointerEvents = 'none';
   quizPromptEl.textContent = '';
-  if (!quizPromptEl.parentElement) holder.appendChild(quizPromptEl);
+  // Attach to header if present, else fallback to holder
+  try {
+    const host = document.getElementById('slice-header') || document.getElementById('slice-quiz-prompt-host');
+    if (host && !quizPromptEl.parentElement) {
+      host.insertBefore(quizPromptEl, host.firstChild || null);
+    } else if (!quizPromptEl.parentElement) {
+      holder.appendChild(quizPromptEl);
+    }
+  } catch { if (!quizPromptEl.parentElement) holder.appendChild(quizPromptEl); }
 
   // Add a subtle pulse animation for extra prominence
   (function addPromptPulse(){
@@ -627,22 +618,7 @@ function groupForIndex(idx){
     }catch{}
   })();
 
-  function positionQuizPrompt(){
-    try{
-      const rHolder = holder.getBoundingClientRect();
-      const status = document.getElementById('slice-status');
-      const closeBtn = document.getElementById('slice-close');
-      const controlsWrap = closeBtn ? closeBtn.parentElement : null;
-      let bottom = 0;
-      if (status){ const r1 = status.getBoundingClientRect(); bottom = Math.max(bottom, r1.bottom); }
-      if (controlsWrap){ const r2 = controlsWrap.getBoundingClientRect(); bottom = Math.max(bottom, r2.bottom); }
-      const pad = 8;
-      if (bottom > 0){
-        const y = Math.max(40, Math.round(bottom - rHolder.top + pad));
-        quizPromptEl.style.top = y + 'px';
-      }
-    }catch{}
-  }
+  function positionQuizPrompt(){ /* no-op: prompt is inline with header */ }
 
   function positionInstructions(){
     try{
@@ -1225,8 +1201,7 @@ function groupForIndex(idx){
   try { if ('ResizeObserver' in window) new ResizeObserver(()=>resize()).observe(holder); } catch {}
   // Keep prompt positioned after layout changes
   try {
-    window.addEventListener('resize', positionQuizPrompt);
-    if ('ResizeObserver' in window) new ResizeObserver(()=>positionQuizPrompt()).observe(holder);
+    // Inline prompt doesn't need positioning, but keep a cheap call
     setTimeout(positionQuizPrompt, 0);
     window.addEventListener('resize', positionInstructions);
     if ('ResizeObserver' in window) new ResizeObserver(()=>positionInstructions()).observe(holder);

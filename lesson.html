@@ -709,37 +709,67 @@
             </div>
             <span id="slice-fever-label" class="text-[10px] uppercase tracking-wide text-amber-700 hidden">Fever</span>
           </div>
-          <div class="slice-toolbar ui-panel pointer-events-auto w-full flex items-center gap-2 md:gap-2 bg-white/90 px-3 md:px-4 py-2 rounded-lg shadow border border-amber-200 text-slate-900 flex-wrap md:flex-nowrap overflow-visible">
-            <label class="flex items-center gap-1">
-              <span class="text-xs">Speed</span>
-              <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
-                <option value="0.85">Slow</option>
-                <option value="1.0" selected>Normal</option>
-                <option value="1.25">Fast</option>
-                <option value="1.5">Turbo</option>
-              </select>
-            </label>
-            <label class="flex items-center gap-1">
-              <span class="text-xs">Difficulty</span>
-              <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
-                <option value="hard">Hard</option>
-              </select>
-            </label>
-            <label class="flex items-center gap-1">
-              <input type="checkbox" id="slice-showphrase" class="accent-teal-600" checked />
-              <span class="text-xs">Show phrase</span>
-            </label>
-            <label class="flex items-center gap-1">
-              <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
-              <span class="text-xs">Speak on slice</span>
-            </label>
-            <label class="flex items-center gap-1 ml-2">
-              <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
-              <span class="text-xs">Romaji bubbles</span>
-            </label>
-            <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
+          <div id="slice-header" class="pointer-events-auto w-full flex items-center justify-end gap-2 relative">
+            <div id="slice-quiz-prompt-host" class="min-w-0 flex-shrink overflow-hidden"></div>
+            <!-- Settings gear -->
+            <button id="slice-gear" aria-haspopup="true" aria-expanded="false" class="p-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300" title="Settings">
+              <!-- Simple cog with 8 teeth for clearer gear look -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor">
+                <!-- center hub -->
+                <circle cx="12" cy="12" r="3.5"></circle>
+                <!-- outer ring -->
+                <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+                <!-- teeth -->
+                <rect x="11" y="1.5" width="2" height="4" rx="0.6"></rect>
+                <rect x="11" y="18.5" width="2" height="4" rx="0.6"></rect>
+                <rect x="18.5" y="11" width="4" height="2" rx="0.6"></rect>
+                <rect x="1.5" y="11" width="4" height="2" rx="0.6"></rect>
+                <rect x="11" y="1.5" width="2" height="4" rx="0.6" transform="rotate(45 12 12)"></rect>
+                <rect x="11" y="18.5" width="2" height="4" rx="0.6" transform="rotate(45 12 12)"></rect>
+                <rect x="18.5" y="11" width="4" height="2" rx="0.6" transform="rotate(45 12 12)"></rect>
+                <rect x="1.5" y="11" width="4" height="2" rx="0.6" transform="rotate(45 12 12)"></rect>
+              </svg>
+            </button>
+            <!-- Close X -->
+            <button id="slice-close" aria-label="Close" class="p-2 w-9 h-9 flex items-center justify-center rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"/></svg>
+            </button>
+            <!-- Dropdown menu -->
+            <div id="slice-menu" class="absolute right-0 top-12 z-[120] hidden bg-white/95 text-slate-900 rounded-lg shadow border border-amber-200 p-3 w-[min(88vw,280px)]">
+              <div class="flex flex-col gap-2">
+                <label class="flex items-center justify-between gap-3">
+                  <span class="text-xs">Speed</span>
+                  <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
+                    <option value="0.85">Slow</option>
+                    <option value="1.0" selected>Normal</option>
+                    <option value="1.25">Fast</option>
+                    <option value="1.5">Turbo</option>
+                  </select>
+                </label>
+                <label class="flex items-center justify-between gap-3">
+                  <span class="text-xs">Difficulty</span>
+                  <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
+                    <option value="easy">Easy</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </label>
+                <label class="flex items-center justify-between gap-3">
+                  <span class="text-xs">Show phrase</span>
+                  <input type="checkbox" id="slice-showphrase" class="accent-teal-600" checked />
+                </label>
+                <label class="flex items-center justify-between gap-3">
+                  <span class="text-xs">Speak on slice</span>
+                  <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
+                </label>
+                <label class="flex items-center justify-between gap-3">
+                  <span class="text-xs">Romaji bubbles</span>
+                  <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
+                </label>
+                <hr class="my-1">
+                <button id="slice-bank-reset" class="text-xs px-2 py-1 rounded border border-amber-200 bg-white hover:bg-amber-50 text-amber-900 text-left">Reset coins</button>
+              </div>
+            </div>
           </div>
         </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
@@ -806,9 +836,13 @@
       /* Compact bottom kana chips */
       #slice-wrap .kana-ch{ transform: scale(0.85); margin: 0 1px !important; }
       #slice-progressbar{ height: 6px !important; }
-      /* Put Close on its own line to avoid clipping */
-      #slice-close{ width: 100% !important; margin-left: 0 !important; margin-top: 6px; text-align: center; }
+      /* Icon buttons: keep compact and inline on mobile */
+      #slice-close{ width: auto !important; margin-left: 0 !important; margin-top: 0 !important; }
       #slice-wrap .slice-toolbar{ padding-right: 10px !important; }
+      /* Align canvas with the top of the content card on small screens */
+      #slice-wrap .pt-24{ padding-top: 8px !important; }
+      #slice-wrap .pb-16{ padding-bottom: 8px !important; }
+      #slice-canvas{ margin-top: 0 !important; width: 100% !important; display: block; }
       /* Make example phrase (kana chips) horizontally scrollable to prevent cut-off */
       #slice-kana{
         display: block;
@@ -864,6 +898,8 @@
   const btnOpen = by('#openSlice');
   const btnOpenFooter = by('#openSliceFooter');
   const btnClose = by('#slice-close');
+  const btnGear = by('#slice-gear');
+  const menu = by('#slice-menu');
   // Ensure intro instructions reflect current visuals (sumo bombs)
   try {
     const help = by('#slice-instructions');
@@ -970,6 +1006,13 @@
   btnOpen?.addEventListener('click', launchSlice);
   btnOpenFooter?.addEventListener('click', launchSlice);
   btnClose?.addEventListener('click', () => overlay.classList.add('hidden'));
+  // Settings dropdown toggle
+  function closeMenu(){ try{ menu?.classList.add('hidden'); btnGear?.setAttribute('aria-expanded','false'); } catch{} }
+  function openMenu(){ try{ menu?.classList.remove('hidden'); btnGear?.setAttribute('aria-expanded','true'); } catch{} }
+  btnGear?.addEventListener('click', (e)=>{ e.stopPropagation(); if (!menu) return; if (menu.classList.contains('hidden')) openMenu(); else closeMenu(); });
+  // Dismiss on outside click or Esc
+  overlay?.addEventListener('click', (e)=>{ if (!menu) return; if (e.target === overlay) closeMenu(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeMenu(); });
 </script>
 
 </html>
