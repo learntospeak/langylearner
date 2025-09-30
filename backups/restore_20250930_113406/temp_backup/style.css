@@ -1,0 +1,3 @@
+#lesson-row{display:flex;align-items:flex-start;gap:12px}
+#lesson-main{flex:1}
+#mascot{position:sticky;top:12px;width:64px;height:64px}
