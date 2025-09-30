@@ -761,7 +761,7 @@
           <button id="slice-settings-btn" title="Settings" class="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white shadow border border-amber-200 text-amber-700 hover:bg-white absolute right-2 top-1/2 -translate-y-1/2 z-[10005]">
             <span style="font-size:20px">⚙️</span>
           </button>
-          <div id="slice-settings-backdrop" class="hidden md:block fixed inset-0 bg-black/40 z-[10000]"></div>
+          <div id="slice-settings-backdrop" class="hidden fixed inset-0 bg-black/40 z-[10000] pointer-events-none"></div>
         </div>
         <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
         <div id="slice-instructions" class="absolute inset-x-0 top-32 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
@@ -884,7 +884,7 @@
     @media (min-width: 768px){
       #slice-wrap .slice-toolbar{ display:none !important; }
       #slice-wrap.settings-open .slice-toolbar{ display:flex !important; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:min(92vw, 640px); z-index:10010; }
-      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; }
+      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; pointer-events:auto !important; }
     }
   </style>
 </div>
