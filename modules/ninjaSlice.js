@@ -101,12 +101,12 @@
   }
   // No shading; listener retained but function is no-op
   try { window.addEventListener('resize', updateIntroSpotlight, { passive:true }); } catch {}
-  // Lift instructions + phrase above the dimmer
+  // Ensure key elements render above overlays without changing layout
   try {
     const helpEl = document.getElementById('slice-instructions');
-    if (helpEl) { helpEl.style.position = 'relative'; helpEl.style.zIndex = '70'; }
+    if (helpEl) { helpEl.style.zIndex = '70'; /* keep CSS positioning (absolute) */ }
     const kanaElTop = document.getElementById('slice-kana');
-    if (kanaElTop) { kanaElTop.style.position = 'relative'; kanaElTop.style.zIndex = '70'; }
+    if (kanaElTop) { kanaElTop.style.zIndex = '70'; }
   } catch {}
   function computeUiScale(){
     try{
