@@ -101,43 +101,6 @@
         #mascot.mascot-celebrate {
             animation: celebrate 0.6s ease-in-out 0s 2;
         }
-
-        #mascot.mascot-confused {
-            animation: shake 0.4s ease-in-out 0s 2;
-        }
-
-        @keyframes float {
-            0% {
-                transform: translateY(0)
-            }
-
-            50% {
-                transform: translateY(-4px)
-            }
-
-            100% {
-                transform: translateY(0)
-            }
-        }
-
-        @keyframes talk {
-
-            0%,
-            100% {
-                transform: scaleY(0.6)
-            }
-
-            50% {
-                transform: scaleY(1.2)
-            }
-        }
-
-        @keyframes celebrate {
-            0% {
-                transform: translateY(0) scale(1)
-            }
-
-            50% {
                 transform: translateY(-8px) scale(1.05)
             }
 
@@ -588,11 +551,9 @@
 
 
 
-    <!-- Libraries / App scripts -->
 <!-- Local Wanakana (vendor) -->
 <script src="./modules/wanakana.min.js"></script>
 <!-- Fallback shim removed to prevent stale 404s; local wanakana.min.js is present. -->
-
 <script type="module" src="./lesson-shim.js?v=15"></script>
 
 <!-- Your module that renders/boots the lesson -->
@@ -706,11 +667,9 @@
             </div>
             <div id="slice-combo-meter" class="pointer-events-none w-40 h-2.5 bg-white/70 rounded-full overflow-hidden opacity-0 transition-opacity">
               <div id="slice-combo-meter-fill" class="h-full bg-amber-500" style="width:0%"></div>
-            </div>
             <span id="slice-fever-label" class="text-[10px] uppercase tracking-wide text-amber-700 hidden">Fever</span>
           </div>
           <div class="slice-toolbar ui-panel pointer-events-auto w-full flex items-center gap-2 md:gap-2 bg-white/90 px-3 md:px-4 py-2 rounded-lg shadow border border-amber-200 text-slate-900 flex-wrap md:flex-nowrap overflow-visible">
-            <label class="flex items-center gap-1">
               <span class="text-xs">Speed</span>
               <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
                 <option value="0.85">Slow</option>
@@ -973,8 +932,6 @@
 </script>
 
 </html>
-
-
 
 
 
