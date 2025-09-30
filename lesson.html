@@ -912,6 +912,11 @@
   settingsBackdrop?.addEventListener('click', () => {
     wrapEl?.classList.remove('settings-open');
   });
+  // Fallback delegation in case the button is re-rendered
+  document.addEventListener('click', (ev) => {
+    const t = ev.target && (ev.target.closest ? ev.target.closest('#slice-settings-btn') : null);
+    if (t) { ev.preventDefault(); ev.stopPropagation(); wrapEl?.classList.toggle('settings-open'); }
+  });
   // Ensure intro instructions reflect current visuals (sumo bombs)
   try {
     const help = by('#slice-instructions');
