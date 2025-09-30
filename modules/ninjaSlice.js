@@ -588,7 +588,7 @@ function groupForIndex(idx){
   quizPromptEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
   quizPromptEl.style.font = '700 18px system-ui, sans-serif';
   quizPromptEl.style.letterSpacing = '.02em';
-  quizPromptEl.style.zIndex = '75';
+  quizPromptEl.style.zIndex = '50';
   quizPromptEl.style.pointerEvents = 'none';
   quizPromptEl.textContent = '';
   if (!quizPromptEl.parentElement) holder.appendChild(quizPromptEl);
@@ -1698,6 +1698,27 @@ function groupForIndex(idx){
         ctx.strokeStyle = '#9a5b0e';
         ctx.lineWidth = 2.6;
         ctx.arc(0, 0, radius-1, 0, Math.PI*2); ctx.stroke();
+
+        // Anime target glow (Sequence target or correct quiz option)
+        if ((sequenceMode && t.isTarget) || (quizMode && t.isCorrect)) {
+          const pulse = (Math.sin(now * 0.015) + 1) * 0.5; // 0..1
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          const rg = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius * 1.35);
+          rg.addColorStop(0.0, 'rgba(255,255,255,0.0)');
+          rg.addColorStop(0.6, 'rgba(255,215,0,' + (0.35 + 0.35 * pulse) + ')');
+          rg.addColorStop(1.0, 'rgba(255,165,0,0)');
+          ctx.fillStyle = rg;
+          ctx.beginPath(); ctx.arc(0,0,radius*1.35,0,Math.PI*2); ctx.fill();
+          ctx.restore();
+          // Rim shimmer
+          ctx.save();
+          ctx.shadowColor = 'rgba(255,238,0,0.85)';
+          ctx.shadowBlur = 18 + 22 * pulse;
+          ctx.beginPath(); ctx.arc(0,0,radius+2,0,Math.PI*2);
+          ctx.strokeStyle = 'rgba(255,196,0,0.9)'; ctx.lineWidth = 2.5; ctx.stroke();
+          ctx.restore();
+        }
 
         // Glow effect during fever or streaks
         if (feverActive) {
