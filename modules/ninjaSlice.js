@@ -1,4 +1,4 @@
-﻿export function initNinjaSlice(config) {
+export function initNinjaSlice(config) {
   const {
     containerId,
     canvasId,
@@ -2665,7 +2665,7 @@ canvas.addEventListener('pointerout', endPointer);
     try {
     const help = document.getElementById('slice-instructions');
     if (help) {
-      help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
+      help.textContent = 'Slice kana. Bombs explode - avoid them. Swipe for combos.';
       help.style.opacity = '1';
         // Shading removed; just show/hide help text
         updateIntroSpotlight();
