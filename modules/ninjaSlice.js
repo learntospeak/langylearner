@@ -106,6 +106,9 @@
   const sliceShowcaseEnabled = (config && config.sliceShowcaseEnabled) !== false; // default on
   const sliceShowcasePronounceRomaji = !!(config && config.sliceShowcasePronounceRomaji); // default off
   const sliceShowcaseDurationMs = Math.max(400, Number((config && config.sliceShowcaseDurationMs) ?? 900));
+  // Stage banner cascade reveal
+  const stageCascadeRevealEnabled = (config && config.stageCascadeRevealEnabled) !== false; // default on
+  const stageCascadeStepMs = Math.max(20, Number((config && config.stageCascadeStepMs) ?? 60));
   // Normal-mode distractors (noise) — increase challenge without quiz mode
   const noiseSpawnChance = Math.max(0, Math.min(0.6, Number((config && config.noiseSpawnChance) ?? 0.12)));
   const noisePenalty = Math.max(0, Number((config && config.noisePenalty) ?? 50));
@@ -672,8 +675,32 @@ function groupForIndex(idx){
       const coEl = stageOverlay.querySelector('#slice-stage-coins');
       const stEl = stageOverlay.querySelector('#slice-stage-stats');
       if (numEl) numEl.textContent = String(number);
-      if (phEl) phEl.textContent = phraseText || '';
-      if (roEl) roEl.textContent = romajiText || '';
+      // Cascading reveal for phrase/romaji
+      const cascade = (el, text, stepMs) => {
+        if (!el) return;
+        const t = (text || '').toString();
+        if (!stageCascadeRevealEnabled || !t) { el.textContent = t; return; }
+        el.textContent = '';
+        const frag = document.createDocumentFragment();
+        const chars = Array.from(t);
+        for (let i = 0; i < chars.length; i++) {
+          const span = document.createElement('span');
+          span.textContent = chars[i];
+          span.style.opacity = '0';
+          span.style.display = 'inline-block';
+          span.style.transform = 'translateY(8px)';
+          span.style.transition = 'opacity 260ms ease, transform 260ms ease';
+          span.style.transitionDelay = String(i * Math.max(10, stepMs)) + 'ms';
+          frag.appendChild(span);
+        }
+        el.appendChild(frag);
+        requestAnimationFrame(() => {
+          const spans = el.querySelectorAll('span');
+          spans.forEach(s => { s.style.opacity = '1'; s.style.transform = 'translateY(0)'; });
+        });
+      };
+      cascade(phEl, phraseText || '', stageCascadeStepMs);
+      cascade(roEl, romajiText || '', Math.round(stageCascadeStepMs * 0.8));
       if (enEl) enEl.textContent = englishText || '';
       if (coEl) coEl.textContent = lastFFAAward > 0 ? `Coins +${lastFFAAward}` : '';
       if (stEl) {
@@ -1894,15 +1921,39 @@ function groupForIndex(idx){
       const fontSize = Math.round(baseR * 2.4);
       // Solid white disc to mask background while zoomed
       const discR = Math.max(fontSize * 0.85, baseR * 2.2);
+      // Drop shadow for depth
       ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 6;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(0, 0, discR, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
       // crisp rim to keep a coin-like edge
+      ctx.save();
       ctx.lineWidth = 3;
       ctx.strokeStyle = '#9a5b0e';
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, discR, 0, Math.PI*2); ctx.stroke();
+      // subtle glint sweep
+      ctx.save();
+      ctx.beginPath(); ctx.arc(0, 0, discR, 0, Math.PI*2); ctx.clip();
+      const prevOp = ctx.globalCompositeOperation;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.28;
+      ctx.rotate(-0.25);
+      const lg = ctx.createLinearGradient(-discR, -discR*0.3, discR, -discR*0.3);
+      lg.addColorStop(0.00, 'rgba(255,255,255,0.0)');
+      lg.addColorStop(0.20, 'rgba(255,255,255,0.6)');
+      lg.addColorStop(0.50, 'rgba(255,255,255,0.0)');
+      lg.addColorStop(0.80, 'rgba(255,255,255,0.5)');
+      lg.addColorStop(1.00, 'rgba(255,255,255,0.0)');
+      ctx.fillStyle = lg;
+      ctx.fillRect(-discR, -discR, discR*2, discR*2);
+      ctx.globalCompositeOperation = prevOp;
+      ctx.restore();
       ctx.restore();
 
       // Draw glyph with bevel similar to embossed style
