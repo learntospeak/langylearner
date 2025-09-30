@@ -251,14 +251,16 @@
       // Power-up badges
       const badge = (id, text, bg, color) => {
         const el = document.createElement('div');
-        el.id = id; el.textContent = text;
+        el.id = id; el.textContent = text; el.className = 'slice-badge';
         el.style.padding = '2px 8px'; el.style.borderRadius = '9999px';
         el.style.marginLeft = '6px'; el.style.font = '700 11px system-ui, sans-serif';
         el.style.background = bg; el.style.color = color; el.style.border = '1px solid rgba(0,0,0,0.1)';
         el.style.display = 'none'; return el;
       };
       window.__freezeBadge = badge('slice-freeze-badge', 'Freeze', '#e0f2fe', '#0c4a6e');
-      window.__doubleBadge = badge('slice-double-badge', 'x2', '#fee2e2', '#7f1d1d');
+      // Remove x2 badge text; keep element hidden for layout safety
+      window.__doubleBadge = badge('slice-double-badge', '', '#fee2e2', '#7f1d1d');
+      window.__doubleBadge.style.display = 'none';
       window.__shieldBadge = badge('slice-shield-badge', 'Shield', '#dcfce7', '#064e3b');
       statusBar.appendChild(window.__freezeBadge);
       statusBar.appendChild(window.__doubleBadge);
@@ -280,7 +282,7 @@
       // badges fallback top-left
       const place = (el, x, y) => { el.style.position='absolute'; el.style.left=x; el.style.top=y; holder.appendChild(el); };
       window.__freezeBadge = document.createElement('div'); window.__freezeBadge.textContent='Freeze'; place(window.__freezeBadge,'12px','58px');
-      window.__doubleBadge = document.createElement('div'); window.__doubleBadge.textContent='x2'; place(window.__doubleBadge,'80px','58px');
+      window.__doubleBadge = document.createElement('div'); window.__doubleBadge.textContent=''; place(window.__doubleBadge,'80px','58px'); window.__doubleBadge.style.display='none';
       window.__shieldBadge = document.createElement('div'); window.__shieldBadge.textContent='Shield'; place(window.__shieldBadge,'110px','58px');
       [window.__freezeBadge, window.__doubleBadge, window.__shieldBadge].forEach(el=>{ el.style.display='none'; el.style.padding='2px 8px'; el.style.border='1px solid rgba(0,0,0,0.1)'; el.style.borderRadius='9999px'; el.style.background='#fff'; el.style.font='700 11px system-ui, sans-serif'; });
     }
@@ -657,7 +659,7 @@ function groupForIndex(idx){
   feverToast.style.boxShadow = '0 10px 28px rgba(0,0,0,0.25)';
   feverToast.style.opacity = '0';
   feverToast.style.pointerEvents = 'none';
-  feverToast.textContent = 'FEVER x2!';
+  feverToast.textContent = 'FEVER';
   feverToast.style.zIndex = '70';
   if (!feverToast.parentElement) holder.appendChild(feverToast);
   (function addFeverToastAnim(){ try{ const st=document.createElement('style'); st.textContent='@keyframes feverPop{0%{opacity:0;transform:translateX(-50%) scale(.9)}15%{opacity:1;transform:translateX(-50%) scale(1.05)}60%{opacity:1;transform:translateX(-50%) scale(1)}100%{opacity:0;transform:translateX(-50%) scale(1)} }'; (document.head||holder||document.body).appendChild(st);}catch{}})();
@@ -1295,7 +1297,7 @@ function groupForIndex(idx){
       comboMeter.style.opacity = '1';
       if (feverLabel){
         if (feverActive) {
-          feverLabel.textContent = 'Fever x2';
+          feverLabel.textContent = 'Fever';
           feverLabel.classList.remove('hidden');
           feverLabel.style.color = '#be123c'; // rose-700
         } else if (fever > 0.01) {
@@ -1316,7 +1318,7 @@ function groupForIndex(idx){
       if (freezeUntil > now){ window.__freezeBadge.style.display=''; window.__freezeBadge.textContent = `Freeze ${Math.ceil((freezeUntil-now)/1000)}s`; }
       else if (window.__freezeBadge){ window.__freezeBadge.style.display='none'; }
       // Double
-      if (doubleUntil > now){ window.__doubleBadge.style.display=''; window.__doubleBadge.textContent = `x2 ${Math.ceil((doubleUntil-now)/1000)}s`; }
+      if (doubleUntil > now){ /* suppress x2 badge */ window.__doubleBadge.style.display='none'; }
       else if (window.__doubleBadge){ window.__doubleBadge.style.display='none'; }
       // Shield
       if (shieldCount > 0){ window.__shieldBadge.style.display=''; window.__shieldBadge.textContent = `Shield x${shieldCount}`; }
@@ -1628,7 +1630,8 @@ function groupForIndex(idx){
         } else if (t.kind==='shield'){
           ctx.beginPath(); ctx.moveTo(0,-radius*0.5); ctx.quadraticCurveTo(radius*0.65,-radius*0.2,0,radius*0.6); ctx.quadraticCurveTo(-radius*0.65,-radius*0.2,0,-radius*0.5); ctx.fill();
         } else { // double
-          ctx.font = `${Math.round(radius*0.7)}px system-ui, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('×2',0,0);
+        // Suppress ×2 overlay text on coin face
+        ctx.font = `${Math.round(radius*0.7)}px system-ui, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; /* no text */
         }
         ctx.restore();
       } else if (t.type === 'noise') {
@@ -2260,7 +2263,7 @@ function groupForIndex(idx){
         window.__ffaChain.last = nowC;
         const mult = Math.max(1, window.__ffaChain.n||1);
         coinCount += Math.max(0, coinPerKana * mult);
-        coinCounterEl.textContent = `Coins: ${coinCount} ${mult>1?`(x${mult})`:''}`;
+        coinCounterEl.textContent = `Coins: ${coinCount}`;
         // coin particle
         coinFx.push({
           kind: 'coin',
@@ -2312,7 +2315,7 @@ function groupForIndex(idx){
             lastSliceAt = nowS;
             const baseS = 100 * combo;
             score += Math.round(baseS * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
-            scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}${feverActive ? ' ✨x2' : ''}`;
+            scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}`;
             if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
             const seqCharge = (FEVER_CHARGE_SLICE + Math.min(0.08, (lastSwipeDist-60) * 0.0015)) * FEVER_SEQ_CHARGE_BOOST;
             addFever(seqCharge);
@@ -2352,7 +2355,7 @@ function groupForIndex(idx){
           lastSliceAt = nowQ;
           const baseQ = 200 * Math.max(1, combo);
           score += Math.round(baseQ * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
-          scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}${feverActive ? ' ✨x2' : ''}`;
+          scoreEl.textContent = `${score}${combo > 1 ? ` x${combo}` : ''}`;
           if (combo > 1) { flashCombo(); primeComboMeter(); } else { resetComboBadge(); stopComboMeter(); }
           if (combo > maxCombo) maxCombo = combo;
           // Charge fever more with higher combos; boost in sequence mode
@@ -2390,7 +2393,7 @@ function groupForIndex(idx){
       const base = 100 * combo;
       score += Math.round(base * ((feverEnabled && feverActive) ? FEVER_MULTIPLIER : 1));
       const comboSuffix = combo > 1 ? ` x${combo}` : '';
-      scoreEl.textContent = `${score}${comboSuffix}${feverActive ? ' ✨x2' : ''}`;
+      scoreEl.textContent = `${score}${comboSuffix}`;
       if (combo > 1) {
         flashCombo();
         primeComboMeter();
