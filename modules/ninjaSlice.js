@@ -666,6 +666,92 @@ function groupForIndex(idx){
       <button id="slice-stage-next" class="btn btn-primary" style="margin-top:.25rem;">Continue</button>
     </div>`;
   holder.appendChild(stageOverlay);
+  
+  // Pre-banner phrase reveal overlay (full-screen blackout + big cascading phrase)
+  const revealOverlay = document.createElement('div');
+  revealOverlay.style.position = 'absolute';
+  revealOverlay.style.inset = '0';
+  revealOverlay.style.display = 'none';
+  revealOverlay.style.alignItems = 'center';
+  revealOverlay.style.justifyContent = 'center';
+  revealOverlay.style.background = 'radial-gradient(circle at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.95) 100%)';
+  revealOverlay.style.zIndex = '65';
+  revealOverlay.style.pointerEvents = 'auto';
+  holder.appendChild(revealOverlay);
+
+  function presentStageReveal(phraseText, romajiText, onDone) {
+    try {
+      const phrase = (phraseText || '').toString().trim();
+      if (!phrase) { onDone && onDone(); return; }
+      revealOverlay.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.style.textAlign = 'center';
+      // Slight vignette card for contrast
+      wrap.style.padding = Math.round(12 * Math.max(0.7, uiScale)) + 'px ' + Math.round(16 * Math.max(0.7, uiScale)) + 'px';
+      wrap.style.borderRadius = '14px';
+      wrap.style.background = 'rgba(0,0,0,0.15)';
+      wrap.style.boxShadow = '0 14px 40px rgba(0,0,0,0.45), inset 0 4px 12px rgba(255,255,255,0.05)';
+      revealOverlay.appendChild(wrap);
+
+      const phraseEl = document.createElement('div');
+      phraseEl.id = 'slice-prebanner-phrase';
+      phraseEl.style.color = '#ffffff';
+      phraseEl.style.fontWeight = '900';
+      phraseEl.style.letterSpacing = '.02em';
+      phraseEl.style.textShadow = '0 6px 22px rgba(0,0,0,0.6)';
+      phraseEl.style.fontSize = 'clamp(42px, 9vw, 112px)';
+      phraseEl.style.lineHeight = '1.05';
+
+      const romaEl = document.createElement('div');
+      romaEl.id = 'slice-prebanner-romaji';
+      romaEl.style.marginTop = '10px';
+      romaEl.style.color = '#fde68a';
+      romaEl.style.fontWeight = '700';
+      romaEl.style.textShadow = '0 4px 14px rgba(0,0,0,0.55)';
+      romaEl.style.fontSize = 'clamp(18px, 2.6vw, 34px)';
+
+      wrap.appendChild(phraseEl);
+      wrap.appendChild(romaEl);
+
+      const cascade = (el, text, stepMs) => {
+        if (!el) return 0;
+        const t = (text || '').toString();
+        // If disabled, just set text and return minimal time
+        if (!stageCascadeRevealEnabled || !t) { el.textContent = t; return 300; }
+        el.textContent = '';
+        const frag = document.createDocumentFragment();
+        const chars = Array.from(t);
+        for (let i = 0; i < chars.length; i++) {
+          const span = document.createElement('span');
+          span.textContent = chars[i];
+          span.style.opacity = '0';
+          span.style.display = 'inline-block';
+          span.style.transform = 'translateY(14px)';
+          span.style.transition = 'opacity 320ms ease, transform 320ms ease';
+          span.style.transitionDelay = String(i * Math.max(10, stepMs)) + 'ms';
+          frag.appendChild(span);
+        }
+        el.appendChild(frag);
+        requestAnimationFrame(() => {
+          const spans = el.querySelectorAll('span');
+          spans.forEach(s => { s.style.opacity = '1'; s.style.transform = 'translateY(0)'; });
+        });
+        return (chars.length ? (chars.length - 1) * Math.max(10, stepMs) + 380 : 300);
+      };
+
+      revealOverlay.style.display = 'flex';
+      const romaText = (romajiText || '').toString();
+      const tPhrase = cascade(phraseEl, phrase, Math.round(stageCascadeStepMs * 1.1));
+      const tRoma = cascade(romaEl, romaText, Math.round(stageCascadeStepMs * 0.9));
+
+      // Start speech while revealing
+      try { speakJA(phrase).catch(()=>{}); } catch {}
+
+      const hold = 600; // short hold after reveal completes
+      const total = Math.max(tPhrase, tRoma) + hold;
+      setTimeout(() => { revealOverlay.style.display = 'none'; onDone && onDone(); }, total);
+    } catch { onDone && onDone(); }
+  }
   function showStageBanner(number, phraseText, romajiText, englishText){
     try{
       const numEl = stageOverlay.querySelector('#slice-stage-number');
@@ -788,13 +874,18 @@ function groupForIndex(idx){
       }catch{ resolve(); }
     });
   }
-  // Handle stage completion: banner + speech + advance or end
+  // Handle stage completion: pre-reveal + banner + advance or end
   function completeStage(){
     // Guard if already not active
     const completedStage = stageData[stageIndex] || { phrase: '', romaji: '', english: '' };
     const thisStageNumber = stageIndex + 1;
     pauseForStage();
-    setTimeout(() => showStageBanner(thisStageNumber, completedStage.phrase || '', (completedStage.romaji || ''), (completedStage.english || '')), 1000);
+    // Show pre-banner phrase reveal in the center, then banner
+    setTimeout(() => {
+      presentStageReveal(completedStage.phrase || '', (completedStage.romaji || ''), () => {
+        showStageBanner(thisStageNumber, completedStage.phrase || '', (completedStage.romaji || ''), (completedStage.english || ''));
+      });
+    }, 200);
     let advanced = false;
     const proceed = () => {
       if (advanced) return; advanced = true;
@@ -820,7 +911,7 @@ function groupForIndex(idx){
     if (btn) {
       btn.onclick = () => { try { window.speechSynthesis?.cancel(); } catch{} proceed(); };
     }
-    speakJA(completedStage.phrase || '');
+    // speech is handled during pre-banner reveal
   }
   let bubblesOn = true;
   if (bubblesToggle) {
