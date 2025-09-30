@@ -98,6 +98,14 @@
   const ffaSpawnRateBoost = Math.max(1, Number((config && config.ffaSpawnRateBoost) ?? 2.0));
   const ffaBombs = !!(config && config.ffaBombs);
   const coinPerKana = Math.max(0, Number((config && config.coinPerKana) ?? 1));
+  // Face styles
+  const bubbleFaceStyle = String(((config && config.bubbleFaceStyle) || 'embossed')).toLowerCase(); // flat|embossed|engraved
+  const coinFaceStyle = String(((config && config.coinFaceStyle) || 'embossed')).toLowerCase();
+  // FFA coin face style (uses same `coinFaceStyle` for now)
+  // Slice showcase (zoom/spin + coin swoop) toggle
+  const sliceShowcaseEnabled = (config && config.sliceShowcaseEnabled) !== false; // default on
+  const sliceShowcasePronounceRomaji = !!(config && config.sliceShowcasePronounceRomaji); // default off
+  const sliceShowcaseDurationMs = Math.max(400, Number((config && config.sliceShowcaseDurationMs) ?? 900));
   // Normal-mode distractors (noise) — increase challenge without quiz mode
   const noiseSpawnChance = Math.max(0, Math.min(0.6, Number((config && config.noiseSpawnChance) ?? 0.12)));
   const noisePenalty = Math.max(0, Number((config && config.noisePenalty) ?? 50));
@@ -126,6 +134,7 @@
   let doubleUntil = 0;           // double points until
   let shieldCount = 0;           // number of shield charges
   const coinFx = [];             // coin particles (rendered later via fxCanvas)
+  const sliceFx = [];            // sliced-kana showcase animations
   let lastFFAAward = 0;          // used for stage banner summary
   // Persistent coin bank across rounds (page-level)
   let coinBank = 0;
@@ -1481,17 +1490,19 @@ function groupForIndex(idx){
         ctx.restore();
       } else {
         const radius = t.radius || KANA_RADIUS;
-        const bubbleGradient = ctx.createRadialGradient(0, -radius * 0.25, radius * 0.1, 0, 0, radius);
-        bubbleGradient.addColorStop(0, 'rgba(255, 249, 196, 0.95)');
-        bubbleGradient.addColorStop(0.55, 'rgba(253, 224, 141, 0.4)');
-        bubbleGradient.addColorStop(1, 'rgba(217, 119, 6, 0.22)');
+        // Less translucent, shinier gold background (coin-like)
+        const bubbleGradient = ctx.createRadialGradient(0, -radius * 0.30, Math.max(1, radius * 0.08), 0, 0, radius);
+        bubbleGradient.addColorStop(0, '#fff8cc');
+        bubbleGradient.addColorStop(0.55, '#f7bf3c');
+        bubbleGradient.addColorStop(1, '#e59e0b');
         ctx.beginPath();
         ctx.fillStyle = bubbleGradient;
         ctx.arc(0, 0, radius, 0, Math.PI*2); ctx.fill();
 
+        // Darker, crisper rim for a metallic edge
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(217, 119, 6, 0.85)';
-        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = '#9a5b0e';
+        ctx.lineWidth = 2.6;
         ctx.arc(0, 0, radius-1, 0, Math.PI*2); ctx.stroke();
 
         // Glow effect during fever or streaks
@@ -1655,24 +1666,63 @@ function groupForIndex(idx){
             ctx.restore();
           }
 
-          // Small face details (engraving) that compress with sx
-          ctx.save();
-          ctx.scale(sx, 1);
-          ctx.strokeStyle = 'rgba(124,45,18,0.55)';
-          ctx.lineWidth = 1.6;
-          ctx.beginPath();
-          ctx.moveTo(-cr*0.28, -cr*0.45); ctx.lineTo(-cr*0.28, cr*0.45);
-          ctx.moveTo(cr*0.28, -cr*0.45); ctx.lineTo(cr*0.28, cr*0.45);
-          ctx.stroke();
-          ctx.restore();
+          // Kana face (embossed/engraved) scaled with sx
+          const face = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
+          if (face) {
+            ctx.save();
+            ctx.scale(sx, 1);
+            const fontSize = Math.max(10, cr * 0.95);
+            ctx.font = `${Math.round(fontSize)}px "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            // Base
+            ctx.fillStyle = '#7c3e0a'; ctx.globalAlpha = 0.9; ctx.fillText(face, 0, 0);
+            const light = 'rgba(255,255,255,0.8)';
+            const dark = 'rgba(0,0,0,0.35)';
+            if (coinFaceStyle === 'engraved') {
+              ctx.save(); ctx.shadowColor = dark; ctx.shadowOffsetX = -1.5; ctx.shadowOffsetY = -1.5; ctx.shadowBlur = 0; ctx.fillStyle = '#7c3e0a'; ctx.globalAlpha = 0.95; ctx.fillText(face, 0, 0); ctx.restore();
+              ctx.save(); ctx.shadowColor = light; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.shadowBlur = 0; ctx.fillStyle = '#7c3e0a'; ctx.globalAlpha = 0.85; ctx.fillText(face, 0, 0); ctx.restore();
+            } else {
+              // Embossed: stronger, wider bevels for readability
+              ctx.save(); ctx.shadowColor = light; ctx.shadowOffsetX = -2.6; ctx.shadowOffsetY = -2.6; ctx.shadowBlur = 0; ctx.fillStyle = '#8b5a12'; ctx.globalAlpha = 0.98; ctx.fillText(face, 0, 0); ctx.restore();
+              ctx.save(); ctx.shadowColor = dark; ctx.shadowOffsetX = 2.6; ctx.shadowOffsetY = 2.6; ctx.shadowBlur = 0; ctx.fillStyle = '#8b5a12'; ctx.globalAlpha = 0.94; ctx.fillText(face, 0, 0); ctx.restore();
+            }
+            ctx.lineWidth = 1.4; ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.globalAlpha = 0.7; ctx.strokeText(face, 0, 0);
+            ctx.restore();
+          }
         } else {
-          ctx.fillStyle = '#111';
-          ctx.font = "56px \"Noto Sans JP\", \"Yu Gothic UI\", system-ui, sans-serif";
+          // Normal mode bubble glyph face style: flat | embossed | engraved
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           const bubbleGlyph = (typeof t.char === 'string' && t.char.trim()) ? t.char : '';
           const bubbleYOffset = radius * 0.06;
-          if (bubbleGlyph) ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
+          const fontSize = Math.max(10, radius * 0.95);
+          ctx.font = `${Math.round(fontSize)}px "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif`;
+          if (bubbleGlyph) {
+            if (bubbleFaceStyle === 'engraved') {
+              // Inset look (engraved)
+              const light = 'rgba(255,255,255,0.85)';
+              const dark = 'rgba(0,0,0,0.45)';
+              ctx.save(); ctx.shadowColor = dark; ctx.shadowOffsetX = -1.5; ctx.shadowOffsetY = -1.5; ctx.shadowBlur = 0; ctx.fillStyle = '#7c3e0a'; ctx.globalAlpha = 0.95; ctx.fillText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+              ctx.save(); ctx.shadowColor = light; ctx.shadowOffsetX = 1.5; ctx.shadowOffsetY = 1.5; ctx.shadowBlur = 0; ctx.fillStyle = '#7c3e0a'; ctx.globalAlpha = 0.85; ctx.fillText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+              // Subtle outline for readability
+              ctx.save(); ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.26)'; ctx.globalAlpha = 0.7; ctx.strokeText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+            } else if (bubbleFaceStyle === 'embossed') {
+              // Raised look (embossed) similar to FFA coin faces
+              const light = 'rgba(255,255,255,0.85)';
+              const dark = 'rgba(0,0,0,0.45)';
+              // Base
+              ctx.save(); ctx.fillStyle = '#6b3a09'; ctx.globalAlpha = 0.92; ctx.fillText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+              // Bevel highlights/shadows
+              ctx.save(); ctx.shadowColor = light; ctx.shadowOffsetX = -2.4; ctx.shadowOffsetY = -2.4; ctx.shadowBlur = 0; ctx.fillStyle = '#8b5a12'; ctx.globalAlpha = 0.98; ctx.fillText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+              ctx.save(); ctx.shadowColor = dark; ctx.shadowOffsetX = 2.4; ctx.shadowOffsetY = 2.4; ctx.shadowBlur = 0; ctx.fillStyle = '#8b5a12'; ctx.globalAlpha = 0.94; ctx.fillText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+              // Subtle outline for readability
+              ctx.save(); ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(0,0,0,0.32)'; ctx.globalAlpha = 0.75; ctx.strokeText(bubbleGlyph, 0, bubbleYOffset); ctx.restore();
+            } else {
+              // Flat
+              ctx.fillStyle = '#111';
+              ctx.fillText(bubbleGlyph, 0, bubbleYOffset);
+            }
+          }
         }
 
         if (difficulty === 'easy') {
@@ -1705,10 +1755,17 @@ function groupForIndex(idx){
       ctx.save();
       const alpha = fx.isBomb ? Math.max(0, 0.9 - pct) : Math.max(0, 0.8 - pct * 0.8);
       ctx.globalAlpha = alpha;
-      // perfect ring styling
+      // ring styling
       if (fx.kind === 'perfect') {
         ctx.lineWidth = 3;
         ctx.strokeStyle = 'rgba(251, 191, 36, 0.95)'; // amber-400
+      } else if (fx.kind === 'coinring') {
+        ctx.lineWidth = 3.2;
+        // Gold-orange outer with inner white shimmer
+        const grad = ctx.createRadialGradient(fx.x, fx.y, Math.max(0.1, ringRadius-6), fx.x, fx.y, ringRadius+1);
+        grad.addColorStop(0, 'rgba(255,255,255,0.85)');
+        grad.addColorStop(1, 'rgba(245, 158, 11, 0.95)');
+        ctx.strokeStyle = grad;
       } else {
         ctx.lineWidth = fx.isBomb ? 3 : 2;
         ctx.strokeStyle = fx.isBomb ? '#f87171' : '#a5f3fc';
@@ -1777,6 +1834,93 @@ function groupForIndex(idx){
       ctx.arc((fx.x||0), (fx.y||0), r-1, 0, Math.PI*2);
       ctx.stroke();
       ctx.restore();
+    }
+
+    // Draw sliced-kana showcase FX (zoom -> settle -> spin/fade)
+    for (let i = sliceFx.length - 1; i >= 0; i--) {
+      const fx = sliceFx[i];
+      const start = fx.start || now;
+      const dur = Math.max(1, fx.dur || sliceShowcaseDurationMs);
+      const t = now - start;
+      if (t < 0) continue;
+      const p = Math.min(1, t / dur);
+      const easeOut = (v) => 1 - Math.pow(1 - v, 3);
+      const easeInOut = (v) => (v < 0.5) ? (2*v*v) : (1 - Math.pow(-2*v + 2, 2) / 2);
+      let x = fx.sx || 0, y = fx.sy || 0, s = 1, rot = 0, alpha = 1;
+      const cx = (typeof fx.cx === 'number') ? fx.cx : (viewW * 0.5);
+      const cy = (typeof fx.cy === 'number') ? fx.cy : (viewH * 0.45);
+      // 3-segment timeline
+      const a = 0.35, b = 0.55; // end of zoom-in, end of settle
+      const maxScale = 2.4;     // make it bigger during showcase
+      if (p < a) {
+        const u = easeOut(p / a);
+        x = (fx.sx || 0) + (cx - (fx.sx || 0)) * u;
+        y = (fx.sy || 0) + (cy - (fx.sy || 0)) * u;
+        s = 1 + (maxScale - 1) * u; // 1 -> maxScale
+      } else if (p < b) {
+        const u = easeInOut((p - a) / (b - a));
+        x = cx; y = cy;
+        s = maxScale + (1.2 - maxScale) * u; // maxScale -> 1.2
+      } else {
+        const u = easeInOut((p - b) / (1 - b));
+        x = cx; y = cy;
+        s = 1.2 + (0.9 - 1.2) * u; // 1.2 -> 0.9
+        rot = (fx.spin ? 1 : 0) * (Math.PI * u);
+        alpha = 1 - 0.92 * u;
+      }
+
+      // Speak once when we finish the settle phase
+      if (!fx.spoken && p >= b) {
+        fx.spoken = true;
+        try {
+          if (speakOnSlice) {
+            if (sliceShowcasePronounceRomaji) {
+              const r = (fx.romaji || (typeof toRomaStr === 'function' ? (toRomaStr(fx.char || '') || '') : ''));
+              if (r) speakJA(r);
+            } else {
+              if (fx.char) speakKana(fx.char);
+            }
+          }
+        } catch {}
+      }
+
+      // Draw background disc (white) so nothing shows behind enlarged glyph
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.translate(x, y);
+      if (rot) ctx.rotate(rot);
+      ctx.scale(s, s);
+      const baseR = Math.max(10, (KANA_RADIUS || 24));
+      const fontSize = Math.round(baseR * 2.4);
+      // Solid white disc to mask background while zoomed
+      const discR = Math.max(fontSize * 0.85, baseR * 2.2);
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, discR, 0, Math.PI * 2);
+      ctx.fill();
+      // crisp rim to keep a coin-like edge
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#9a5b0e';
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw glyph with bevel similar to embossed style
+      ctx.font = `${fontSize}px "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const g = (typeof fx.char === 'string' ? fx.char : '');
+      if (g) {
+        const light = 'rgba(255,255,255,0.85)';
+        const dark = 'rgba(0,0,0,0.45)';
+        ctx.save(); ctx.fillStyle = '#6b3a09'; ctx.globalAlpha = 0.92; ctx.fillText(g, 0, 0); ctx.restore();
+        ctx.save(); ctx.shadowColor = light; ctx.shadowOffsetX = -3.0; ctx.shadowOffsetY = -3.0; ctx.shadowBlur = 0; ctx.fillStyle = '#8b5a12'; ctx.globalAlpha = 0.98; ctx.fillText(g, 0, 0); ctx.restore();
+        ctx.save(); ctx.shadowColor = dark; ctx.shadowOffsetX = 3.0; ctx.shadowOffsetY = 3.0; ctx.shadowBlur = 0; ctx.fillStyle = '#8b5a12'; ctx.globalAlpha = 0.95; ctx.fillText(g, 0, 0); ctx.restore();
+        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.globalAlpha = 0.8; ctx.strokeText(g, 0, 0);
+      }
+      ctx.restore();
+
+      if (p >= 1) { sliceFx.splice(i, 1); }
     }
 
     // End FFA if time has elapsed (extra guard)
@@ -1949,6 +2093,8 @@ function groupForIndex(idx){
           born: performance.now(),
           life: 650
         });
+        // bright gold ring highlight tied to coin slice
+        popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: (t.radius || KANA_RADIUS) + 8, kind: 'coinring' });
         try { SFX('coin'); } catch {}
       } catch {}
       return;
@@ -1970,7 +2116,15 @@ function groupForIndex(idx){
             const yHint = (t.y || 0) - ((t.radius || KANA_RADIUS) + 16);
             const rTxt = toRomaStr(want) || want;
             showRomaAt(t.x || 0, yHint, rTxt);
-            if (speakOnSlice && want) speakKana(want);
+            if (sliceShowcaseEnabled) {
+              // Launch showcase FX for the sliced kana
+              const tx = viewW * 0.5, ty = viewH * 0.45;
+              coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
+              popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
+              sliceFx.push({ kind:'show', char: want, romaji: rTxt, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+            } else {
+              if (speakOnSlice && want) speakKana(want);
+            }
 
             // Sequence-mode scoring + feedback + fever charge
             try { popFx.push({ x: t.x, y: t.y, created: performance.now(), radius: t.radius || KANA_RADIUS }); } catch {}
@@ -2007,8 +2161,14 @@ function groupForIndex(idx){
           const romajiTextQ = toRomaStr(kanaTextQ) || '';
           const yAboveQ = t.y - ((t.radius || KANA_RADIUS) + 16);
           showRomaAt(t.x, yAboveQ, romajiTextQ || kanaTextQ);
-
-          if (speakOnSlice && kanaTextQ) speakKana(kanaTextQ);
+          if (sliceShowcaseEnabled) {
+            const tx = viewW * 0.5, ty = viewH * 0.45;
+            coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
+            popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
+            sliceFx.push({ kind:'show', char: kanaTextQ, romaji: romajiTextQ, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+          } else {
+            if (speakOnSlice && kanaTextQ) speakKana(kanaTextQ);
+          }
           const nowQ = performance.now();
           combo = (nowQ - lastSliceAt <= comboWindowMs) ? (combo + 1) : 1;
           lastSliceAt = nowQ;
@@ -2027,7 +2187,7 @@ function groupForIndex(idx){
           updateProgressUI();
           if (sliced.size === original.length) { if (ffaEnabled) { startFreeForAll(); } else { flashFullMapping(); completeStage(); }
           } else {
-            pauseSliceMoment('', null);
+            if (!sliceShowcaseEnabled) pauseSliceMoment('', null);
             scheduleNextQuizWave(waveId);
           }
         } else {
@@ -2073,8 +2233,15 @@ function groupForIndex(idx){
       const yAbove = t.y - ((t.radius || KANA_RADIUS) + 16);
       showRomaAt(t.x, yAbove, romajiText || kanaText);
 
-      if (speakOnSlice && kanaText) speakKana(kanaText);
-      pauseSliceMoment('', null);
+      if (sliceShowcaseEnabled) {
+        const tx = viewW * 0.5, ty = viewH * 0.45;
+        coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
+        popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
+        sliceFx.push({ kind:'show', char: kanaText, romaji: romajiText, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+      } else {
+        if (speakOnSlice && kanaText) speakKana(kanaText);
+        pauseSliceMoment('', null);
+      }
       // remove partner tile(s) if present
       for (let j = tiles.length - 1; j >= 0; j--) { if (group.includes(tiles[j].index) && tiles[j].index !== t.index) { tiles.splice(j,1); } }
       // persistent progress: show last romaji + count and update bar      updateProgressUI();
