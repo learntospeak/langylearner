@@ -1,4 +1,4 @@
-﻿export function initNinjaSlice(config) {
+﻿﻿﻿﻿export function initNinjaSlice(config) {
   const {
     containerId,
     canvasId,
@@ -715,7 +715,7 @@ function groupForIndex(idx){
 
   function presentStageReveal(phraseText, romajiText, onDone) {
     try {
-      const phrase = (phraseText || '').toString().trim();
+      const phrase = (phraseText || '').toString().trim().replace(/[\u3002\uFF0E\.]+/g, '');
       if (!phrase) { onDone && onDone(); return; }
       revealOverlay.innerHTML = '';
       const wrap = document.createElement('div');
@@ -749,7 +749,7 @@ function groupForIndex(idx){
 
       const cascade = (el, text, stepMs) => {
         if (!el) return 0;
-        const t = (text || '').toString();
+        const t = (text || '').toString().replace(/[\u3002\uFF0E\.]+/g, '');
         // If disabled, just set text and return minimal time
         if (!stageCascadeRevealEnabled || !t) { el.textContent = t; return 300; }
         el.textContent = '';
@@ -799,7 +799,7 @@ function groupForIndex(idx){
       // Cascading reveal for phrase/romaji
       const cascade = (el, text, stepMs) => {
         if (!el) return;
-        const t = (text || '').toString();
+        const t = (text || '').toString().replace(/[\u3002\uFF0E\.]+/g, '');
         if (!stageCascadeRevealEnabled || !t) { el.textContent = t; return; }
         el.textContent = '';
         const frag = document.createDocumentFragment();
@@ -1966,8 +1966,9 @@ function groupForIndex(idx){
       } else {
         const u = easeInOut((p - b) / (1 - b));
         x = cx; y = cy;
-        s = 1.2 + (0.9 - 1.2) * u; // 1.2 -> 0.9
-        rot = (fx.spin ? 1 : 0) * (Math.PI * u);
+        // Keep enlarged size; do not shrink or spin, just fade out
+        s = 1.2;
+        rot = 0;
         alpha = 1 - 0.92 * u;
       }
 
@@ -1990,7 +1991,7 @@ function groupForIndex(idx){
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
       ctx.translate(x, y);
-      if (rot) ctx.rotate(rot);
+        if (rot) ctx.rotate(rot);
       ctx.scale(s, s);
       const baseR = Math.max(10, (KANA_RADIUS || 24));
       const fontSize = Math.round(baseR * 2.4);
@@ -2247,7 +2248,7 @@ function groupForIndex(idx){
               const tx = viewW * 0.5, ty = viewH * 0.45;
               coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
               popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
-              sliceFx.push({ kind:'show', char: want, romaji: rTxt, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+              sliceFx.push({ kind:'show', char: want, romaji: rTxt, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: false, spoken: false });
             } else {
               if (speakOnSlice && want) speakKana(want);
             }
@@ -2291,7 +2292,7 @@ function groupForIndex(idx){
             const tx = viewW * 0.5, ty = viewH * 0.45;
             coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
             popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
-            sliceFx.push({ kind:'show', char: kanaTextQ, romaji: romajiTextQ, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+            sliceFx.push({ kind:'show', char: kanaTextQ, romaji: romajiTextQ, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: false, spoken: false });
           } else {
             if (speakOnSlice && kanaTextQ) speakKana(kanaTextQ);
           }
@@ -2363,7 +2364,7 @@ function groupForIndex(idx){
         const tx = viewW * 0.5, ty = viewH * 0.45;
         coinFx.push({ mode:'swoop', sx: t.x || 0, sy: t.y || 0, tx, ty, born: performance.now(), dur: 500 });
         popFx.push({ x: tx, y: ty, created: performance.now() + 500, radius: (t.radius || KANA_RADIUS) + 10, kind: 'coinring' });
-        sliceFx.push({ kind:'show', char: kanaText, romaji: romajiText, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: true, spoken: false });
+        sliceFx.push({ kind:'show', char: kanaText, romaji: romajiText, sx: t.x || 0, sy: t.y || 0, cx: tx, cy: ty, start: performance.now(), dur: sliceShowcaseDurationMs, spin: false, spoken: false });
       } else {
         if (speakOnSlice && kanaText) speakKana(kanaText);
         pauseSliceMoment('', null);
@@ -2675,7 +2676,7 @@ canvas.addEventListener('pointerout', endPointer);
       const t = document.getElementById('slice-over-title');
       const r = document.getElementById('slice-over-reason');
       if (t) t.textContent = (reason === 'clear') ? 'All Done!' : 'Game Over';
-      if (r) r.textContent = (reason === 'bomb') ? 'You hit a bomb.' : (reason === 'timeout' ? 'Time up.' : 'Great job!');
+      if (r) r.textContent = (reason === 'bomb') ? 'You hit a bomb' : (reason === 'timeout' ? 'Time up' : 'Great job!');
       overPanel.classList.remove('hidden');
       if (tryBtn) tryBtn.onclick = () => { overPanel.classList.add('hidden'); startRound(); };
       if (finishBtn) finishBtn.onclick = () => { overPanel.classList.add('hidden'); overlay.classList.add('hidden'); try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.style.touchAction=''; }catch{} };
