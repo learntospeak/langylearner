@@ -1,4 +1,4 @@
-﻿﻿﻿﻿export function initNinjaSlice(config) {
+﻿﻿﻿﻿﻿﻿export function initNinjaSlice(config) {
   const {
     containerId,
     canvasId,
@@ -307,9 +307,17 @@
     try {
       if (!ffaEnabled || mode === MODE_FFA) { if (typeof flashFullMapping === 'function') flashFullMapping(); completeStage(); return; }
       mode = MODE_FFA;
-      coinCount = 0;
-      ffaEndsAt = performance.now() + (ffaSeconds * 1000);
-      ffaReadyAt = performance.now() + 1000; // wait 1s before accepting input
+    coinCount = 0;
+    ffaEndsAt = performance.now() + (ffaSeconds * 1000);
+    ffaReadyAt = performance.now() + 1000; // wait 1s before accepting input
+    // Purge any non-FFA tiles (e.g., leftover kana/noise/power) to avoid stray interactions
+    try {
+      for (let i = tiles.length - 1; i >= 0; i--) {
+        const tt = tiles[i];
+        if (!tt) continue;
+        if (!tt.ffa) tiles.splice(i, 1);
+      }
+    } catch {} // wait 1s before accepting input
       // Remove any existing bombs from the board to avoid interference
       try { for (let i = tiles.length - 1; i >= 0; i--) { if (tiles[i] && tiles[i].type === 'bomb') tiles.splice(i, 1); } } catch {}
       bonusOverlay.style.display = 'flex';
@@ -1536,19 +1544,47 @@ function groupForIndex(idx){
         // Specular highlight
         ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,0.16)';
         ctx.ellipse(-r*0.3,-r*0.3,r*0.35,r*0.22,-0.4,0,Math.PI*2); ctx.fill();
-        // Fuse
+        // Fuse (curved) + glow and animated ember
+        const p0x = r*0.25, p0y = -r*0.75;
+        const p1x = r*0.65, p1y = -r*1.05;
+        const p2x = r*0.95, p2y = -r*1.25;
         ctx.strokeStyle = '#b45309';
         ctx.lineWidth = Math.max(2, r*0.12);
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(r*0.25, -r*0.75);
-        ctx.quadraticCurveTo(r*0.65, -r*1.05, r*0.95, -r*1.25);
+        ctx.moveTo(p0x, p0y);
+        ctx.quadraticCurveTo(p1x, p1y, p2x, p2y);
         ctx.stroke();
-        // Spark at fuse tip
+        // Glow pass
         ctx.save();
-        const sx = r*0.95, sy = -r*1.25;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(251,191,36,0.6)'; // amber-300
+        ctx.lineWidth = Math.max(2, r*0.22);
+        ctx.beginPath();
+        ctx.moveTo(p0x, p0y);
+        ctx.quadraticCurveTo(p1x, p1y, p2x, p2y);
+        ctx.stroke();
+        ctx.restore();
+        // animated ember traveling along the fuse towards the tip
+        try {
+          const tt = ((now % 700) / 700); // 0..1 looping
+          const t2 = tt*tt; const omt = 1-tt; const omt2 = omt*omt;
+          const ex = omt2*p0x + 2*omt*tt*p1x + t2*p2x;
+          const ey = omt2*p0y + 2*omt*tt*p1y + t2*p2y;
+          ctx.save();
+          ctx.fillStyle = '#fbbf24'; // amber-300 core
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = r*0.25;
+          ctx.beginPath(); ctx.arc(ex, ey, r*0.12, 0, Math.PI*2); ctx.fill();
+          ctx.restore();
+        } catch {}
+        // Spark at fuse tip (flicker)
+        ctx.save();
+        const sx = p2x, sy = p2y;
+        const flicker = 0.7 + 0.3 * Math.sin((now % 400)/400 * Math.PI*2);
         ctx.translate(sx, sy);
         ctx.fillStyle = '#f59e0b'; // amber
+        ctx.globalAlpha = flicker;
         ctx.beginPath(); ctx.arc(0,0,r*0.18,0,Math.PI*2); ctx.fill();
         ctx.strokeStyle = '#fbbf24'; // amber-300
         ctx.lineWidth = r*0.06;
@@ -2198,7 +2234,7 @@ function groupForIndex(idx){
   function sliceKana(t) {
     if (mode === MODE_FFA && performance.now() < ffaReadyAt) { return; }
     // Bonus Free-for-All: collect coins only, no quiz/sequence checks
-    if (mode === MODE_FFA && t && t.type === 'kana') {
+    if (mode === MODE_FFA && t && t.type !== 'bomb') {
       try {
         // Chain multiplier for rapid coins
         const CHAIN_WINDOW = 450;

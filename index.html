@@ -5,6 +5,12 @@
   <meta charset="UTF-8" />
   <title>KanaReader</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- Anime/Manga fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Shared anime theme -->
+  <link rel="stylesheet" href="anime-theme.css" />
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,14 +18,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-gray-50">
+<body class="anime-bg min-h-screen flex items-center justify-center">
   <main class="text-center">
-    <h1 class="text-3xl font-bold mb-6">KanaReader</h1>
+    <h1 class="site-title text-3xl font-bold mb-6 accent-underline">KanaReader</h1>
 
     <!-- Button that opens lesson.html with a lesson ID -->
     <form action="lesson.html" method="get" target="_blank">
       <input type="hidden" name="lesson" value="greetings-001" />
-      <button type="submit" class="px-6 py-3 rounded bg-blue-600 text-white hover:bg-blue-700">
+      <button type="submit" class="btn btn-primary">
         Start Lesson
       </button>
     </form>

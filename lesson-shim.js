@@ -1535,7 +1535,8 @@ window.LessonShim = (() => {
     mascotSet("mascot-idle");
     if (!lesson || !lesson.steps) return;
     const state = { stepIndex: 0 };
-    const steps = lesson.steps;
+    // Remove disabled/duplicate pages (e.g., variations_disabled)
+    const steps = (lesson.steps || []).filter(s => s && s.type !== 'variations_disabled');
 
     const sentences = Array.isArray(lesson?.sentences) ? lesson.sentences : [];
     const findSentence = (sid) => sentences.find((x) => x.sid === sid);

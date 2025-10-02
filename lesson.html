@@ -7,6 +7,12 @@
     <meta name="theme-color" content="#111111">
     <title>KanaReader - Lesson</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Anime/Manga fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Shared anime theme -->
+    <link rel="stylesheet" href="anime-theme.css" />
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
     <style type="text/tailwindcss">
@@ -177,8 +183,22 @@
 
 
 </head>
+<style>
+  /* Ensure anime theme button styles override Tailwind @apply block */
+  .anime-bg .btn {
+    border: var(--outline) solid var(--ink);
+    border-radius: 9999px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-soft);
+  }
+  .anime-bg .btn-primary { background: linear-gradient(180deg, var(--sakura) 0%, #ff6b9b 100%); color:#fff; }
+  .anime-bg .btn-amber   { background: linear-gradient(180deg, #fbbf24 0%, var(--sun) 100%); color:#111827; }
+  .anime-bg .btn-dark    { background: linear-gradient(180deg, #334155 0%, var(--indigo) 100%); color:#fff; }
+  .anime-bg .btn-ghost   { background: var(--paper); color: var(--indigo); }
+</style>
 
-<body class="bg-white">
+<body class="anime-bg">
     <div id="page" class="container mx-auto p-6">
         <nav class="mb-4 flex items-center gap-4">
             <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">Kana Reference</a>
@@ -307,12 +327,11 @@
             <button id="lsReveal" class="btn btn-amber   flex-1 basis-[120px] max-w-[240px] min-h-10">Reveal</button>
             <button id="lsNext" class="btn btn-dark    flex-1 basis-[120px] max-w-[240px] min-h-10">Next ></button>
 
-            <button id="lsToggleRomaji"
-                class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
-            <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">Speak</button>
+            <button id="lsToggleRomaji" class="btn btn-ghost flex-1 basis-[120px] max-w-[240px] min-h-10">Romaji</button>
+            <button id="lsSpeak" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Speak</button>
 
             <!-- Fallback Slice launcher (always visible on mobile) -->
-            <button id="openSliceFooter" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-purple-600 text-white">Slice</button>
+            <button id="openSliceFooter" class="btn btn-dark flex-1 basis-[120px] max-w-[240px] min-h-10">Slice</button>
 
             <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
                 w-full sm:w-auto justify-center">
