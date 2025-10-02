@@ -1,14 +1,20 @@
 // service-worker.js
-const VERSION = 'v1.0.38';                      // bump when core changes
+const VERSION = 'v1.0.40';                      // bump when core changes
 const CACHE_NAME = `jp-lesson-${VERSION}`;
 
 const CORE = [
   './',
   './index.html',
+  './signin.html',
+  './signup.html',
+  './forgot.html',
+  './reset.html',
+  './account.html',
   './lesson.html',
   './stories.json',
   './lesson-loader.js',
   './lesson-shim.js',
+  './anime-theme.css',
   './images/favicon.ico'
 ];
 

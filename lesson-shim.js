@@ -1539,6 +1539,46 @@ window.LessonShim = (() => {
     const steps = (lesson.steps || []).filter(s => s && s.type !== 'variations_disabled');
 
     const sentences = Array.isArray(lesson?.sentences) ? lesson.sentences : [];
+    const lessonId = (lesson && (lesson.id || lesson.slug || lesson.title)) || 'lesson';
+    let stepStartAt = Date.now();
+    let stats = { timeMsByStep: {}, checks: {}, reveals: {}, totalTimeMs: 0 };
+    function __accumulateTime(){
+      try {
+        const now = Date.now();
+        const idx = state.stepIndex|0;
+        const dt = Math.max(0, now - stepStartAt);
+        stats.timeMsByStep[idx] = Math.max(0, Number(stats.timeMsByStep[idx]||0) + dt);
+        stats.totalTimeMs = Math.max(0, Number(stats.totalTimeMs||0) + dt);
+        stepStartAt = now;
+      } catch {}
+    }
+    // Try to restore last step (and stats) for signed-in users
+    try {
+      (async () => {
+        try {
+          const r = await fetch('/api/progress/' + encodeURIComponent(lessonId), { cache: 'no-store' });
+          if (r.ok) {
+            const j = await r.json();
+            const n = Number(j && j.data && j.data.stepIndex);
+            if (j && j.data && j.data.stats) { try { stats = Object.assign({}, stats, j.data.stats); } catch {} }
+            if (Number.isFinite(n) && n >= 0) {
+              state.stepIndex = Math.max(0, Math.min(n, (Array.isArray(lesson?.steps) ? lesson.steps.length : steps.length) - 1));
+              try { render(); } catch {}
+            }
+          }
+        } catch {}
+      })();
+    } catch {}
+    async function __saveProgress(){
+      try {
+        await fetch('/api/progress/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lessonId, data: { stepIndex: state.stepIndex, stats } })
+        }).catch(()=>{});
+      } catch {}
+    }
+    try { setTimeout(() => { __saveProgress(); }, 50); } catch {}
     const findSentence = (sid) => sentences.find((x) => x.sid === sid);
     const toRomajiSafe = (text) => {
       if (!text) return '';
@@ -1692,8 +1732,8 @@ window.LessonShim = (() => {
 
     };
 
-    const onNext = () => { state.stepIndex = Math.min(state.stepIndex + 1, steps.length - 1); render(); };
-    const onPrev = () => { state.stepIndex = Math.max(state.stepIndex - 1, 0); render(); };
+    const onNext = () => { __accumulateTime(); state.stepIndex = Math.min(state.stepIndex + 1, steps.length - 1); __saveProgress(); render(); };
+    const onPrev = () => { __accumulateTime(); state.stepIndex = Math.max(state.stepIndex - 1, 0); __saveProgress(); render(); };
     // --- add below your other handlers inside run() ---
 
     // NEW: initialize slider UI to current rate
@@ -1724,8 +1764,18 @@ window.LessonShim = (() => {
 
     const onCheck = () => {
       const step = steps[state.stepIndex] || {};
-      if (step.type === "cloze") checkCloze(map);
-      if (step.type === "translate_to_jp") checkTranslate(lesson, step, map);
+      let ok = null;
+      if (step.type === "cloze") ok = !!checkCloze(map);
+      if (step.type === "translate_to_jp") ok = !!checkTranslate(lesson, step, map);
+      try {
+        const idx = state.stepIndex|0; const now = Date.now();
+        const rec = Object.assign({ attempts:0, correct:0 }, stats.checks[idx] || {});
+        rec.attempts = Number(rec.attempts||0) + 1;
+        if (ok) rec.correct = Number(rec.correct||0) + 1;
+        rec.lastOk = !!ok; rec.lastAt = now; rec.type = step.type||'';
+        stats.checks[idx] = rec;
+      } catch {}
+      __saveProgress();
     };
 
     const onReveal = () => {
@@ -1742,6 +1792,8 @@ window.LessonShim = (() => {
         });
         feedback(map, "Answers revealed.", true);
       }
+      try { const idx = state.stepIndex|0; stats.reveals[idx] = Number(stats.reveals[idx]||0) + 1; } catch {}
+      __saveProgress();
     };
     const onToggleRomaji = () => {
       map.flags = map.flags || {};

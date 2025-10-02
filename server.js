@@ -2,6 +2,9 @@
 // Requires: Node 18+ (global fetch), express, cors, dotenv (optional)
 
 const path = require('path');
+const fs = require('fs');
+const fsp = fs.promises;
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 
@@ -11,6 +14,9 @@ try { require('dotenv').config(); } catch {}
 const app = express();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const AUTH_SECRET = process.env.AUTH_SECRET || 'dev-secret-change-me';
+const DB_DIR = path.join(__dirname, 'data');
+const DB_FILE = path.join(DB_DIR, 'users.json');
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -27,6 +33,219 @@ app.use(cors(corsOptions));
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
+});
+
+// --- Simple file DB helpers (users + progress) ---
+async function ensureDb(){
+  try { await fsp.mkdir(DB_DIR, { recursive: true }); } catch {}
+  try {
+    await fsp.access(DB_FILE, fs.constants.F_OK);
+  } catch {
+    const empty = { users: {} };
+    await fsp.writeFile(DB_FILE, JSON.stringify(empty, null, 2));
+  }
+}
+async function readDb(){
+  await ensureDb();
+  try {
+    const buf = await fsp.readFile(DB_FILE); return JSON.parse(buf.toString('utf8'));
+  } catch { return { users: {} }; }
+}
+async function writeDb(db){
+  await ensureDb();
+  const tmp = DB_FILE + '.tmp';
+  const data = JSON.stringify(db, null, 2);
+  await fsp.writeFile(tmp, data);
+  await fsp.rename(tmp, DB_FILE);
+}
+
+// --- Password hashing (scrypt) ---
+function hashPassword(password){
+  const salt = crypto.randomBytes(16);
+  const key = crypto.scryptSync(password, salt, 32);
+  return `scrypt$${salt.toString('hex')}$${key.toString('hex')}`;
+}
+function verifyPassword(password, stored){
+  try {
+    const [alg, saltHex, keyHex] = String(stored||'').split('$');
+    if (alg !== 'scrypt' || !saltHex || !keyHex) return false;
+    const salt = Buffer.from(saltHex, 'hex');
+    const key = Buffer.from(keyHex, 'hex');
+    const test = crypto.scryptSync(password, salt, key.length);
+    return crypto.timingSafeEqual(test, key);
+  } catch { return false; }
+}
+
+// --- Token (HMAC) in HttpOnly cookie ---
+function b64url(buf){ return Buffer.from(buf).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function signToken(username, ttlSec = 60*60*24*30){
+  const payload = { u: String(username), exp: Math.floor(Date.now()/1000)+ttlSec };
+  const json = JSON.stringify(payload);
+  const b = b64url(json);
+  const sig = crypto.createHmac('sha256', AUTH_SECRET).update(b).digest('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return `${b}.${sig}`;
+}
+function verifyToken(token){
+  try {
+    if (!token || typeof token !== 'string') return null;
+    const idx = token.lastIndexOf('.'); if (idx < 1) return null;
+    const b = token.slice(0, idx); const sig = token.slice(idx+1);
+    const expSig = crypto.createHmac('sha256', AUTH_SECRET).update(b).digest('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    if (sig !== expSig) return null;
+    const json = Buffer.from(b.replace(/-/g,'+').replace(/_/g,'/'), 'base64').toString('utf8');
+    const payload = JSON.parse(json);
+    if (!payload || !payload.u) return null;
+    if (payload.exp && payload.exp < Math.floor(Date.now()/1000)) return null;
+    return String(payload.u);
+  } catch { return null; }
+}
+function parseCookies(req){
+  const h = req.headers && req.headers.cookie; if (!h) return {};
+  return h.split(';').map(s=>s.trim()).reduce((m,p)=>{ const i=p.indexOf('='); if(i>0) m[p.slice(0,i)]=decodeURIComponent(p.slice(i+1)); return m; },{});
+}
+function setAuthCookie(res, token){
+  const cookie = `auth=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60*60*24*30}`;
+  res.setHeader('Set-Cookie', cookie);
+}
+function clearAuthCookie(res){ res.setHeader('Set-Cookie', 'auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'); }
+function requireUser(req, res){
+  const { auth } = parseCookies(req);
+  const user = verifyToken(auth);
+  if (!user) { res.status(401).json({ error: 'Unauthorized' }); return null; }
+  return user;
+}
+
+// --- Auth APIs ---
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { username, password, email } = req.body || {};
+    if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
+    if (!/^[a-zA-Z0-9_]{3,32}$/.test(username)) return res.status(400).json({ error: 'Invalid username' });
+    if (String(password).length < 6) return res.status(400).json({ error: 'Password too short' });
+    if (email && !/^\S+@\S+\.\S+$/.test(String(email))) return res.status(400).json({ error: 'Invalid email' });
+    const db = await readDb();
+    if (db.users[username]) return res.status(409).json({ error: 'Username taken' });
+    db.users[username] = { username, email: email || '', password: hashPassword(password), progress: {}, createdAt: Date.now() };
+    await writeDb(db);
+    const token = signToken(username);
+    setAuthCookie(res, token);
+    res.json({ ok: true, user: { username } });
+  } catch (e) { res.status(500).json({ error: 'Signup failed', details: String(e) }); }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) return res.status(400).json({ error: 'Missing username or password' });
+    const db = await readDb();
+    const rec = db.users[username];
+    if (!rec || !verifyPassword(password, rec.password)) return res.status(401).json({ error: 'Invalid credentials' });
+    const token = signToken(username);
+    setAuthCookie(res, token);
+    res.json({ ok: true, user: { username } });
+  } catch (e) { res.status(500).json({ error: 'Login failed', details: String(e) }); }
+});
+
+app.post('/api/auth/logout', (req, res) => { try { clearAuthCookie(res); res.json({ ok: true }); } catch { res.json({ ok: true }); } });
+
+app.get('/api/me', async (req, res) => {
+  try {
+    const { auth } = parseCookies(req); const username = verifyToken(auth);
+    if (!username) return res.json({ user: null });
+    const db = await readDb();
+    const rec = db.users[username] || {};
+    res.json({ user: { username, email: rec.email || '' } });
+  } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
+});
+
+// Password reset (dev-friendly token flow)
+app.post('/api/auth/request-reset', async (req, res) => {
+  try {
+    const { username, email } = req.body || {};
+    if (!username && !email) return res.status(400).json({ error: 'Provide username or email' });
+    const db = await readDb();
+    let entry = null;
+    if (username && db.users[username]) entry = db.users[username];
+    else if (email) entry = Object.values(db.users).find(u => (u.email||'').toLowerCase() === String(email).toLowerCase()) || null;
+    if (!entry) return res.status(404).json({ error: 'Account not found' });
+    const token = crypto.randomBytes(16).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    entry.reset = { tokenHash, exp: Date.now() + 1000*60*30 }; // 30 min
+    await writeDb(db);
+    // In production, email this token. For dev, return it directly.
+    res.json({ ok: true, token });
+  } catch (e) { res.status(500).json({ error: 'Reset request failed', details: String(e) }); }
+});
+
+app.post('/api/auth/reset', async (req, res) => {
+  try {
+    const { username, token, newPassword } = req.body || {};
+    if (!username || !token || !newPassword) return res.status(400).json({ error: 'Missing fields' });
+    if (String(newPassword).length < 6) return res.status(400).json({ error: 'Password too short' });
+    const db = await readDb();
+    const rec = db.users[username];
+    if (!rec || !rec.reset) return res.status(400).json({ error: 'Invalid reset request' });
+    if (rec.reset.exp && rec.reset.exp < Date.now()) return res.status(400).json({ error: 'Reset token expired' });
+    const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
+    if (tokenHash !== rec.reset.tokenHash) return res.status(400).json({ error: 'Invalid reset token' });
+    rec.password = hashPassword(newPassword);
+    delete rec.reset;
+    await writeDb(db);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: 'Reset failed', details: String(e) }); }
+});
+
+// --- Progress APIs ---
+app.post('/api/progress/save', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const { lessonId, data } = req.body || {};
+    if (!lessonId || typeof data !== 'object') return res.status(400).json({ error: 'Missing lessonId or data' });
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    rec.progress = rec.progress || {};
+    const prev = rec.progress[lessonId] || {};
+    // Shallow-merge root; deep-merge stats/time/checks when present
+    const next = Object.assign({}, prev, data, { updatedAt: Date.now() });
+    if (data && data.stats) {
+      next.stats = Object.assign({}, prev.stats || {}, data.stats);
+      // Deep merge nested maps
+      if (prev.stats && prev.stats.timeMsByStep && data.stats.timeMsByStep) {
+        next.stats.timeMsByStep = Object.assign({}, prev.stats.timeMsByStep, data.stats.timeMsByStep);
+      }
+      if (prev.stats && prev.stats.checks && data.stats.checks) {
+        const merged = Object.assign({}, prev.stats.checks);
+        for (const k of Object.keys(data.stats.checks)) merged[k] = data.stats.checks[k];
+        next.stats.checks = merged;
+      }
+      if (typeof data.stats.totalTimeMs === 'number' && typeof (prev.stats||{}).totalTimeMs === 'number') {
+        // Prefer transmitted value
+        next.stats.totalTimeMs = data.stats.totalTimeMs;
+      }
+    }
+    rec.progress[lessonId] = next;
+    await writeDb(db);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: 'Save failed', details: String(e) }); }
+});
+
+app.get('/api/progress', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    res.json({ progress: rec.progress || {} });
+  } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
+});
+
+app.get('/api/progress/:lessonId', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    const data = (rec.progress || {})[String(req.params.lessonId)] || null;
+    res.json({ data });
+  } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
 });
 
 // POST /api/chat -> minimal chat bridge to OpenAI

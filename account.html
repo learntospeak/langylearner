@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KanaReader – Account</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css" />
+</head>
+<body class="anime-bg min-h-screen flex items-center justify-center p-4">
+  <main class="w-full max-w-md">
+    <h1 class="site-title text-2xl font-bold mb-4 accent-underline">Account</h1>
+
+    <!-- Signed-in view -->
+    <section id="authed" class="hidden manga-bubble p-4">
+      <div class="mb-3">
+        <div class="text-sm text-gray-600">Signed in as</div>
+        <div id="who" class="text-lg font-semibold"></div>
+      </div>
+      <div class="mb-4">
+        <div class="font-medium mb-2">Your Progress</div>
+        <div id="progress" class="text-sm text-gray-700">Loading…</div>
+      </div>
+      <div class="flex gap-2">
+        <a href="index.html" class="btn btn-ghost">Home</a>
+        <button id="logoutBtn" class="btn btn-dark">Log Out</button>
+      </div>
+    </section>
+
+    <!-- Sign in / Sign up tabs -->
+    <section id="auth" class="manga-bubble p-4">
+      <div class="inline-flex rounded bg-gray-100 p-1 mb-4">
+        <button id="tabLogin" class="px-3 py-1 rounded bg-white shadow text-sm">Sign In</button>
+        <button id="tabSignup" class="px-3 py-1 rounded text-sm">Create Account</button>
+      </div>
+
+      <form id="loginForm" class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">Username</label>
+          <input id="loginUser" class="field w-full" autocomplete="username" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Password</label>
+          <input id="loginPass" type="password" class="field w-full" autocomplete="current-password" />
+        </div>
+        <div class="text-sm text-red-600" id="loginErr"></div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-dark">Sign In</button>
+          <a href="index.html" class="btn btn-ghost">Cancel</a>
+        </div>
+      </form>
+
+      <form id="signupForm" class="space-y-3 hidden">
+        <div>
+          <label class="block text-sm mb-1">Username</label>
+          <input id="signupUser" class="field w-full" autocomplete="username" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Email (optional)</label>
+          <input id="signupEmail" type="email" class="field w-full" autocomplete="email" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Password (min 6 chars)</label>
+          <input id="signupPass" type="password" class="field w-full" autocomplete="new-password" />
+        </div>
+        <div class="text-sm text-red-600" id="signupErr"></div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary">Create Account</button>
+          <a href="index.html" class="btn btn-ghost">Cancel</a>
+        </div>
+      </form>
+      <hr class="my-4" />
+      <div class="mb-2 font-medium">Forgot password?</div>
+      <form id="resetReqForm" class="space-y-2">
+        <div class="text-sm text-gray-600">Enter your username or email to request a reset token.</div>
+        <div class="flex gap-2">
+          <input id="resetReqUser" class="field flex-1" placeholder="Username" />
+          <input id="resetReqEmail" type="email" class="field flex-1" placeholder="Email" />
+        </div>
+        <div class="text-xs text-gray-500">Dev mode: token will be shown below. In production, this would be emailed.</div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-amber">Request Reset</button>
+        </div>
+        <div id="resetTokenBox" class="text-sm text-amber-700"></div>
+      </form>
+      <form id="resetForm" class="space-y-2 mt-3">
+        <div class="flex gap-2">
+          <input id="resetUser" class="field flex-1" placeholder="Username" />
+          <input id="resetToken" class="field flex-1" placeholder="Reset token" />
+        </div>
+        <div>
+          <input id="resetPass" type="password" class="field w-full" placeholder="New password (min 6)" />
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-dark">Set New Password</button>
+        </div>
+        <div id="resetErr" class="text-sm text-red-600"></div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const show = (el, on) => { if (!el) return; el.classList[on ? 'remove' : 'add']('hidden'); };
+    const text = (el, t) => { if (el) el.textContent = t; };
+    const html = (el, h) => { if (el) el.innerHTML = h; };
+
+    async function getMe(){
+      try { const r = await fetch('/api/me', { cache:'no-store' }); return await r.json(); } catch { return { user:null }; }
+    }
+    async function loadProgress(){
+      try { const r = await fetch('/api/progress', { cache:'no-store' }); if (!r.ok) throw 0; return await r.json(); } catch { return { progress: {} }; }
+    }
+    async function logout(){ try { await fetch('/api/auth/logout', { method:'POST' }); location.reload(); } catch {} }
+    async function login(username, password){
+      const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+      return await r.json();
+    }
+    async function signup(username, password, email){
+      const r = await fetch('/api/auth/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, password, email }) });
+      return await r.json();
+    }
+    async function requestReset(username, email){
+      const r = await fetch('/api/auth/request-reset', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, email }) });
+      return await r.json();
+    }
+    async function doReset(username, token, newPassword){
+      const r = await fetch('/api/auth/reset', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, token, newPassword }) });
+      return await r.json();
+    }
+
+    function fmtMs(ms){ const m = Math.floor(ms/60000); const s = Math.floor((ms%60000)/1000); return (m?m+'m ':'') + s + 's'; }
+    function renderProgress(p){
+      const entries = Object.entries(p||{});
+      if (!entries.length) return 'No progress yet.';
+      return '<ul class="list-disc pl-5">' + entries.map(([k,v])=>{
+        const step = Number(v?.stepIndex ?? 0) + 1;
+        const tt = Number(v?.stats?.totalTimeMs || 0);
+        const checks = v?.stats?.checks || {};
+        const attempts = Object.values(checks).reduce((a,c)=>a + Number(c?.attempts||0), 0);
+        const correct = Object.values(checks).reduce((a,c)=>a + Number(c?.correct||0), 0);
+        return `<li><code>${k}</code> – step ${step}; total ${fmtMs(tt)}; attempts ${attempts}, correct ${correct} (updated ${(new Date(v?.updatedAt||Date.now())).toLocaleString()})</li>`;
+      }).join('') + '</ul>';
+    }
+
+    // Tabs
+    $('#tabLogin')?.addEventListener('click', ()=>{ show($('#loginForm'), true); show($('#signupForm'), false); $('#tabLogin').classList.add('bg-white','shadow'); $('#tabSignup').classList.remove('bg-white','shadow'); });
+    $('#tabSignup')?.addEventListener('click', ()=>{ show($('#loginForm'), false); show($('#signupForm'), true); $('#tabSignup').classList.add('bg-white','shadow'); $('#tabLogin').classList.remove('bg-white','shadow'); });
+
+    $('#logoutBtn')?.addEventListener('click', logout);
+
+    $('#loginForm')?.addEventListener('submit', async (e)=>{
+      e.preventDefault(); text($('#loginErr'),'');
+      const u = $('#loginUser')?.value?.trim(); const p = $('#loginPass')?.value || '';
+      if (!u || !p) return text($('#loginErr'),'Enter username and password.');
+      const res = await login(u,p);
+      if (!res.ok) return text($('#loginErr'), (res && res.error) || 'Sign in failed');
+      location.href = 'index.html';
+    });
+    $('#signupForm')?.addEventListener('submit', async (e)=>{
+      e.preventDefault(); text($('#signupErr'),'');
+      const u = $('#signupUser')?.value?.trim(); const p = $('#signupPass')?.value || ''; const em = $('#signupEmail')?.value?.trim();
+      if (!u || !p) return text($('#signupErr'),'Enter username and password.');
+      const res = await signup(u,p,em);
+      if (!res.ok) return text($('#signupErr'), (res && res.error) || 'Create account failed');
+      location.href = 'index.html';
+    });
+    $('#resetReqForm')?.addEventListener('submit', async (e)=>{
+      e.preventDefault(); text($('#resetTokenBox'),'');
+      const u = $('#resetReqUser')?.value?.trim(); const em = $('#resetReqEmail')?.value?.trim();
+      if (!u && !em) { text($('#resetTokenBox'),'Enter username or email.'); return; }
+      const res = await requestReset(u, em);
+      if (!res.ok) { text($('#resetTokenBox'), (res && res.error) || 'Request failed'); return; }
+      text($('#resetTokenBox'), 'Reset token: ' + (res.token || '(sent)'));
+    });
+    $('#resetForm')?.addEventListener('submit', async (e)=>{
+      e.preventDefault(); text($('#resetErr'),'');
+      const u = $('#resetUser')?.value?.trim(); const t = $('#resetToken')?.value?.trim(); const p = $('#resetPass')?.value || '';
+      if (!u || !t || !p) { text($('#resetErr'),'Fill all fields.'); return; }
+      const res = await doReset(u, t, p);
+      if (!res.ok) { text($('#resetErr'), (res && res.error) || 'Reset failed'); return; }
+      location.href = 'index.html';
+    });
+
+    // Boot
+    (async () => {
+      const me = await getMe();
+      if (me && me.user) {
+        show($('#auth'), false);
+        show($('#authed'), true);
+        text($('#who'), me.user.username || 'user');
+        const pg = await loadProgress();
+        html($('#progress'), renderProgress(pg.progress));
+      } else {
+        show($('#auth'), true);
+        show($('#authed'), false);
+      }
+    })();
+  </script>
+</body>
+</html>

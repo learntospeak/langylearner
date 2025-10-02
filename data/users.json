@@ -1,0 +1,11 @@
+{
+  "users": {
+    "test": {
+      "username": "test",
+      "email": "hello@cleverfoxprint.com.au",
+      "password": "scrypt$3ec677e6cb39f9d303c3c0ab1c293bf9$7c269c32830ba06fa5854ccd82f36baf56adb1bcde0fbca6990d238fd6a052b4",
+      "progress": {},
+      "createdAt": 1759402120040
+    }
+  }
+}

@@ -39,6 +39,9 @@ body.anime-bg {
 
 /* Buttons (comic pill with bold outline) */
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: "M PLUS Rounded 1c", "Noto Sans JP", system-ui, sans-serif;
   border: var(--outline) solid var(--ink);
   border-radius: 9999px;
