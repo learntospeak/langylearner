@@ -1,0 +1,117 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/lesson.html b/lesson.html
+index d863d34d144a6c4917318fdeb7e617421f748dde..a10a79c056ce29e90e2e3bbf02fec725b72df916 100644
+--- a/lesson.html
++++ b/lesson.html
+@@ -1,36 +1,37 @@
+ <!DOCTYPE html>
+ <html lang="en">
+ 
+ <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
+     <meta name="theme-color" content="#111111">
+     <title>KanaReader — Lesson</title>
+     <script src="https://cdn.tailwindcss.com"></script>
+     <script src="./lesson-shim.js?v=4"></script>
+     <script type="module" src="./lesson-loader.js?v=4"></script>
++    <script type="module" src="./modules/mascot-controller.js"></script>
+     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
+     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
+     <style type="text/tailwindcss">
+         .btn { @apply px-3 py-2 rounded font-medium transition focus:outline-none focus:ring; }
+   .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-300; }
+   .btn-amber   { @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-300; }
+   .btn-dark    { @apply bg-gray-900 text-white hover:bg-black focus:ring-gray-400; }
+   .btn-ghost   { @apply bg-gray-200 hover:bg-gray-300 text-gray-900 focus:ring-gray-300; }
+ </style>
+     <style type="text/tailwindcss">
+         .field {
+     @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner
+            focus:outline-none focus:ring-2 focus:ring-blue-400;
+   }
+   .field.ok  { @apply border-green-400 ring-green-300; }
+   .field.bad { @apply border-red-400   ring-red-300; }
+ </style>
+     <!--blah-->
+     <style>
+         html,
+         body {
+             height: 100%;
+         }
+ 
+diff --git a/lesson.html b/lesson.html
+index d863d34d144a6c4917318fdeb7e617421f748dde..a10a79c056ce29e90e2e3bbf02fec725b72df916 100644
+--- a/lesson.html
++++ b/lesson.html
+@@ -262,60 +263,60 @@
+                 <span id="lsSpeedVal">1.0×</span>
+             </label>
+         </div>
+ 
+         <style>
+             /* Let users start a vertical scroll on the bar itself */
+             #footer-controls {
+                 touch-action: pan-y;
+             }
+ 
+             /* Fallback padding in case JS doesn’t run */
+             #page {
+                 padding-bottom: 7rem;
+             }
+         </style>
+ 
+ 
+         <style>
+             /* Make wrapper the positioning context */
+             #lesson-wrap {
+                 position: relative;
+             }
+ 
+             /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
+             #lesson-wrap #mascot {
+-                position: absolute !important;
+-                top: 10px !important;
+-                right: 10px !important;
+-                left: auto !important;
+-                bottom: auto !important;
++                position: absolute;
++                top: 10px;
++                right: 10px;
+                 width: 120px;
+                 height: 120px;
+                 z-index: 50;
+-                pointer-events: none;
++                pointer-events: auto;
+                 user-select: none;
++                cursor: move;
++                touch-action: none;
+             }
+ 
+             /* SVG sizing + animations (unchanged) */
+             #lesson-wrap #mascot svg {
+                 width: 100%;
+                 height: 100%;
+                 display: block;
+             }
+ 
+             #lesson-wrap #mascot .mouth {
+                 transform-origin: 50% 64%;
+             }
+ 
+             #lesson-wrap #mascot.mascot-idle {
+                 animation: float 3s ease-in-out infinite;
+             }
+ 
+             #lesson-wrap #mascot.mascot-talk .mouth {
+                 animation: talk 0.25s ease-in-out infinite;
+             }
+ 
+             #lesson-wrap #mascot.mascot-celebrate {
+                 animation: celebrate 0.6s ease-in-out 0s 2;
+             }
+ 
+ 
+EOF
+)

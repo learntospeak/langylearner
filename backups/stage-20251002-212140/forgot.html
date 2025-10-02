@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KanaReader – Forgot Password</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css" />
+</head>
+<body class="anime-bg min-h-screen flex items-center justify-center p-4">
+  <main class="w-full max-w-sm">
+    <h1 class="site-title text-2xl font-bold mb-4 accent-underline">Forgot Password</h1>
+    <section class="manga-bubble p-4 space-y-3">
+      <p class="text-sm text-gray-700">Enter your email or username and we’ll send a reset code to your email. After you receive the code, continue to the Reset Password page.</p>
+      <form id="resetReqForm" class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">Email</label>
+          <input id="resetReqEmail" type="email" class="field w-full" autocomplete="email" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Username (optional)</label>
+          <input id="resetReqUser" class="field w-full" autocomplete="username" />
+        </div>
+        <div id="resetMsg" class="text-sm"></div>
+        <div class="flex items-center gap-2">
+          <button type="submit" class="btn btn-amber">Send Reset Code</button>
+          <a class="btn btn-ghost" href="index.html">Cancel</a>
+        </div>
+      </form>
+      <div class="text-sm">Already have a code? <a class="text-blue-700 hover:underline" href="reset.html">Reset Password</a></div>
+    </section>
+  </main>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    async function requestReset(username, email){
+      const r = await fetch('/api/auth/request-reset', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, email }) });
+      return await r.json();
+    }
+    $('#resetReqForm')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const u = $('#resetReqUser')?.value?.trim();
+      const em = $('#resetReqEmail')?.value?.trim();
+      if (!u && !em) { $('#resetMsg').textContent = 'Enter email or username.'; $('#resetMsg').className='text-sm text-red-600'; return; }
+      const res = await requestReset(u, em);
+      if (!res.ok) { $('#resetMsg').textContent = (res && res.error) || 'Request failed'; $('#resetMsg').className='text-sm text-red-600'; return; }
+      $('#resetMsg').textContent = 'If this email/username exists, a reset code was sent. Check your inbox.';
+      $('#resetMsg').className='text-sm text-green-700';
+    });
+  </script>
+</body>
+</html>
+
