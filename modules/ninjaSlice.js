@@ -1,4 +1,4 @@
-export function initNinjaSlice(config) {
+﻿export function initNinjaSlice(config) {
   const {
     containerId,
     canvasId,
@@ -2678,17 +2678,17 @@ canvas.addEventListener('pointerout', endPointer);
       if (r) r.textContent = (reason === 'bomb') ? 'You hit a bomb.' : (reason === 'timeout' ? 'Time up.' : 'Great job!');
       overPanel.classList.remove('hidden');
       if (tryBtn) tryBtn.onclick = () => { overPanel.classList.add('hidden'); startRound(); };
-      if (finishBtn) finishBtn.onclick = () => { overPanel.classList.add('hidden'); overlay.classList.add('hidden'); };
+      if (finishBtn) finishBtn.onclick = () => { overPanel.classList.add('hidden'); overlay.classList.add('hidden'); try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.style.touchAction=''; }catch{} };
     } else {
-      overlay.classList.add('hidden');
+      overlay.classList.add('hidden'); try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.style.touchAction=''; }catch{}
     }
     // persist bank on game end
     updateCoinBankUI();
   }
-  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); updateCoinBankUI(); overlay.classList.add('hidden'); });
+  closeBtn.addEventListener("click", () => { clearTimeout(spawnHandle); clearInterval(timerInterval); cancelAnimationFrame(animateId); stopComboMeter(); resetComboBadge(); resetSwordCursor(); popFx.length = 0; clearTrails(); roundActive = false; cancelActivePause({ skipResume: true, skipCallbacks: true }); if (quizMode) setQuizPrompt(''); updateCoinBankUI(); overlay.classList.add('hidden'); try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.style.touchAction=''; }catch{} });
 
   // show modal & kick off ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ensure sizing runs after it becomes visible
-  overlay.classList.remove('hidden');
+  overlay.classList.remove('hidden'); try{ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; document.body.style.touchAction='none'; }catch{}
   requestAnimationFrame(() => { resize(); startRound(); });
 }
 
