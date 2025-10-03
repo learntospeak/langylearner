@@ -173,7 +173,7 @@
   // Power-ups (Stage 4)
   const powerUpsEnabled = (config && config.powerUpsEnabled) !== false;
   const powerSpawnChance = Math.max(0, Math.min(0.4, Number((config && config.powerSpawnChance) ?? 0.07)));
-  const powerFreezeMs = Math.max(1000, Number((config && config.powerFreezeMs) ?? 6000));
+  let powerFreezeMs = Math.max(1000, Number((config && config.powerFreezeMs) ?? 6000));
   const powerDoubleMs = Math.max(1000, Number((config && config.powerDoubleMs) ?? 8000));
   const powerWeights = Object.assign({ freeze: 1, shield: 1, double: 1 }, (config && config.powerWeights) || {});
   // Timer + failure handling
@@ -194,6 +194,17 @@
   const coinFx = [];             // coin particles (rendered later via fxCanvas)
   const sliceFx = [];            // sliced-kana showcase animations
   let lastFFAAward = 0;          // used for stage banner summary
+  // Wallet-driven upgrades
+  let coinMultiplier = 1;
+  try {
+    fetch('/api/wallet', { cache:'no-store' })
+      .then(r=>r.json())
+      .then(j=>{
+        const owned = (j && j.owned) || {};
+        if (owned['upgrade-coin-boost']) coinMultiplier = 2;
+        if (owned['upgrade-freeze-plus']) powerFreezeMs = Math.round(powerFreezeMs * 1.5);
+      }).catch(()=>{});
+  } catch {}
   // Persistent coin bank across rounds (page-level)
   let coinBank = 0;
   try { const saved = Number(localStorage.getItem('sliceCoinBank') || '0'); coinBank = isFinite(saved) ? Math.max(0, Math.floor(saved)) : 0; } catch {}
@@ -361,7 +372,7 @@
       } catch {}
     } catch {}
     // Run a quick swoop animation to the top-right, then tally + stage banner
-    const award = Math.max(0, Math.floor(coinCount));
+    const award = Math.max(0, Math.floor(coinCount * coinMultiplier));
     lastFFAAward = award;
     launchCoinSwoop(award, () => {
       try { coinCounterEl.style.display = 'none'; } catch {}

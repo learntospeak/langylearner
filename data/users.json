@@ -13,14 +13,34 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759455604180
+          "updatedAt": 1759456304367
         }
       },
       "createdAt": 1759402120040,
       "wallet": {
         "coins": 2000000,
-        "owned": {},
-        "equipped": {}
+        "owned": {
+          "upgrade-tutor-basic": true,
+          "upgrade-tutor-pro": true,
+          "upgrade-hint-plus": true,
+          "cos-scarf-pink": true,
+          "cos-scarf-blue": true,
+          "cos-hat-kabuto": true,
+          "cos-hat-headband": true,
+          "cos-eyes-star": true,
+          "cos-eyes-sparkle": true,
+          "cos-cheek-heart": true,
+          "cos-face-catmouth": true,
+          "cos-body-sakura": true
+        },
+        "equipped": {
+          "scarf": "cos-scarf-blue",
+          "hat": "cos-hat-kabuto",
+          "eyes": "cos-eyes-sparkle",
+          "cheek": "cos-cheek-heart",
+          "mouth": "cos-face-catmouth",
+          "body": "cos-body-sakura"
+        }
       }
     }
   }
