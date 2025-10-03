@@ -225,6 +225,16 @@ body.anime-bg {
 .mascot-stack.small { width: 60px; height: 72px; }
 .mascot-stack.tiny { width: 48px; height: 58px; }
 
+/* Gentle float for 3D model-viewer (replaces fast GLB idle) */
+.float-slow {
+  animation: floatSlow 3.6s ease-in-out infinite;
+}
+@keyframes floatSlow {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+
 /* Romaji pop bubbles in Slice (best-effort match even if classes differ) */
 #slice-wrap .romaji-bubble,
 #slice-wrap .roma-bubble {

@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759471505690
+          "updatedAt": 1759483442099
         }
       },
       "createdAt": 1759402120040,
@@ -31,9 +31,28 @@
           "cos-eyes-sparkle": true,
           "cos-cheek-heart": true,
           "cos-face-catmouth": true,
-          "cos-body-sakura": true
+          "cos-body-sakura": true,
+          "skin-student": true,
+          "eyes-default": true,
+          "mouth-smile": true,
+          "upgrade-coin-boost": true,
+          "upgrade-freeze-plus": true,
+          "upgrade-shield-start": true,
+          "model-student": true,
+          "skin-ninja": true,
+          "skin-knight": true,
+          "model-ninja": true,
+          "model-knight": true,
+          "outfit-sailor": true
         },
-        "equipped": {}
+        "equipped": {
+          "eyes": "eyes-default",
+          "mouth": "mouth-smile",
+          "cheek": "cos-cheek-heart",
+          "outfit": "outfit-sailor",
+          "model": "model-student",
+          "skin": "skin-student"
+        }
       }
     }
   }

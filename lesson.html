@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+?<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -183,6 +183,8 @@
 
 
 </head>
+<script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
+<script nomodule src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer-legacy.js"></script>
 <style>
   /* Ensure anime theme button styles override Tailwind @apply block */
   .anime-bg .btn {
@@ -248,13 +250,13 @@
         <!-- wrapper that positions the mascot beside the lesson -->
         <div id="lesson-wrap">
             <div id="jp-text" class="space-y-3"></div>
+            <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             <div id="en-text" class="text-gray-700 mt-2"></div>
             <div id="full-romaji" class="text-gray-500 mt-1"></div>
 
             <!-- mascot lives INSIDE the wrapper -->
             <!-- Mascot (drop-in, no inline <style> here) -->
-            <div id="mascot2d" class="mascot-stack" style="display:none"></div>
-            <div id="mascot" class="w-16 h-20">
+            <div id="mascot" style="display:none" class="w-16 h-20" style="display:none">
                 <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
                     <!-- BODY -->
                     <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700"
@@ -304,7 +306,7 @@
                 touch-action: pan-y;
             }
 
-            /* Fallback padding in case JS doesn�t run */
+            /* Fallback padding in case JS doesn?t run */
             #page {
                 padding-bottom: 7rem;
             }
@@ -330,6 +332,17 @@
                 user-select: none;
                 cursor: move;
                 touch-action: none;
+            }
+            /* Position 3D mascot same spot */
+            #lesson-wrap #mascot3d {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 140px !important;
+                height: 160px !important;
+                z-index: 50;
+                pointer-events: auto;
+                user-select: none;
             }
 
 
@@ -384,7 +397,7 @@
                 w-full sm:w-auto justify-center">
                 Speed
                 <input id="lsSpeed" type="range" min="0.6" max="1.4" step="0.1" value="1" class="w-32" />
-                <span id="lsSpeedVal">1.0�</span>
+                <span id="lsSpeedVal">1.0?</span>
             </label>
         </div>
     <!-- Kana Reference Modal -->
@@ -483,9 +496,9 @@
                             <tr>
                                 <th class="p-2 border">y</th>
                                 <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">�</td>
+                                <td class="p-2 border text-gray-300">?</td>
                                 <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">�</td>
+                                <td class="p-2 border text-gray-300">?</td>
                                 <td class="p-2 border">?</td>
                             </tr>
                             <tr>
@@ -499,9 +512,9 @@
                             <tr>
                                 <th class="p-2 border">w</th>
                                 <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">�</td>
-                                <td class="p-2 border text-gray-300">�</td>
-                                <td class="p-2 border text-gray-300">�</td>
+                                <td class="p-2 border text-gray-300">?</td>
+                                <td class="p-2 border text-gray-300">?</td>
+                                <td class="p-2 border text-gray-300">?</td>
                                 <td class="p-2 border">?</td>
                             </tr>
                             <tr>
@@ -585,9 +598,9 @@
                             <tr>
                                 <th class="p-2 border">y</th>
                                 <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">�</td>
+                                <td class="p-2 border text-gray-300">?</td>
                                 <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">�</td>
+                                <td class="p-2 border text-gray-300">?</td>
                                 <td class="p-2 border">?</td>
                             </tr>
                             <tr>
@@ -601,9 +614,9 @@
                             <tr>
                                 <th class="p-2 border">w</th>
                                 <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">�</td>
-                                <td class="p-2 border text-gray-300">�</td>
-                                <td class="p-2 border text-gray-300">�</td>
+                                <td class="p-2 border text-gray-300">?</td>
+                                <td class="p-2 border text-gray-300">?</td>
+                                <td class="p-2 border text-gray-300">?</td>
                                 <td class="p-2 border">?</td>
                             </tr>
                             <tr>
@@ -650,6 +663,20 @@
 
             switchTab('hira'); // default tab
         })();
+        </script>
+        <script>
+          (async function(){
+            try {
+              const [w, cat] = await Promise.all([
+                fetch('/api/wallet', { cache:'no-store' }).then(r=>r.json()),
+                fetch('/api/shop/catalog', { cache:'no-store' }).then(r=>r.json())
+              ]);
+              const eq = (w && w.equipped) || {}; const items = (cat && cat.items) || [];
+              const it = items.find(x=> x.id === eq.model && x.model);
+              const mv = document.getElementById('mvLesson');
+              if (it && mv) { mv.src = it.model; try{ mv.pause(); }catch{} }
+            } catch {}
+          })();
         </script>
         <script>
           (async function(){ try {
@@ -1129,3 +1156,24 @@
 
 
 
+
+
+<script>
+(function(){
+  try {
+    Promise.all([
+      fetch('/api/wallet', {cache:'no-store'}).then(r=>r.json()),
+      fetch('/api/shop/catalog', {cache:'no-store'}).then(r=>r.json()),
+    ]).then(([w, cat]) => {
+      const eq = (w && w.equipped) || {}; const items=(cat&&cat.items)||[];
+      const it = items.find(x=> x.id === eq.model && x.model);
+      const mv = document.getElementById('mvLesson'); if (!mv) return;
+      if (it && it.model){
+        mv.src = it.model;
+        const setRate=()=>{ try{ mv.animationPlayRate=0.3 }catch{}; try{ mv.animationPlaybackRate=0.3 }catch{}; mv.pause(); };
+        if(!mv.dataset.rateBound){ mv.addEventListener('load', setRate, {once:true}); mv.dataset.rateBound='1'; }
+      }
+    }).catch(()=>{});
+  } catch {}
+})();
+</script>

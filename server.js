@@ -196,6 +196,15 @@ const CATALOG = [
   { id:'hat-headband-red-img',kind:'cosmetic', slot:'hat',   name:'Headband (red)',       price: 50,  src:'assets/chibi/2d/hat/red-headband.svg' },
   { id:'scarf-blue-img',      kind:'cosmetic', slot:'scarf', name:'Scarf (blue)',         price: 50,  src:'assets/chibi/2d/scarf/blue.svg' },
   { id:'outfit-sailor',       kind:'cosmetic', slot:'outfit',name:'Outfit (sailor)',      price: 120, src:'assets/chibi/2d/outfit/sailor.svg' },
+
+  // 3D models (use GLB files with model-viewer)
+  { id:'model-student',       kind:'cosmetic', slot:'model', name:'3D Student',           price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/studentpr.glb' },
+  { id:'model-ninja',         kind:'cosmetic', slot:'model', name:'3D Ninja',             price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/ninjapr.glb' },
+  { id:'model-knight',        kind:'cosmetic', slot:'model', name:'3D Knight',            price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/knightpr.glb' },
+  { id:'model-archer',        kind:'cosmetic', slot:'model', name:'3D Archer',            price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/archerpr.glb' },
+  { id:'model-merchant',      kind:'cosmetic', slot:'model', name:'3D Merchant',          price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/merchantpr.glb' },
+  { id:'model-basemesh',      kind:'cosmetic', slot:'model', name:'3D Basemesh',          price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/basemeshpr.glb' },
+  { id:'model-allinone',      kind:'cosmetic', slot:'model', name:'3D All-in-one',        price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/allinonepr.glb' },
 ];
 function getWallet(rec){
   if (!rec.wallet) rec.wallet = { coins: 0, owned: {}, equipped: {} };
@@ -216,13 +225,13 @@ app.get('/api/wallet', async (req, res) => {
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
     // Dev convenience: ensure base freebies are owned + equipped defaults
-    const freebies = ['skin-student','eyes-default','mouth-smile'];
+    const freebies = ['skin-student','eyes-default','mouth-smile','model-student'];
     wallet.owned = wallet.owned || {};
     freebies.forEach(id => { wallet.owned[id] = true; });
     wallet.equipped = wallet.equipped || {};
     if (!wallet.equipped.skin)  wallet.equipped.skin  = 'skin-student';
     if (!wallet.equipped.eyes)  wallet.equipped.eyes  = 'eyes-default';
-    if (!wallet.equipped.mouth) wallet.equipped.mouth = 'mouth-smile';
+    if (!wallet.equipped.mouth) wallet.equipped.mouth = 'mouth-smile'; if (!wallet.equipped.model) wallet.equipped.model = 'model-student';
     await writeDb(db);
     // Dev convenience: boost test user's coins
     if (String(user).toLowerCase() === 'test') {

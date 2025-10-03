@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="anime-theme.css" />
+  <script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
+  <script nomodule src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer-legacy.js"></script>
 </head>
 <body class="anime-bg min-h-screen p-5">
   <main class="max-w-5xl mx-auto">
@@ -28,9 +30,10 @@
 
         <!-- Preview (sticky) -->
         <div class="flex items-start justify-center sm:sticky top-2">
-          <div class="text-center">
+            <div class="text-center">
+            <model-viewer id="mvShop" class="float-slow" style="display:none;width:140px;height:160px;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             <div id="mascotPreview2D" class="inline-block mascot-stack tiny" style="display:none"></div>
-            <div id="mascotPreview" class="w-12 h-14 inline-block" style="transform:scale(0.36); transform-origin: top center;">
+            <div id="mascotPreview" class="w-12 h-14 inline-block" style="display:none; transform:scale(0.36); transform-origin: top center;">
               <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
                 <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700" stroke-width="2" />
                 <path d="M28 72 q-10 6 -12 0" fill="none" stroke="#E0A700" stroke-width="3" stroke-linecap="round" />
@@ -68,9 +71,6 @@
     </section>
 
     <div class="mt-3 flex items-center gap-2">
-      <a href="index.html" class="btn btn-ghost">Home</a>
-      <a href="lesson.html" class="btn btn-ghost">Lesson</a>
-      <a id="tutorLink" href="tutor.html" class="btn btn-dark hidden">Open Tutor</a>
     </div>
   </main>
 
@@ -97,8 +97,8 @@
       const has = (slot)=>items.some(it=>it.kind==='cosmetic' && it.slot===slot);
       const cats = [];
       if (items.some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
-      const slots = ['hat','scarf','eyes','cheek','mouth','body'];
-      const names = { hat:'Hats', scarf:'Scarves', eyes:'Eyes', cheek:'Cheeks', mouth:'Mouth', body:'Body' };
+      const slots = ['model','skin','outfit','hat','scarf','eyes','cheek','mouth','body'];
+      const names = { model:'Characters', skin:'Skins', outfit:'Clothes', hat:'Hats', scarf:'Scarves', eyes:'Eyes', cheek:'Cheeks', mouth:'Mouth', body:'Body' };
       slots.forEach(s=>{ if (has(s)) cats.push({ id:s, label:names[s], filter:(it)=>it.kind==='cosmetic' && it.slot===s }); });
       return cats;
     }
@@ -130,6 +130,15 @@
 
     function renderPreview(){
       const equip = _wallet.equipped||{};
+      // Prefer 3D model when equipped
+      try {
+        const itemsMap = new Map((_items||[]).map(x=>[x.id,x]));
+        const modelItem = equip.model && itemsMap.get(equip.model);
+        const mv = document.getElementById('mvShop');
+        if (modelItem && modelItem.model && mv) {
+          mv.src = modelItem.model; mv.style.display='inline-block'; try{ mv.pause(); }catch{}; return;
+        } else if (mv) { mv.style.display='none'; }
+      } catch {}
       const cls = Object.values(equip).filter(Boolean).join(' ');
       setPreviewClass(cls);
       // Try 2D layered preview from catalog src
@@ -229,3 +238,7 @@
   </script>
 </body>
 </html>
+
+
+
+
