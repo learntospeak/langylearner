@@ -13,10 +13,15 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759404632305
+          "updatedAt": 1759455604180
         }
       },
-      "createdAt": 1759402120040
+      "createdAt": 1759402120040,
+      "wallet": {
+        "coins": 2000000,
+        "owned": {},
+        "equipped": {}
+      }
     }
   }
 }
