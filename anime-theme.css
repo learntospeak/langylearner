@@ -208,6 +208,17 @@ body.anime-bg {
 /* Utility: vertical stack rhythm */
 .stack > * + * { margin-top: var(--stack-gap, 1.5rem); }
 
+/* Shop layout (fallback if Tailwind grid utilities aren’t active) */
+.shop-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (min-width: 700px) {
+  .shop-grid { grid-template-columns: 220px 1fr 1.6fr; }
+}
+
 /* Romaji pop bubbles in Slice (best-effort match even if classes differ) */
 #slice-wrap .romaji-bubble,
 #slice-wrap .roma-bubble {

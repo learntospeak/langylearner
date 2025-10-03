@@ -203,6 +203,7 @@
         const owned = (j && j.owned) || {};
         if (owned['upgrade-coin-boost']) coinMultiplier = 2;
         if (owned['upgrade-freeze-plus']) powerFreezeMs = Math.round(powerFreezeMs * 1.5);
+        if (owned['upgrade-shield-start']) shieldCount = Math.max(shieldCount|0, 1);
       }).catch(()=>{});
   } catch {}
   // Persistent coin bank across rounds (page-level)

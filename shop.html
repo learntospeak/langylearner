@@ -19,17 +19,17 @@
 
     <section class="manga-bubble p-3">
       <!-- 3-column layout: categories (L) | preview (C) | items list (R) -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="shop-grid items-start">
         <!-- Categories -->
-        <aside>
+        <aside class="max-h-[70vh] overflow-auto pr-1">
           <div class="font-medium mb-2">Categories</div>
           <div id="catList" class="flex md:flex-col gap-2 overflow-x-auto pb-1"></div>
         </aside>
 
         <!-- Preview (sticky) -->
-        <div class="flex items-start justify-center">
+        <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
-            <div id="mascotPreview" class="w-12 h-14 inline-block" style="transform:scale(0.42); transform-origin: top center;">
+            <div id="mascotPreview" class="w-12 h-14 inline-block" style="transform:scale(0.36); transform-origin: top center;">
               <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
                 <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700" stroke-width="2" />
                 <path d="M28 72 q-10 6 -12 0" fill="none" stroke="#E0A700" stroke-width="3" stroke-linecap="round" />
@@ -59,7 +59,7 @@
         </div>
 
         <!-- Items list -->
-        <div>
+        <div class="max-h-[70vh] overflow-auto pr-1" id="itemsPane">
           <div class="font-medium mb-2" id="catTitle">Items</div>
           <div id="catalog" class="grid grid-cols-1 gap-2"></div>
         </div>
@@ -155,6 +155,7 @@
       });
       if (owned['upgrade-tutor-basic']) tutorLink.classList.remove('hidden'); else tutorLink.classList.add('hidden');
       bindActions();
+      try { document.getElementById('itemsPane').scrollTop = 0; } catch {}
     }
     function bindActions(){
       catalogEl.querySelectorAll('[data-buy]')?.forEach(btn => btn.addEventListener('click', async (e)=>{

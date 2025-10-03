@@ -164,6 +164,9 @@ const CATALOG = [
   { id:'upgrade-tutor-basic', kind:'upgrade', name:'Tutor (Basic)', price: 200 },
   { id:'upgrade-tutor-pro',   kind:'upgrade', name:'Tutor (Pro)',   price: 800 },
   { id:'upgrade-hint-plus',   kind:'upgrade', name:'Extra Hints',   price: 300 },
+  { id:'upgrade-coin-boost',  kind:'upgrade', name:'Coin Boost (x2)', price: 500 },
+  { id:'upgrade-freeze-plus', kind:'upgrade', name:'Longer Freeze',   price: 350 },
+  { id:'upgrade-shield-start',kind:'upgrade', name:'Start with Shield', price: 250 },
 
   // Cosmetics (slots)
   { id:'cos-scarf-pink',      kind:'cosmetic', slot:'scarf', name:'Pink Scarf',      price: 80 },
@@ -252,6 +255,25 @@ app.post('/api/shop/equip', async (req, res) => {
     await writeDb(db);
     res.json({ ok: true, equipped: wallet.equipped });
   } catch (e) { res.status(500).json({ error: 'Equip failed', details: String(e) }); }
+});
+
+app.post('/api/shop/unequip', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const { itemId, slot } = req.body || {};
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    const wallet = getWallet(rec);
+    let targetSlot = String(slot||'');
+    if (!targetSlot && itemId) {
+      const it = findItem(String(itemId));
+      if (it && it.kind === 'cosmetic') targetSlot = it.slot;
+    }
+    if (!targetSlot) return res.status(400).json({ error: 'Missing slot or itemId' });
+    if (wallet.equipped && wallet.equipped[targetSlot]) delete wallet.equipped[targetSlot];
+    await writeDb(db);
+    res.json({ ok: true, equipped: wallet.equipped });
+  } catch (e) { res.status(500).json({ error: 'Unequip failed', details: String(e) }); }
 });
 
 // Password reset (dev-friendly token flow)
