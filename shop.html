@@ -84,7 +84,13 @@
 
     function setPreviewClass(cls){ try { previewHost.className = 'w-14 h-16 ' + (cls||''); } catch {} }
 
-    async function api(path, opts){ const r = await fetch(path, opts||{}); return await r.json(); }
+    async function api(path, opts){
+      const r = await fetch(path, opts||{});
+      let data = null;
+      try { data = await r.json(); } catch { data = null; }
+      if (!r.ok) return data || { ok:false, error: `HTTP ${r.status}` };
+      return data;
+    }
     let SELECTED = 'upgrades';
     function categoriesFrom(items){
       const has = (slot)=>items.some(it=>it.kind==='cosmetic' && it.slot===slot);
@@ -126,11 +132,21 @@
       const cls = Object.values(equip).filter(Boolean).join(' ');
       setPreviewClass(cls);
     }
-    function cardHtml(it, owned){
+    function cardHtml(it, owned, equipped){
       const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
-      const equipBtn = `<button data-equip="${it.id}" class="btn btn-ghost btn-equip">Equip</button>`;
+      const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
+      const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
       const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
-      const action = owned[it.id] ? (it.kind==='cosmetic' ? equipBtn : ownedBadge) : buyBtn;
+      let action = buyBtn;
+      if (owned[it.id]) {
+        if (it.kind==='cosmetic') {
+          const slot = it.slot;
+          const isEquipped = equipped && equipped[slot] === it.id;
+          action = `${equipBtn(isEquipped)} ${unequipBtn(!isEquipped)}`;
+        } else {
+          action = ownedBadge;
+        }
+      }
       const sub = it.kind==='upgrade' ? 'Upgrade' : (it.slot ? it.slot : 'Cosmetic');
       return `
         <div class="p-3 rounded-xl border-2 border-black bg-white shadow">
@@ -143,14 +159,14 @@
         </div>`;
     }
     function renderItems(){
-      const owned = _wallet.owned||{};
+      const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
       const cat = cats.find(c=>c.id===SELECTED) || cats[0];
       const list = (cat ? _items.filter(cat.filter) : _items);
       catalogEl.innerHTML='';
       list.forEach(it=>{
         const wrap = document.createElement('div');
-        wrap.innerHTML = cardHtml(it, owned);
+        wrap.innerHTML = cardHtml(it, owned, equipped);
         const node = wrap.firstElementChild; catalogEl.appendChild(node);
       });
       if (owned['upgrade-tutor-basic']) tutorLink.classList.remove('hidden'); else tutorLink.classList.add('hidden');
@@ -170,10 +186,21 @@
       }));
       catalogEl.querySelectorAll('[data-equip]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
         const id = e.currentTarget.getAttribute('data-equip');
+        if (e.currentTarget.disabled) return;
         const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
         if (!res.ok && res.error) { alert(res.error); return; }
         _wallet.equipped = res.equipped || _wallet.equipped || {};
         renderPreview();
+        renderItems();
+      }));
+      catalogEl.querySelectorAll('[data-unequip]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.getAttribute('data-unequip');
+        if (e.currentTarget.disabled) return;
+        const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+        if (!res.ok && res.error) { alert(res.error); return; }
+        _wallet.equipped = res.equipped || _wallet.equipped || {};
+        renderPreview();
+        renderItems();
       }));
     }
 

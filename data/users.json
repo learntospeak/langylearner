@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759460853396
+          "updatedAt": 1759462326268
         }
       },
       "createdAt": 1759402120040,
@@ -33,14 +33,7 @@
           "cos-face-catmouth": true,
           "cos-body-sakura": true
         },
-        "equipped": {
-          "scarf": "cos-scarf-blue",
-          "hat": "cos-hat-kabuto",
-          "eyes": "cos-eyes-sparkle",
-          "cheek": "cos-cheek-heart",
-          "mouth": "cos-face-catmouth",
-          "body": "cos-body-sakura"
-        }
+        "equipped": {}
       }
     }
   }

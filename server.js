@@ -35,6 +35,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve favicon to avoid 404 spam
+try {
+  const favPath = path.join(__dirname, 'images', 'favicon.ico');
+  app.get('/favicon.ico', (req, res) => {
+    try { return res.sendFile(favPath); } catch { return res.sendStatus(204); }
+  });
+} catch {}
+
 // --- Simple file DB helpers (users + progress) ---
 async function ensureDb(){
   try { await fsp.mkdir(DB_DIR, { recursive: true }); } catch {}
