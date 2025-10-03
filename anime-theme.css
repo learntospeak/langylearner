@@ -219,6 +219,12 @@ body.anime-bg {
   .shop-grid { grid-template-columns: 220px 1fr 1.6fr; }
 }
 
+/* 2D Mascot layering */
+.mascot-stack { position: relative; width: 100px; height: 120px; }
+.mascot-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: auto; }
+.mascot-stack.small { width: 60px; height: 72px; }
+.mascot-stack.tiny { width: 48px; height: 58px; }
+
 /* Romaji pop bubbles in Slice (best-effort match even if classes differ) */
 #slice-wrap .romaji-bubble,
 #slice-wrap .roma-bubble {

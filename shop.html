@@ -29,6 +29,7 @@
         <!-- Preview (sticky) -->
         <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
+            <div id="mascotPreview2D" class="inline-block mascot-stack tiny" style="display:none"></div>
             <div id="mascotPreview" class="w-12 h-14 inline-block" style="transform:scale(0.36); transform-origin: top center;">
               <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
                 <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700" stroke-width="2" />
@@ -131,6 +132,26 @@
       const equip = _wallet.equipped||{};
       const cls = Object.values(equip).filter(Boolean).join(' ');
       setPreviewClass(cls);
+      // Try 2D layered preview from catalog src
+      const host = document.getElementById('mascotPreview2D');
+      const svgHost = document.getElementById('mascotPreview');
+      const order = ['skin','outfit','scarf','hat','eyes','mouth','cheek','body'];
+      const map = new Map((_items||[]).map(x=>[x.id, x]));
+      while (host.firstChild) host.removeChild(host.firstChild);
+      let any = false;
+      order.forEach(slot=>{
+        const id = equip[slot];
+        const it = id && map.get(id);
+        const src = it && it.src;
+        if (src) {
+          const img = document.createElement('img');
+          img.className = 'mascot-layer'; img.alt = slot; img.loading = 'lazy';
+          img.src = src; img.onerror = ()=>{ try { host.removeChild(img); } catch {} };
+          host.appendChild(img); any = true;
+        }
+      });
+      if (any) { host.style.display='inline-block'; svgHost.style.display='none'; }
+      else { host.style.display='none'; svgHost.style.display='inline-block'; }
     }
     function cardHtml(it, owned, equipped){
       const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';

@@ -253,6 +253,7 @@
 
             <!-- mascot lives INSIDE the wrapper -->
             <!-- Mascot (drop-in, no inline <style> here) -->
+            <div id="mascot2d" class="mascot-stack" style="display:none"></div>
             <div id="mascot" class="w-16 h-20">
                 <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
                     <!-- BODY -->
@@ -649,7 +650,20 @@
 
             switchTab('hira'); // default tab
         })();
-    </script>
+        </script>
+        <script>
+          (async function(){ try {
+            const w = await fetch('/api/wallet', { cache:'no-store' }); if (!w.ok) return; const jw = await w.json();
+            const cat = await fetch('/api/shop/catalog', { cache:'no-store' }).then(x=>x.json()).catch(()=>({items:[]}));
+            const eq = (jw && jw.equipped) || {}; const items = (cat && cat.items) || [];
+            const host = document.getElementById('mascot2d'); const svgHost = document.getElementById('mascot');
+            const order = ['skin','outfit','scarf','hat','eyes','mouth','cheek','body'];
+            const map = new Map(items.map(x=>[x.id, x]));
+            while (host.firstChild) host.removeChild(host.firstChild);
+            let any=false; order.forEach(slot=>{ const id=eq[slot]; const it=id&&map.get(id); const src=it&&it.src; if(src){ const img=document.createElement('img'); img.className='mascot-layer'; img.alt=slot; img.src=src; img.onerror=()=>{ try{ host.removeChild(img);}catch{}}; host.appendChild(img); any=true; } });
+            if (any) { host.style.display='block'; svgHost.style.display='none'; }
+          } catch {} })();
+        </script>
 
 
 

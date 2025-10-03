@@ -186,6 +186,16 @@ const CATALOG = [
   { id:'cos-cheek-heart',     kind:'cosmetic', slot:'cheek', name:'Heart Cheeks',    price: 70 },
   { id:'cos-face-catmouth',   kind:'cosmetic', slot:'mouth', name:'Cat Smile',       price: 60 },
   { id:'cos-body-sakura',     kind:'cosmetic', slot:'body',  name:'Sakura Tint',     price: 110 },
+
+  // 2D layered skin & parts (provide PNGs at these paths to enable layered preview)
+  { id:'skin-student',        kind:'cosmetic', slot:'skin',  name:'Chibi Student (body)', price: 0,   src:'assets/chibi/2d/skin-student/body.svg' },
+  { id:'skin-ninja',          kind:'cosmetic', slot:'skin',  name:'Chibi Ninja (body)',   price: 0,   src:'assets/chibi/2d/skin-ninja/body.svg' },
+  { id:'skin-knight',         kind:'cosmetic', slot:'skin',  name:'Chibi Knight (body)',  price: 0,   src:'assets/chibi/2d/skin-knight/body.svg' },
+  { id:'eyes-default',        kind:'cosmetic', slot:'eyes',  name:'Eyes (default)',       price: 0,   src:'assets/chibi/2d/common/eyes.svg' },
+  { id:'mouth-smile',         kind:'cosmetic', slot:'mouth', name:'Mouth (smile)',        price: 0,   src:'assets/chibi/2d/common/mouth-smile.svg' },
+  { id:'hat-headband-red-img',kind:'cosmetic', slot:'hat',   name:'Headband (red)',       price: 50,  src:'assets/chibi/2d/hat/red-headband.svg' },
+  { id:'scarf-blue-img',      kind:'cosmetic', slot:'scarf', name:'Scarf (blue)',         price: 50,  src:'assets/chibi/2d/scarf/blue.svg' },
+  { id:'outfit-sailor',       kind:'cosmetic', slot:'outfit',name:'Outfit (sailor)',      price: 120, src:'assets/chibi/2d/outfit/sailor.svg' },
 ];
 function getWallet(rec){
   if (!rec.wallet) rec.wallet = { coins: 0, owned: {}, equipped: {} };
@@ -205,6 +215,15 @@ app.get('/api/wallet', async (req, res) => {
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
+    // Dev convenience: ensure base freebies are owned + equipped defaults
+    const freebies = ['skin-student','eyes-default','mouth-smile'];
+    wallet.owned = wallet.owned || {};
+    freebies.forEach(id => { wallet.owned[id] = true; });
+    wallet.equipped = wallet.equipped || {};
+    if (!wallet.equipped.skin)  wallet.equipped.skin  = 'skin-student';
+    if (!wallet.equipped.eyes)  wallet.equipped.eyes  = 'eyes-default';
+    if (!wallet.equipped.mouth) wallet.equipped.mouth = 'mouth-smile';
+    await writeDb(db);
     // Dev convenience: boost test user's coins
     if (String(user).toLowerCase() === 'test') {
       wallet.coins = Math.max(wallet.coins|0, 2000000);
