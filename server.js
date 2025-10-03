@@ -160,10 +160,21 @@ app.get('/api/me', async (req, res) => {
 
 // ---- Shop + Wallet ----
 const CATALOG = [
+  // Upgrades
   { id:'upgrade-tutor-basic', kind:'upgrade', name:'Tutor (Basic)', price: 200 },
-  { id:'cos-scarf-pink',     kind:'cosmetic', slot:'scarf', name:'Pink Scarf', price: 80 },
-  { id:'cos-hat-kabuto',     kind:'cosmetic', slot:'hat',   name:'Kabuto Hat', price: 120 },
-  { id:'cos-eyes-star',      kind:'cosmetic', slot:'eyes',  name:'Star Eyes',  price: 90 },
+  { id:'upgrade-tutor-pro',   kind:'upgrade', name:'Tutor (Pro)',   price: 800 },
+  { id:'upgrade-hint-plus',   kind:'upgrade', name:'Extra Hints',   price: 300 },
+
+  // Cosmetics (slots)
+  { id:'cos-scarf-pink',      kind:'cosmetic', slot:'scarf', name:'Pink Scarf',      price: 80 },
+  { id:'cos-scarf-blue',      kind:'cosmetic', slot:'scarf', name:'Blue Scarf',      price: 80 },
+  { id:'cos-hat-kabuto',      kind:'cosmetic', slot:'hat',   name:'Kabuto Hat',      price: 120 },
+  { id:'cos-hat-headband',    kind:'cosmetic', slot:'hat',   name:'Red Headband',    price: 100 },
+  { id:'cos-eyes-star',       kind:'cosmetic', slot:'eyes',  name:'Star Eyes',       price: 90 },
+  { id:'cos-eyes-sparkle',    kind:'cosmetic', slot:'eyes',  name:'Sparkle Eyes',    price: 90 },
+  { id:'cos-cheek-heart',     kind:'cosmetic', slot:'cheek', name:'Heart Cheeks',    price: 70 },
+  { id:'cos-face-catmouth',   kind:'cosmetic', slot:'mouth', name:'Cat Smile',       price: 60 },
+  { id:'cos-body-sakura',     kind:'cosmetic', slot:'body',  name:'Sakura Tint',     price: 110 },
 ];
 function getWallet(rec){
   if (!rec.wallet) rec.wallet = { coins: 0, owned: {}, equipped: {} };
@@ -183,6 +194,11 @@ app.get('/api/wallet', async (req, res) => {
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
+    // Dev convenience: boost test user's coins
+    if (String(user).toLowerCase() === 'test') {
+      wallet.coins = Math.max(wallet.coins|0, 2000000);
+      await writeDb(db);
+    }
     res.json({ coins: wallet.coins|0, owned: wallet.owned, equipped: wallet.equipped });
   } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
 });
