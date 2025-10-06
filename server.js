@@ -176,27 +176,6 @@ const CATALOG = [
   { id:'upgrade-freeze-plus', kind:'upgrade', name:'Longer Freeze',   price: 350 },
   { id:'upgrade-shield-start',kind:'upgrade', name:'Start with Shield', price: 250 },
 
-  // Cosmetics (slots)
-  { id:'cos-scarf-pink',      kind:'cosmetic', slot:'scarf', name:'Pink Scarf',      price: 80 },
-  { id:'cos-scarf-blue',      kind:'cosmetic', slot:'scarf', name:'Blue Scarf',      price: 80 },
-  { id:'cos-hat-kabuto',      kind:'cosmetic', slot:'hat',   name:'Kabuto Hat',      price: 120 },
-  { id:'cos-hat-headband',    kind:'cosmetic', slot:'hat',   name:'Red Headband',    price: 100 },
-  { id:'cos-eyes-star',       kind:'cosmetic', slot:'eyes',  name:'Star Eyes',       price: 90 },
-  { id:'cos-eyes-sparkle',    kind:'cosmetic', slot:'eyes',  name:'Sparkle Eyes',    price: 90 },
-  { id:'cos-cheek-heart',     kind:'cosmetic', slot:'cheek', name:'Heart Cheeks',    price: 70 },
-  { id:'cos-face-catmouth',   kind:'cosmetic', slot:'mouth', name:'Cat Smile',       price: 60 },
-  { id:'cos-body-sakura',     kind:'cosmetic', slot:'body',  name:'Sakura Tint',     price: 110 },
-
-  // 2D layered skin & parts (provide PNGs at these paths to enable layered preview)
-  { id:'skin-student',        kind:'cosmetic', slot:'skin',  name:'Chibi Student (body)', price: 0,   src:'assets/chibi/2d/skin-student/body.svg' },
-  { id:'skin-ninja',          kind:'cosmetic', slot:'skin',  name:'Chibi Ninja (body)',   price: 0,   src:'assets/chibi/2d/skin-ninja/body.svg' },
-  { id:'skin-knight',         kind:'cosmetic', slot:'skin',  name:'Chibi Knight (body)',  price: 0,   src:'assets/chibi/2d/skin-knight/body.svg' },
-  { id:'eyes-default',        kind:'cosmetic', slot:'eyes',  name:'Eyes (default)',       price: 0,   src:'assets/chibi/2d/common/eyes.svg' },
-  { id:'mouth-smile',         kind:'cosmetic', slot:'mouth', name:'Mouth (smile)',        price: 0,   src:'assets/chibi/2d/common/mouth-smile.svg' },
-  { id:'hat-headband-red-img',kind:'cosmetic', slot:'hat',   name:'Headband (red)',       price: 50,  src:'assets/chibi/2d/hat/red-headband.svg' },
-  { id:'scarf-blue-img',      kind:'cosmetic', slot:'scarf', name:'Scarf (blue)',         price: 50,  src:'assets/chibi/2d/scarf/blue.svg' },
-  { id:'outfit-sailor',       kind:'cosmetic', slot:'outfit',name:'Outfit (sailor)',      price: 120, src:'assets/chibi/2d/outfit/sailor.svg' },
-
   // 3D models (use GLB files with model-viewer)
   { id:'model-student',       kind:'cosmetic', slot:'model', name:'3D Student',           price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/studentpr.glb' },
   { id:'model-ninja',         kind:'cosmetic', slot:'model', name:'3D Ninja',             price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/ninjapr.glb' },
@@ -224,14 +203,18 @@ app.get('/api/wallet', async (req, res) => {
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
-    // Dev convenience: ensure base freebies are owned + equipped defaults
-    const freebies = ['skin-student','eyes-default','mouth-smile','model-student'];
-    wallet.owned = wallet.owned || {};
-    freebies.forEach(id => { wallet.owned[id] = true; });
+    // Remove any equipped items that are no longer in the catalog
+    const validIds = new Set(CATALOG.map(i => i.id));
     wallet.equipped = wallet.equipped || {};
-    if (!wallet.equipped.skin)  wallet.equipped.skin  = 'skin-student';
-    if (!wallet.equipped.eyes)  wallet.equipped.eyes  = 'eyes-default';
-    if (!wallet.equipped.mouth) wallet.equipped.mouth = 'mouth-smile'; if (!wallet.equipped.model) wallet.equipped.model = 'model-student';
+    Object.keys(wallet.equipped).forEach(slot => {
+      const id = wallet.equipped[slot];
+      if (!validIds.has(id)) delete wallet.equipped[slot];
+    });
+    wallet.owned = wallet.owned || {};
+    Object.keys(wallet.owned).forEach(id => { if (!validIds.has(id)) delete wallet.owned[id]; });
+    // Ensure a default 3D model is owned/equipped to showcase 3D by default
+    wallet.owned['model-student'] = true;
+    if (!wallet.equipped.model) wallet.equipped.model = 'model-student';
     await writeDb(db);
     // Dev convenience: boost test user's coins
     if (String(user).toLowerCase() === 'test') {
