@@ -64,7 +64,13 @@
     const catList = $('#catList');
     const catTitle = $('#catTitle');
     const backBtn = document.getElementById('backBtn');
-    backBtn?.addEventListener('click', (e)=>{ e.preventDefault(); try { history.length > 1 • history.back() : (location.href='lesson.html'); } catch { location.href='lesson.html'; } });
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        try { if (history.length > 1) history.back(); else location.href = 'lesson.html'; }
+        catch { location.href = 'lesson.html'; }
+      });
+    }
 
     // No 2D mascot fallback; preview shows only 3D models
 
@@ -286,7 +292,7 @@
           action = ownedBadge;
         }
       }
-      const sub = it.kind==='upgrade' • 'Upgrade' : (it.slot • it.slot : 'Cosmetic');
+      const sub = it.kind==='upgrade' ? 'Upgrade' : (it.slot ? it.slot : 'Cosmetic');
       return `
         <div class="p-3 rounded-xl border-2 border-black bg-white shadow">
           <div class="font-semibold">${it.name}</div>
@@ -301,7 +307,7 @@
       const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
       const cat = cats.find(c=>c.id===SELECTED) || cats[0];
-      const list = (cat • _items.filter(cat.filter) : _items);
+      const list = (cat ? _items.filter(cat.filter) : _items);
       catalogEl.innerHTML='';
       list.forEach(it=>{
         const wrap = document.createElement('div');
@@ -347,6 +353,7 @@
   </script>
 </body>
 </html>
+
 
 
 
