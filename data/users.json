@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759742406443
+          "updatedAt": 1759744125522
         }
       },
       "createdAt": 1759402120040,
@@ -48,7 +48,8 @@
           "model-merchant": true,
           "model-basemesh": true,
           "model-allinone": true,
-          "hat-headband-red-img": true
+          "hat-headband-red-img": true,
+          "scarf-blue-img": true
         },
         "equipped": {
           "eyes": "eyes-default",
@@ -57,7 +58,8 @@
           "skin": "skin-student",
           "model": "model-student",
           "hat": "hat-headband-red-img",
-          "body": "cos-body-sakura"
+          "body": "cos-body-sakura",
+          "outfit": "outfit-sailor"
         }
       }
     }
