@@ -167,16 +167,19 @@ app.get('/api/me', async (req, res) => {
 });
 
 // ---- Shop + Wallet ----
-const CATALOG = [
-  // Upgrades
+// Catalog is composed of: static upgrades, static 3D models, and 3D clothing items
+// discovered by scanning assets/chibi/items for .glb files.
+const ITEMS_DIR = path.join(__dirname, 'assets', 'chibi', 'items');
+
+const STATIC_UPGRADES = [
   { id:'upgrade-tutor-basic', kind:'upgrade', name:'Tutor (Basic)', price: 200 },
   { id:'upgrade-tutor-pro',   kind:'upgrade', name:'Tutor (Pro)',   price: 800 },
   { id:'upgrade-hint-plus',   kind:'upgrade', name:'Extra Hints',   price: 300 },
   { id:'upgrade-coin-boost',  kind:'upgrade', name:'Coin Boost (x2)', price: 500 },
   { id:'upgrade-freeze-plus', kind:'upgrade', name:'Longer Freeze',   price: 350 },
   { id:'upgrade-shield-start',kind:'upgrade', name:'Start with Shield', price: 250 },
-
-  // 3D models (use GLB files with model-viewer)
+];
+const STATIC_MODELS = [
   { id:'model-student',       kind:'cosmetic', slot:'model', name:'3D Student',           price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/studentpr.glb' },
   { id:'model-ninja',         kind:'cosmetic', slot:'model', name:'3D Ninja',             price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/ninjapr.glb' },
   { id:'model-knight',        kind:'cosmetic', slot:'model', name:'3D Knight',            price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/knightpr.glb' },
@@ -185,26 +188,80 @@ const CATALOG = [
   { id:'model-basemesh',      kind:'cosmetic', slot:'model', name:'3D Basemesh',          price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/basemeshpr.glb' },
   { id:'model-allinone',      kind:'cosmetic', slot:'model', name:'3D All-in-one',        price: 0,   model:'assets/chibi/characters/ChibiCharacters/glb/allinonepr.glb' },
 ];
-function getWallet(rec){
+
+async function listGlbFilesRecursive(dir){
+  const out = [];
+  try {
+    const entries = await fsp.readdir(dir, { withFileTypes: true });
+    for (const e of entries) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) out.push(...(await listGlbFilesRecursive(p)));
+      else if (e.isFile() && p.toLowerCase().endsWith('.glb')) out.push(p);
+    }
+  } catch {}
+  return out;
+}
+function slotFromFilename(base){
+  const b = base.toLowerCase();
+  if (/helmet|hat/.test(b)) return 'hat';
+  if (/mask/.test(b)) return 'mask';
+  if (/hair/.test(b)) return 'hair';
+  if (/shoe|boot|bottes/.test(b)) return 'boots';
+  if (/pants|leg|thigh|knee/.test(b)) return 'legs';
+  if (/shirt|chemise|plastron|torso|chest|top/.test(b)) return 'top';
+  if (/skirt/.test(b)) return 'skirt';
+  if (/belt|ceinture/.test(b)) return 'belt';
+  if (/bag/.test(b)) return 'bag';
+  if (/outfit|suit|armor/.test(b)) return 'outfit';
+  return 'misc';
+}
+function labelize(base){
+  const s = base.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+async function loadClothingItems(){
+  const files = await listGlbFilesRecursive(ITEMS_DIR);
+  const items = [];
+  for (const p of files) {
+    const rel = path.relative(__dirname, p).replace(/\\/g,'/');
+    const nameBase = path.basename(p, path.extname(p));
+    const slot = slotFromFilename(nameBase);
+    const id = `cos-${nameBase.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`;
+    const name = labelize(nameBase);
+    items.push({ id, kind:'cosmetic', slot, name, price: 100 });
+  }
+  return items;
+}
+async function getCatalog(){
+  const clothing = await loadClothingItems();
+  return [...STATIC_UPGRADES, ...STATIC_MODELS, ...clothing];
+}
+async function findItem(id){
+  const all = await getCatalog();
+  return all.find(i => i.id === id) || null;
+}
+  function getWallet(rec){
   if (!rec.wallet) rec.wallet = { coins: 0, owned: {}, equipped: {} };
   if (!rec.wallet.owned) rec.wallet.owned = {};
   if (!rec.wallet.equipped) rec.wallet.equipped = {};
   return rec.wallet;
 }
-function findItem(id){ return CATALOG.find(i => i.id === id) || null; }
+  
 
-app.get('/api/shop/catalog', (req, res) => {
-  res.json({ items: CATALOG });
-});
+  app.get('/api/shop/catalog', async (req, res) => {
+    try { const items = await getCatalog(); res.json({ items }); }
+    catch (e) { res.status(500).json({ error: 'Catalog load failed', details: String(e) }); }
+  });
 
-app.get('/api/wallet', async (req, res) => {
+  app.get('/api/wallet', async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   try {
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
-    // Remove any equipped items that are no longer in the catalog
-    const validIds = new Set(CATALOG.map(i => i.id));
+      // Remove any equipped items that are no longer in the catalog
+      const catalog = await getCatalog();
+      const validIds = new Set(catalog.map(i => i.id));
     wallet.equipped = wallet.equipped || {};
     Object.keys(wallet.equipped).forEach(slot => {
       const id = wallet.equipped[slot];
@@ -240,11 +297,11 @@ app.post('/api/wallet/sync', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Sync failed', details: String(e) }); }
 });
 
-app.post('/api/shop/purchase', async (req, res) => {
+  app.post('/api/shop/purchase', async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   try {
-    const { itemId } = req.body || {};
-    const item = findItem(String(itemId||''));
+      const { itemId } = req.body || {};
+      const item = await findItem(String(itemId||''));
     if (!item) return res.status(404).json({ error: 'Item not found' });
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
@@ -259,11 +316,11 @@ app.post('/api/shop/purchase', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Purchase failed', details: String(e) }); }
 });
 
-app.post('/api/shop/equip', async (req, res) => {
+  app.post('/api/shop/equip', async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   try {
-    const { itemId } = req.body || {};
-    const item = findItem(String(itemId||''));
+      const { itemId } = req.body || {};
+      const item = await findItem(String(itemId||''));
     if (!item) return res.status(404).json({ error: 'Item not found' });
     if (item.kind !== 'cosmetic') return res.status(400).json({ error: 'Not equippable' });
     const db = await readDb();
@@ -276,7 +333,7 @@ app.post('/api/shop/equip', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Equip failed', details: String(e) }); }
 });
 
-app.post('/api/shop/unequip', async (req, res) => {
+  app.post('/api/shop/unequip', async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   try {
     const { itemId, slot } = req.body || {};
@@ -284,8 +341,8 @@ app.post('/api/shop/unequip', async (req, res) => {
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
     let targetSlot = String(slot||'');
-    if (!targetSlot && itemId) {
-      const it = findItem(String(itemId));
+      if (!targetSlot && itemId) {
+        const it = await findItem(String(itemId));
       if (it && it.kind === 'cosmetic') targetSlot = it.slot;
     }
     if (!targetSlot) return res.status(400).json({ error: 'Missing slot or itemId' });

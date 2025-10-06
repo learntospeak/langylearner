@@ -67,12 +67,15 @@
     }
     let SELECTED = 'upgrades';
     function categoriesFrom(items){
-      const has = (slot)=>items.some(it=>it.kind==='cosmetic' && it.slot===slot);
       const cats = [];
-      if (items.some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
-      const slots = ['model','skin','outfit','hat','scarf','eyes','cheek','mouth','body'];
-      const names = { model:'Characters', skin:'Skins', outfit:'Clothes', hat:'Hats', scarf:'Scarves', eyes:'Eyes', cheek:'Cheeks', mouth:'Mouth', body:'Body' };
-      slots.forEach(s=>{ if (has(s)) cats.push({ id:s, label:names[s], filter:(it)=>it.kind==='cosmetic' && it.slot===s }); });
+      if ((items||[]).some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
+      // Characters category
+      if ((items||[]).some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
+      // Dynamic clothing categories by slot
+      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model').map(it=>it.slot)));
+      const names = { outfit:'Outfits', hat:'Hats', hair:'Hair', mask:'Masks', top:'Tops', legs:'Legwear', boots:'Boots', skirt:'Skirts', belt:'Belts', bag:'Bags', misc:'Accessories' };
+      const labelFor = (s)=> names[s] || (s.charAt(0).toUpperCase()+s.slice(1));
+      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s }));
       return cats;
     }
     function renderCats(cats){

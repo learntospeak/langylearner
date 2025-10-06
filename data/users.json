@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759744125522
+          "updatedAt": 1759745757674
         }
       },
       "createdAt": 1759402120040,
@@ -23,43 +23,25 @@
           "upgrade-tutor-basic": true,
           "upgrade-tutor-pro": true,
           "upgrade-hint-plus": true,
-          "cos-scarf-pink": true,
-          "cos-scarf-blue": true,
-          "cos-hat-kabuto": true,
-          "cos-hat-headband": true,
-          "cos-eyes-star": true,
-          "cos-eyes-sparkle": true,
-          "cos-cheek-heart": true,
-          "cos-face-catmouth": true,
-          "cos-body-sakura": true,
-          "skin-student": true,
-          "eyes-default": true,
-          "mouth-smile": true,
           "upgrade-coin-boost": true,
           "upgrade-freeze-plus": true,
           "upgrade-shield-start": true,
           "model-student": true,
-          "skin-ninja": true,
-          "skin-knight": true,
           "model-ninja": true,
           "model-knight": true,
-          "outfit-sailor": true,
           "model-archer": true,
           "model-merchant": true,
           "model-basemesh": true,
           "model-allinone": true,
-          "hat-headband-red-img": true,
-          "scarf-blue-img": true
+          "cos-outfit-sailor": true,
+          "cos-hat-headband-red": true,
+          "cos-scarf-blue": true
         },
         "equipped": {
-          "eyes": "eyes-default",
-          "mouth": "mouth-smile",
-          "cheek": "cos-cheek-heart",
-          "skin": "skin-student",
-          "model": "model-student",
-          "hat": "hat-headband-red-img",
-          "body": "cos-body-sakura",
-          "outfit": "outfit-sailor"
+          "model": "model-basemesh",
+          "outfit": "cos-outfit-sailor",
+          "hat": "cos-hat-headband-red",
+          "scarf": "cos-scarf-blue"
         }
       }
     }

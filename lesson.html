@@ -87,30 +87,7 @@
             position: relative;
         }
 
-              /* OR overlay top-right inside #lesson-wrap (uncomment these 3 lines and place #mascot inside #lesson-wrap)
-  #lesson-wrap #mascot { position:absolute; top:8px; right:8px; width:56px; height:72px; }
-  */
-
-        /* Animations (mouth talks when class mascot-talk is set by JS) */
-        #mascot .mouth {
-            transform-origin: 50% 60%;
-        }
-
-        #mascot.mascot-idle {
-            animation: float 3s ease-in-out infinite;
-        }
-
-        #mascot.mascot-talk .mouth {
-            animation: talk 0.25s ease-in-out infinite;
-        }
-
-        #mascot.mascot-celebrate {
-            animation: celebrate 0.6s ease-in-out 0s 2;
-        }
-
-        #mascot.mascot-confused {
-            animation: shake 0.4s ease-in-out 0s 2;
-        }
+        /* (old 2D mascot rules removed) */
 
         @keyframes float {
             0% {
@@ -272,60 +249,7 @@
                 position: relative;
             }
 
-            /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
-            #lesson-wrap #mascot {
-
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                width: 120px;
-                height: 120px;
-                z-index: 50;
-                pointer-events: auto;
-                user-select: none;
-                cursor: move;
-                touch-action: none;
-            }
-            /* Position 3D mascot same spot */
-            #lesson-wrap #mascot3d {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                width: 140px !important;
-                height: 160px !important;
-                z-index: 50;
-                pointer-events: auto;
-                user-select: none;
-            }
-
-
-
-            /* SVG sizing + animations (unchanged) */
-            #lesson-wrap #mascot svg {
-                width: 100%;
-                height: 100%;
-                display: block;
-            }
-
-            #lesson-wrap #mascot .mouth {
-                transform-origin: 50% 64%;
-            }
-
-            #lesson-wrap #mascot.mascot-idle {
-                animation: float 3s ease-in-out infinite;
-            }
-
-            #lesson-wrap #mascot.mascot-talk .mouth {
-                animation: talk 0.25s ease-in-out infinite;
-            }
-
-            #lesson-wrap #mascot.mascot-celebrate {
-                animation: celebrate 0.6s ease-in-out 0s 2;
-            }
-
-            #lesson-wrap #mascot.mascot-confused {
-                animation: shake 0.4s ease-in-out 0s 2;
-            }
+            /* (old 2D mascot positioning removed) */
         </style>
     </div>
      <!-- Bottom toolbar (fixed, wraps on small screens) -->
@@ -647,7 +571,6 @@
 <script type="module" src="./lesson-loader.js?v=10"></script>
 
 <!-- Optional mascot controller (if you actually use it) -->
-<script type="module" src="./modules/mascot-controller.js?v=2"></script>
 
 <script>
 (function () {

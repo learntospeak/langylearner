@@ -171,17 +171,7 @@ body.anime-bg {
 }
 #memory-game-root > div:hover { transform: translateY(-2px); }
 
-/* Mascot cosmetics visibility */
-#cos-scarf-pink, #cos-scarf-blue, #cos-hat-kabuto, #cos-hat-headband, #cos-eyes-star, #cos-eyes-sparkle, #cos-cheek-heart, #cos-face-catmouth, #cos-body-sakura { display: none; }
-#mascot.cos-scarf-pink #cos-scarf-pink, #mascotPreview.cos-scarf-pink #cos-scarf-pink { display: block; }
-#mascot.cos-scarf-blue #cos-scarf-blue, #mascotPreview.cos-scarf-blue #cos-scarf-blue { display: block; }
-#mascot.cos-hat-kabuto #cos-hat-kabuto, #mascotPreview.cos-hat-kabuto #cos-hat-kabuto { display: block; }
-#mascot.cos-hat-headband #cos-hat-headband, #mascotPreview.cos-hat-headband #cos-hat-headband { display: block; }
-#mascot.cos-eyes-star #cos-eyes-star, #mascotPreview.cos-eyes-star #cos-eyes-star { display: block; }
-#mascot.cos-eyes-sparkle #cos-eyes-sparkle, #mascotPreview.cos-eyes-sparkle #cos-eyes-sparkle { display: block; }
-#mascot.cos-cheek-heart #cos-cheek-heart, #mascotPreview.cos-cheek-heart #cos-cheek-heart { display: block; }
-#mascot.cos-face-catmouth #cos-face-catmouth, #mascotPreview.cos-face-catmouth #cos-face-catmouth { display: block; }
-#mascot.cos-body-sakura #cos-body-sakura, #mascotPreview.cos-body-sakura #cos-body-sakura { display: block; }
+/* (old 2D mascot cosmetics removed) */
 
 /* Drop blanks (fill-the-blank placeholders) */
 .drop {
@@ -219,11 +209,7 @@ body.anime-bg {
   .shop-grid { grid-template-columns: 220px 1fr 1.6fr; }
 }
 
-/* 2D Mascot layering */
-.mascot-stack { position: relative; width: 100px; height: 120px; }
-.mascot-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: auto; }
-.mascot-stack.small { width: 60px; height: 72px; }
-.mascot-stack.tiny { width: 48px; height: 58px; }
+/* (old 2D mascot layering removed) */
 
 /* Gentle float for 3D model-viewer (replaces fast GLB idle) */
 .float-slow {
