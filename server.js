@@ -222,13 +222,25 @@ function labelize(base){
 async function loadClothingItems(){
   const files = await listGlbFilesRecursive(ITEMS_DIR);
   const items = [];
+  const seen = new Set();
   for (const p of files) {
+    const nameBaseRaw = path.basename(p, path.extname(p));
+    // Canonicalize to collapse duplicates like foo, foo_001, foo-1, foo (1)
+    const canon = nameBaseRaw
+      .toLowerCase()
+      .replace(/[\s()]+/g, '-')
+      .replace(/[-_]*(copy|final|v\d+)$/,'')
+      .replace(/[-_]*\d+$/,'')
+      .replace(/[^a-z0-9-]+/g,'-')
+      .replace(/-+/g,'-')
+      .replace(/^-|-$/g,'');
+    if (seen.has(canon)) continue;
+    seen.add(canon);
+    const slot = slotFromFilename(nameBaseRaw);
+    const id = `cos-${canon}`;
+    const name = labelize(nameBaseRaw);
     const rel = path.relative(__dirname, p).replace(/\\/g,'/');
-    const nameBase = path.basename(p, path.extname(p));
-    const slot = slotFromFilename(nameBase);
-    const id = `cos-${nameBase.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`;
-    const name = labelize(nameBase);
-    items.push({ id, kind:'cosmetic', slot, name, price: 100 });
+    items.push({ id, kind:'cosmetic', slot, name, price: 100, model: rel });
   }
   return items;
 }

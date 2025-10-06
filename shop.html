@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KanaReader – Shop</title>
+  <title>KanaReader â€“ Shop</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,10 @@
 <body class="anime-bg min-h-screen p-5">
   <main class="max-w-5xl mx-auto">
     <header class="flex items-center justify-between mb-3">
-      <h1 class="site-title text-2xl font-bold accent-underline">Shop</h1>
+      <div class="flex items-center gap-2">
+        <a href="#" id="backBtn" class="btn btn-ghost text-sm">Back</a>
+        <h1 class="site-title text-2xl font-bold accent-underline">Shop</h1>
+      </div>
       <div class="text-sm">Coins: <strong id="coins">0</strong></div>
     </header>
 
@@ -30,8 +33,13 @@
 
         <!-- Preview (sticky) -->
         <div class="flex items-start justify-center sm:sticky top-2">
-            <div class="text-center">
-            <model-viewer id="mvShop" class="float-slow" style="display:none;width:140px;height:160px;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+          <div class="text-center">
+            <div id="mvWrap" class="inline-block relative" style="display:none; width:140px; height:160px;">
+              <model-viewer id="mvShop" class="float-slow absolute inset-0" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+              <div id="mvOverlays" class="absolute inset-0 pointer-events-none"></div>
+            </div>
+            <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
+            <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
             <div class="text-xs text-gray-600 mt-2">Tap a category and equip/buy to preview.</div>
           </div>
         </div>
@@ -55,6 +63,8 @@
     const tutorLink = $('#tutorLink');
     const catList = $('#catList');
     const catTitle = $('#catTitle');
+    const backBtn = document.getElementById('backBtn');
+    backBtn?.addEventListener('click', (e)=>{ e.preventDefault(); try { history.length > 1 • history.back() : (location.href='lesson.html'); } catch { location.href='lesson.html'; } });
 
     // No 2D mascot fallback; preview shows only 3D models
 
@@ -66,6 +76,65 @@
       return data;
     }
     let SELECTED = 'upgrades';
+    // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
+    const SLOT_ANCHORS = {
+      // General body regions
+      head:  { position:[0, 0.16, 0], rotation:[0,0,0], scale:[1,1,1] },
+      torso: { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      body:  { position:[0, 0.00, 0], rotation:[0,0,0], scale:[1,1,1] },
+      legs:  { position:[0, -0.06, 0], rotation:[0,0,0], scale:[1,1,1] },
+      feet:  { position:[0, -0.12, 0], rotation:[0,0,0], scale:[1,1,1] },
+      arms:  { position:[0.02, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      hands: { position:[0.04, -0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      // Clothing synonyms
+      hat:   { position:[0, 0.16, 0], rotation:[0,0,0], scale:[1,1,1] },
+      hair:  { position:[0, 0.12, 0], rotation:[0,0,0], scale:[1,1,1] },
+      mask:  { position:[0, 0.08, 0.06], rotation:[0,0,0], scale:[1,1,1] },
+      top:   { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      outfit:{ position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] },
+      boots: { position:[0, -0.12, 0], rotation:[0,0,0], scale:[1,1,1] },
+      skirt: { position:[0, -0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      belt:  { position:[0, -0.01, 0.01], rotation:[0,0,0], scale:[1,1,1] },
+      bag:   { position:[-0.05, 0.02, -0.03], rotation:[0,0,0], scale:[1,1,1] },
+      misc:  { position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] }
+    };
+    // Accessory pool (offscreen model-viewers) to load GLBs for scene-graph cloning
+    const accPool = document.createElement('div'); accPool.id = 'accPool'; accPool.style.display = 'none'; document.body.appendChild(accPool);
+    const accCache = new Map(); // id -> { mv, ready:Promise }
+    function accessoryViewerFor(id, src){
+      let rec = accCache.get(id);
+      if (rec && rec.mv && rec.mv.getAttribute('src') === src) return rec;
+      const mv = document.createElement('model-viewer'); mv.setAttribute('src', src); mv.setAttribute('reveal','auto');
+      accPool.appendChild(mv);
+      const ready = new Promise(res=>{ mv.addEventListener('load', ()=>res(mv), { once:true }); });
+      rec = { mv, ready }; accCache.set(id, rec); return rec;
+    }
+    function getBaseRoot(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch { return null; } }
+    function getSceneFromViewer(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch { return null; } }
+    function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch {} }); mv.__attachments=[]; } catch { mv.__attachments=[]; } }
+    async function attachAccessoriesToBase(mv, equip, itemsMap){
+      try {
+        const root = getBaseRoot(mv); if (!root) return false;
+        clearAttachments(mv);
+        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        const added = [];
+        for (const slot of slots){
+          const it = itemsMap.get(equip[slot]); if(!it || !it.model) continue;
+          const rec = accessoryViewerFor(it.id, it.model); await rec.ready;
+          const srcScene = getSceneFromViewer(rec.mv); if(!srcScene || !srcScene.clone) continue;
+          const obj = srcScene.clone(true);
+          const a = SLOT_ANCHORS[slot] || SLOT_ANCHORS.misc;
+          try {
+            if (obj.position) { obj.position.set(a.position[0], a.position[1], a.position[2]); }
+            if (obj.rotation) { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); }
+            if (obj.scale)    { obj.scale.set(a.scale[0], a.scale[1], a.scale[2]); }
+          } catch {}
+          try { root.add(obj); added.push(obj); } catch {}
+        }
+        mv.__attachments = added;
+        return added.length > 0;
+      } catch { return false; }
+    }
     function categoriesFrom(items){
       const cats = [];
       if ((items||[]).some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
@@ -82,7 +151,7 @@
       catList.innerHTML = '';
       cats.forEach(c=>{
         const b = document.createElement('button');
-        b.className = 'btn btn-ghost text-sm whitespace-nowrap ' + (SELECTED===c.id ? 'ring-2' : '');
+        b.className = 'btn btn-ghost text-sm whitespace-nowrap ' + (SELECTED===c.id • 'ring-2' : '');
         b.textContent = c.label; b.dataset.id = c.id;
         b.addEventListener('click', ()=>{ SELECTED = c.id; catTitle.textContent = c.label; renderItems(); });
         catList.appendChild(b);
@@ -113,13 +182,94 @@
         const modelItem = equip.model && itemsMap.get(equip.model);
         if (modelItem && modelItem.model && mv) {
           mv.src = modelItem.model;
-          mv.style.display='inline-block';
+          (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
           // 3D only
           try { mv.pause(); } catch {}
-          return;
-        } else if (mv) { mv.style.display='none'; }
+          // Nudge animation to show change
+          try { mv.classList.remove('animate-pulse'); void mv.offsetWidth; mv.classList.add('animate-pulse'); setTimeout(()=>mv.classList.remove('animate-pulse'), 300); } catch {}
+        } else { const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='none'; }
+      } catch {}
+      // Try to attach clothing into the base viewer's scene; fallback overlays still render below if needed
+      try { attachAccessoriesToBase(mv, equip, itemsMap); } catch {}
+      // Build overlay viewers and sync camera with base
+      try {
+        const host = document.getElementById('mvOverlays');
+        if (host) {
+          while (host.firstChild) host.removeChild(host.firstChild);
+          Object.keys(equip||{}).forEach(slot => {
+            if (slot==='model') return;
+            const it = itemsMap.get(equip[slot]);
+            if (!it || !it.model) return;
+            const ov = document.createElement('model-viewer');
+            ov.setAttribute('src', it.model);
+            ov.setAttribute('interaction-prompt', 'none');
+            ov.style.position = 'absolute';
+            ov.style.inset = '0';
+            ov.style.pointerEvents = 'none';
+            host.appendChild(ov);
+          });
+        }
+        let _camSyncBound = window.__mvCameraSyncBound || false;
+        const sync = ()=>{
+          try {
+            const overlays = host ? Array.from(host.querySelectorAll('model-viewer')) : [];
+            const mv = document.getElementById('mvShop');
+            const orbit = (mv && mv.getCameraOrbit) ? mv.getCameraOrbit() : null;
+            const target = (mv && mv.getCameraTarget) ? mv.getCameraTarget() : null;
+            const fov = (mv && mv.getFieldOfView) ? mv.getFieldOfView() : null;
+            overlays.forEach(ov => {
+              try {
+                if (orbit) ov.setAttribute('camera-orbit', `${orbit.theta}rad ${orbit.phi}rad ${orbit.radius}m`);
+                if (target) ov.setAttribute('camera-target', `${target.x}m ${target.y}m ${target.z}m`);
+                if (fov != null) ov.setAttribute('field-of-view', typeof fov === 'string' ? fov : `${fov}deg`);
+              } catch {}
+            });
+          } catch {}
+        };
+        const mvBase = document.getElementById('mvShop');
+        if (mvBase && !_camSyncBound) {
+          mvBase.addEventListener('camera-change', sync);
+          mvBase.addEventListener('load', sync, { once:true });
+          window.__mvCameraSyncBound = true;
+        }
+        sync();
+      } catch {}
+      // Update equipped summary so user sees immediate feedback
+      try {
+        const eqList = [];
+        Object.keys(equip||{}).forEach(slot => {
+          if (slot==='model') return;
+          const it = itemsMap.get(equip[slot]);
+          if (it) eqList.push(`${slot}: ${it.name}`);
+        });
+        const sum = document.getElementById('equipSummary');
+        if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
       } catch {}
       // No fallback preview
+      // Render equipped chips with quick remove buttons
+      try {
+        const chips = document.getElementById('equipChips');
+        while (chips.firstChild) chips.removeChild(chips.firstChild);
+        Object.keys(equip||{}).forEach(slot => {
+          if (slot==='model') return;
+          const it = itemsMap.get(equip[slot]);
+          if (!it) return;
+          const b = document.createElement('button');
+          b.className = 'btn btn-ghost text-xs';
+          b.innerHTML = `${it.name} <span aria-hidden="true">x</span>`;
+          b.title = `Remove ${it.name}`;
+          b.addEventListener('click', async ()=>{
+            try {
+              const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ slot }) });
+              if (!res.ok && res.error) { alert(res.error); return; }
+              _wallet.equipped = res.equipped || _wallet.equipped || {};
+              renderPreview();
+              renderItems();
+            } catch {}
+          });
+          chips.appendChild(b);
+        });
+      } catch {}
     }
     function cardHtml(it, owned, equipped){
       const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
@@ -136,7 +286,7 @@
           action = ownedBadge;
         }
       }
-      const sub = it.kind==='upgrade' ? 'Upgrade' : (it.slot ? it.slot : 'Cosmetic');
+      const sub = it.kind==='upgrade' • 'Upgrade' : (it.slot • it.slot : 'Cosmetic');
       return `
         <div class="p-3 rounded-xl border-2 border-black bg-white shadow">
           <div class="font-semibold">${it.name}</div>
@@ -151,7 +301,7 @@
       const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
       const cat = cats.find(c=>c.id===SELECTED) || cats[0];
-      const list = (cat ? _items.filter(cat.filter) : _items);
+      const list = (cat • _items.filter(cat.filter) : _items);
       catalogEl.innerHTML='';
       list.forEach(it=>{
         const wrap = document.createElement('div');
@@ -197,6 +347,11 @@
   </script>
 </body>
 </html>
+
+
+
+
+
 
 
 

@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759745757674
+          "updatedAt": 1759749206495
         }
       },
       "createdAt": 1759402120040,
@@ -33,15 +33,16 @@
           "model-merchant": true,
           "model-basemesh": true,
           "model-allinone": true,
-          "cos-outfit-sailor": true,
-          "cos-hat-headband-red": true,
-          "cos-scarf-blue": true
+          "cos-amorplastron": true,
+          "cos-chemise": true,
+          "cos-armorhelmet": true,
+          "cos-amorarm": true,
+          "cos-ninjassuitmask": true,
+          "cos-armorskirt": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "outfit": "cos-outfit-sailor",
-          "hat": "cos-hat-headband-red",
-          "scarf": "cos-scarf-blue"
+          "model": "model-student",
+          "skirt": "cos-armorskirt"
         }
       }
     }
