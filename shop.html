@@ -199,7 +199,7 @@
         wrap.innerHTML = cardHtml(it, owned, equipped);
         const node = wrap.firstElementChild; catalogEl.appendChild(node);
       });
-      if (owned['upgrade-tutor-basic']) tutorLink.classList.remove('hidden'); else tutorLink.classList.add('hidden');
+      try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch {}
       bindActions();
       try { document.getElementById('itemsPane').scrollTop = 0; } catch {}
     }

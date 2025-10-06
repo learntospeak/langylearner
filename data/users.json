@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759483442099
+          "updatedAt": 1759483865795
         }
       },
       "createdAt": 1759402120040,
@@ -43,15 +43,15 @@
           "skin-knight": true,
           "model-ninja": true,
           "model-knight": true,
-          "outfit-sailor": true
+          "outfit-sailor": true,
+          "model-archer": true
         },
         "equipped": {
           "eyes": "eyes-default",
           "mouth": "mouth-smile",
           "cheek": "cos-cheek-heart",
-          "outfit": "outfit-sailor",
-          "model": "model-student",
-          "skin": "skin-student"
+          "skin": "skin-student",
+          "model": "model-archer"
         }
       }
     }
