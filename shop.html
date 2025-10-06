@@ -36,7 +36,6 @@
           <div class="text-center">
             <div id="mvWrap" class="inline-block relative" style="display:none; width:140px; height:160px;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
-              <div id="mvOverlays" class="absolute inset-0 pointer-events-none"></div>
             </div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
@@ -68,7 +67,7 @@
       backBtn.addEventListener('click', (e) => {
         e.preventDefault();
         try { if (history.length > 1) history.back(); else location.href = 'lesson.html'; }
-        catch { location.href = 'lesson.html'; }
+        catch (e) { location.href = 'lesson.html'; }
       });
     }
 
@@ -77,7 +76,7 @@
     async function api(path, opts){
       const r = await fetch(path, opts||{});
       let data = null;
-      try { data = await r.json(); } catch { data = null; }
+      try { data = await r.json(); } catch (e) { data = null; }
       if (!r.ok) return data || { ok:false, error: `HTTP ${r.status}` };
       return data;
     }
@@ -115,9 +114,9 @@
       const ready = new Promise(res=>{ mv.addEventListener('load', ()=>res(mv), { once:true }); });
       rec = { mv, ready }; accCache.set(id, rec); return rec;
     }
-    function getBaseRoot(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch { return null; } }
-    function getSceneFromViewer(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch { return null; } }
-    function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch {} }); mv.__attachments=[]; } catch { mv.__attachments=[]; } }
+    function getBaseRoot(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch (e) { return null; } }
+    function getSceneFromViewer(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch (e) { return null; } }
+    function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
     async function attachAccessoriesToBase(mv, equip, itemsMap){
       try {
         const root = getBaseRoot(mv); if (!root) return false;
@@ -134,12 +133,12 @@
             if (obj.position) { obj.position.set(a.position[0], a.position[1], a.position[2]); }
             if (obj.rotation) { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); }
             if (obj.scale)    { obj.scale.set(a.scale[0], a.scale[1], a.scale[2]); }
-          } catch {}
-          try { root.add(obj); added.push(obj); } catch {}
+          } catch (e) {}
+          try { root.add(obj); added.push(obj); } catch (e) {}
         }
         mv.__attachments = added;
         return added.length > 0;
-      } catch { return false; }
+      } catch (e) { return false; }
     }
     function categoriesFrom(items){
       const cats = [];
@@ -157,7 +156,7 @@
       catList.innerHTML = '';
       cats.forEach(c=>{
         const b = document.createElement('button');
-        b.className = 'btn btn-ghost text-sm whitespace-nowrap ' + (SELECTED===c.id • 'ring-2' : '');
+        b.className = 'btn btn-ghost text-sm whitespace-nowrap ' + (SELECTED===c.id ? 'ring-2' : '');
         b.textContent = c.label; b.dataset.id = c.id;
         b.addEventListener('click', ()=>{ SELECTED = c.id; catTitle.textContent = c.label; renderItems(); });
         catList.appendChild(b);
@@ -190,31 +189,13 @@
           mv.src = modelItem.model;
           (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
           // 3D only
-          try { mv.pause(); } catch {}
+          try { mv.pause(); } catch (e) {}
           // Nudge animation to show change
-          try { mv.classList.remove('animate-pulse'); void mv.offsetWidth; mv.classList.add('animate-pulse'); setTimeout(()=>mv.classList.remove('animate-pulse'), 300); } catch {}
+          try { mv.classList.remove('animate-pulse'); void mv.offsetWidth; mv.classList.add('animate-pulse'); setTimeout(()=>mv.classList.remove('animate-pulse'), 300); } catch (e) {}
         } else { const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='none'; }
-      } catch {}
+      } catch (e) {}
       // Try to attach clothing into the base viewer's scene; fallback overlays still render below if needed
-      try { attachAccessoriesToBase(mv, equip, itemsMap); } catch {}
-      // Build overlay viewers and sync camera with base
-      try {
-        const host = document.getElementById('mvOverlays');
-        if (host) {
-          while (host.firstChild) host.removeChild(host.firstChild);
-          Object.keys(equip||{}).forEach(slot => {
-            if (slot==='model') return;
-            const it = itemsMap.get(equip[slot]);
-            if (!it || !it.model) return;
-            const ov = document.createElement('model-viewer');
-            ov.setAttribute('src', it.model);
-            ov.setAttribute('interaction-prompt', 'none');
-            ov.style.position = 'absolute';
-            ov.style.inset = '0';
-            ov.style.pointerEvents = 'none';
-            host.appendChild(ov);
-          });
-        }
+      try { attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
         let _camSyncBound = window.__mvCameraSyncBound || false;
         const sync = ()=>{
           try {
@@ -228,9 +209,9 @@
                 if (orbit) ov.setAttribute('camera-orbit', `${orbit.theta}rad ${orbit.phi}rad ${orbit.radius}m`);
                 if (target) ov.setAttribute('camera-target', `${target.x}m ${target.y}m ${target.z}m`);
                 if (fov != null) ov.setAttribute('field-of-view', typeof fov === 'string' ? fov : `${fov}deg`);
-              } catch {}
+              } catch (e) {}
             });
-          } catch {}
+          } catch (e) {}
         };
         const mvBase = document.getElementById('mvShop');
         if (mvBase && !_camSyncBound) {
@@ -239,7 +220,7 @@
           window.__mvCameraSyncBound = true;
         }
         sync();
-      } catch {}
+      } catch (e) {}
       // Update equipped summary so user sees immediate feedback
       try {
         const eqList = [];
@@ -250,7 +231,7 @@
         });
         const sum = document.getElementById('equipSummary');
         if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
-      } catch {}
+      } catch (e) {}
       // No fallback preview
       // Render equipped chips with quick remove buttons
       try {
@@ -271,11 +252,11 @@
               _wallet.equipped = res.equipped || _wallet.equipped || {};
               renderPreview();
               renderItems();
-            } catch {}
+            } catch (e) {}
           });
           chips.appendChild(b);
         });
-      } catch {}
+      } catch (e) {}
     }
     function cardHtml(it, owned, equipped){
       const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
@@ -314,9 +295,9 @@
         wrap.innerHTML = cardHtml(it, owned, equipped);
         const node = wrap.firstElementChild; catalogEl.appendChild(node);
       });
-      try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch {}
+      try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch (e) {}
       bindActions();
-      try { document.getElementById('itemsPane').scrollTop = 0; } catch {}
+      try { document.getElementById('itemsPane').scrollTop = 0; } catch (e) {}
     }
     function bindActions(){
       catalogEl.querySelectorAll('[data-buy]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
@@ -353,6 +334,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 
 

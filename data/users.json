@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759791091695
+          "updatedAt": 1759792582061
         }
       },
       "createdAt": 1759402120040,
@@ -38,11 +38,14 @@
           "cos-armorhelmet": true,
           "cos-amorarm": true,
           "cos-ninjassuitmask": true,
-          "cos-armorskirt": true
+          "cos-armorskirt": true,
+          "cos-shirt": true,
+          "cos-skirt": true
         },
         "equipped": {
           "model": "model-student",
-          "skirt": "cos-armorskirt"
+          "top": "cos-shirt",
+          "skirt": "cos-skirt"
         }
       }
     }
