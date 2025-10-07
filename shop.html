@@ -240,24 +240,31 @@
       // Attach clothing via plugin (scene-graph)
       try {
         function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } }
-        window.__ofp = window.__ofp || (window.OutfitPreview && window.OutfitPreview.create({ mv: mv, overrides: loadAnchorOverrides() }));
+        const overrides = loadAnchorOverrides();
+        if (!window.__ofp || typeof window.__ofp.attachAll !== 'function' || typeof window.__ofp.setOverrides !== 'function') {
+          if (window.OutfitPreview) {
+            window.__ofp = window.OutfitPreview.create({ mv: mv, overrides });
+          } else {
+            console.warn('OutfitPreview plugin not found');
+          }
+        } else {
+          try { window.__ofp.state.mv = mv; } catch (e) {}
+        }
         if (window.__ofp) {
-          window.__ofp.setOverrides(loadAnchorOverrides());
+          try { window.__ofp.setOverrides(overrides); } catch (e) {}
           window.__ofp.update(equip, _items||[]);
           await window.__ofp.attachAll();
         }
       } catch (e) { console.warn('preview attach failed', e); }
-      // Update equipped summary so user sees immediate feedback
-      try {
-        const eqList = [];
-        Object.keys(equip||{}).forEach(slot => {
-          if (slot==='model') return;
-          const it = itemsMap.get(equip[slot]);
-          if (it) eqList.push(`${slot}: ${it.name}`);
-        });
-        const sum = document.getElementById('equipSummary');
-        if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
-      } catch (e) {}
+        try {
+          Object.keys(equip||{}).forEach(slot => {
+           if (slot==='model') return;
+           const it = itemsMap.get(equip[slot]);
+           if (it) eqList.push(`${slot}: ${it.name}`);
+          });
+          const sum = document.getElementById('equipSummary');
+          if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
+        } catch (e) {}
       // No fallback preview
       // Render equipped chips with quick remove buttons + refresh Anchor panel slots
       try {
@@ -286,9 +293,57 @@
         // Anchor Debug: populate slot list
         try {
           const sel = document.getElementById('adSlot');
+          const posX = document.getElementById('adPosX');
+          const posY = document.getElementById('adPosY');
+          const posZ = document.getElementById('adPosZ');
+          const rotX = document.getElementById('adRotX');
+          const rotY = document.getElementById('adRotY');
+          const rotZ = document.getElementById('adRotZ');
+          const scale = document.getElementById('adScale');
+          const applyBtn = document.getElementById('adApply');
+          const resetBtn = document.getElementById('adReset');
           if (sel) {
+            const prev = sel.value;
             sel.innerHTML='';
             slotsEquipped.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+            if (prev && slotsEquipped.includes(prev)) sel.value = prev; else if (slotsEquipped[0]) sel.value = slotsEquipped[0];
+            const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+            const slot = sel.value;
+            const a = ov[slot] || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+            if (posX) posX.value = a.position[0]||0;
+            if (posY) posY.value = a.position[1]||0.05;
+            if (posZ) posZ.value = a.position[2]||0;
+            if (rotX) rotX.value = Math.round((a.rotation[0]||0)*180/Math.PI);
+            if (rotY) rotY.value = Math.round((a.rotation[1]||0)*180/Math.PI);
+            if (rotZ) rotZ.value = Math.round((a.rotation[2]||0)*180/Math.PI);
+            if (scale) scale.value = (a.scale && a.scale[0]) || 1;
+            sel.onchange = ()=>{ try { const ov2 = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; const slot2 = sel.value; const a2 = ov2[slot2] || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; if(posX) posX.value=a2.position[0]||0; if(posY) posY.value=a2.position[1]||0.05; if(posZ) posZ.value=a2.position[2]||0; if(rotX) rotX.value=Math.round((a2.rotation[0]||0)*180/Math.PI); if(rotY) rotY.value=Math.round((a2.rotation[1]||0)*180/Math.PI); if(rotZ) rotZ.value=Math.round((a2.rotation[2]||0)*180/Math.PI); if(scale) scale.value=(a2.scale && a2.scale[0])||1; } catch(e){} };
+            if (applyBtn && !applyBtn.__wired) {
+              applyBtn.__wired = true;
+              applyBtn.addEventListener('click', async ()=>{
+                try {
+                  const slot3 = sel.value; if(!slot3) return;
+                  const ov3 = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+                  const rx = Number(rotX?.value||0)*Math.PI/180, ry=Number(rotY?.value||0)*Math.PI/180, rz=Number(rotZ?.value||0)*Math.PI/180;
+                  const s = Number(scale?.value||1) || 1;
+                  ov3[slot3] = { position:[Number(posX?.value)||0, Number(posY?.value)||0.05, Number(posZ?.value)||0], rotation:[rx,ry,rz], scale:[s,s,s] };
+                  localStorage.setItem('anchorOverrides', JSON.stringify(ov3));
+                  if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov3); await window.__ofp.attachAll(); }
+                } catch(e){ console.warn('apply failed', e); }
+              });
+            }
+            if (resetBtn && !resetBtn.__wired) {
+              resetBtn.__wired = true;
+              resetBtn.addEventListener('click', async ()=>{
+                try {
+                  const slot4 = sel.value; if(!slot4) return;
+                  const ov4 = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+                  delete ov4[slot4]; localStorage.setItem('anchorOverrides', JSON.stringify(ov4));
+                  if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov4); await window.__ofp.attachAll(); }
+                  sel.onchange();
+                } catch(e){ console.warn('reset failed', e); }
+              });
+            }
           }
         } catch (e) {}
       } catch (e) {}
