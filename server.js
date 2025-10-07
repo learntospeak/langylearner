@@ -266,33 +266,23 @@ async function findItem(id){
   });
 
   app.get('/api/wallet', async (req, res) => {
-  const user = requireUser(req, res); if (!user) return;
-  try {
-    const db = await readDb();
-    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
-    const wallet = getWallet(rec);
-      // Remove any equipped items that are no longer in the catalog
+    const user = requireUser(req, res); if (!user) return;
+    try {
+      const db = await readDb();
+      const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+      const wallet = getWallet(rec);
       const catalog = await getCatalog();
       const validIds = new Set(catalog.map(i => i.id));
-    wallet.equipped = wallet.equipped || {};
-    Object.keys(wallet.equipped).forEach(slot => {
-      const id = wallet.equipped[slot];
-      if (!validIds.has(id)) delete wallet.equipped[slot];
-    });
-    wallet.owned = wallet.owned || {};
-    Object.keys(wallet.owned).forEach(id => { if (!validIds.has(id)) delete wallet.owned[id]; });
-    // Ensure a default 3D model is owned/equipped to showcase 3D by default
-    wallet.owned['model-student'] = true;
-    if (!wallet.equipped.model) wallet.equipped.model = 'model-student';
-    await writeDb(db);
-    // Dev convenience: boost test user's coins
-    if (String(user).toLowerCase() === 'test') {
-      wallet.coins = Math.max(wallet.coins|0, 2000000);
-      await writeDb(db);
-    }
-    res.json({ coins: wallet.coins|0, owned: wallet.owned, equipped: wallet.equipped });
-  } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
-});
+      // Build a response view without writing to disk (avoids file locking issues)
+      const owned = Object.fromEntries(Object.entries(wallet.owned||{}).filter(([id])=>validIds.has(id)));
+      const equipped = Object.fromEntries(Object.entries(wallet.equipped||{}).filter(([slot,id])=>validIds.has(id)));
+      owned['model-student'] = true;
+      if (!equipped.model) equipped.model = 'model-student';
+      let coins = wallet.coins|0;
+      if (String(user).toLowerCase() === 'test') coins = Math.max(coins, 2000000);
+      res.json({ coins, owned, equipped });
+    } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
+  });
 
 // Sync coin bank up to server (takes the max of current and provided to avoid accidental loss)
 app.post('/api/wallet/sync', async (req, res) => {

@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="anime-theme.css" />
+  <script src="./modules/outfit-preview.js"></script>
   <script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
   <script nomodule src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer-legacy.js"></script>
 </head>
@@ -36,7 +37,6 @@
           <div class="text-center">
             <div id="mvWrap" class="inline-block relative" style="display:none; width:200px; height:220px; overflow:hidden; z-index:1;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
-              <div id="mvOverlays" class="absolute inset-0 pointer-events-none"></div>
             </div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
@@ -237,45 +237,16 @@
           try { mv.classList.remove('animate-pulse'); void mv.offsetWidth; mv.classList.add('animate-pulse'); setTimeout(()=>mv.classList.remove('animate-pulse'), 300); } catch (e) {}
         } else { const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='none'; }
       } catch (e) {}
-      // Attach clothing into the base viewer's scene (scene-graph)
-      let attached = false;
-      try { attached = await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) { attached = false; }
-      // Fallback overlays if attach failed
+      // Attach clothing via plugin (scene-graph)
       try {
-        const host = document.getElementById('mvOverlays');
-        if (host) {
-          while (host.firstChild) host.removeChild(host.firstChild);
-          if (!attached) {
-            Object.keys(equip||{}).forEach(slot => {
-              if (slot==='model') return;
-              const it = itemsMap.get(equip[slot]); if (!it || !it.model) return;
-              const ov = document.createElement('model-viewer');
-              ov.setAttribute('src', it.model);
-              ov.setAttribute('interaction-prompt','none');
-              ov.setAttribute('disable-zoom','');
-              ov.setAttribute('disable-pan','');
-              ov.style.position='absolute'; ov.style.top='0'; ov.style.left='0'; ov.style.width='100%'; ov.style.height='100%'; ov.style.pointerEvents='none';
-              host.appendChild(ov);
-            });
-            const sync = ()=>{
-              try {
-                const overlays = Array.from(host.querySelectorAll('model-viewer'));
-                const orbit = mv && mv.getCameraOrbit ? mv.getCameraOrbit() : null;
-                const target = mv && mv.getCameraTarget ? mv.getCameraTarget() : null;
-                const fov = mv && mv.getFieldOfView ? mv.getFieldOfView() : null;
-                overlays.forEach(ov=>{
-                  if (orbit) ov.setAttribute('camera-orbit', `${orbit.theta}rad ${orbit.phi}rad ${orbit.radius}m`);
-                  if (target) ov.setAttribute('camera-target', `${target.x}m ${target.y}m ${target.z}m`);
-                  if (fov != null) ov.setAttribute('field-of-view', typeof fov === 'string' ? fov : `${fov}deg`);
-                });
-              } catch (e) {}
-            };
-            mv?.addEventListener('camera-change', sync, { once:false });
-            mv?.addEventListener('load', sync, { once:true });
-            sync();
-          }
+        function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } }
+        window.__ofp = window.__ofp || (window.OutfitPreview && window.OutfitPreview.create({ mv: mv, overrides: loadAnchorOverrides() }));
+        if (window.__ofp) {
+          window.__ofp.setOverrides(loadAnchorOverrides());
+          window.__ofp.update(equip, _items||[]);
+          await window.__ofp.attachAll();
         }
-      } catch (e) {}
+      } catch (e) { console.warn('preview attach failed', e); }
       // Update equipped summary so user sees immediate feedback
       try {
         const eqList = [];
@@ -288,11 +259,12 @@
         if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
       } catch (e) {}
       // No fallback preview
-      // Render equipped chips with quick remove buttons
+      // Render equipped chips with quick remove buttons + refresh Anchor panel slots
       try {
         const chips = document.getElementById('equipChips');
         while (chips.firstChild) chips.removeChild(chips.firstChild);
-        Object.keys(equip||{}).forEach(slot => {
+        const slotsEquipped = Object.keys(equip||{}).filter(s=>s!=='model');
+        slotsEquipped.forEach(slot => {
           if (slot==='model') return;
           const it = itemsMap.get(equip[slot]);
           if (!it) return;
@@ -311,6 +283,14 @@
           });
           chips.appendChild(b);
         });
+        // Anchor Debug: populate slot list
+        try {
+          const sel = document.getElementById('adSlot');
+          if (sel) {
+            sel.innerHTML='';
+            slotsEquipped.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+          }
+        } catch (e) {}
       } catch (e) {}
     }
     function cardHtml(it, owned, equipped){
