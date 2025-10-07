@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759799229797
+          "updatedAt": 1759820544214
         }
       },
       "createdAt": 1759402120040,
@@ -48,7 +48,8 @@
           "cos-bottesgreen": true,
           "cos-ninjassuitshoe": true,
           "cos-shoe": true,
-          "cos-armorceinturethighs": true
+          "cos-armorceinturethighs": true,
+          "cos-bag": true
         },
         "equipped": {
           "model": "model-basemesh",
