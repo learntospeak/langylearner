@@ -110,6 +110,7 @@
       return data;
     }
     let SELECTED = 'upgrades';
+    const FORCE_OVERLAY_SLOT = 'top';
     // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
     const SLOT_ANCHORS_DEFAULT = {
       // General body regions
@@ -145,6 +146,8 @@
     }
     function getBaseRoot(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch (e) { return null; } }
     function getSceneFromViewer(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch (e) { return null; } }
+    function getThree(){ try { return (window.THREE||null); } catch (e) { return null; } }
+    function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
     async function attachAccessoriesToBase(mv, equip, itemsMap){
       try {
@@ -159,11 +162,22 @@
           const obj = srcScene.clone(true);
           const a = (SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT)[slot] || (SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT).misc;
           try {
+            // Attach first so world matrices are valid
+            try { root.add(obj); } catch (e) {}
+            // Auto-scale accessory height relative to base height
+            const baseBox = computeBounds(root);
+            const accBox0 = computeBounds(obj);
+            if (baseBox && accBox0) {
+              const baseH = Math.max(1e-6, baseBox.max.y - baseBox.min.y);
+              const accH  = Math.max(1e-6, accBox0.max.y - accBox0.min.y);
+              var target = 0.25; if (slot==='top' || slot==='torso' || slot==='body') target = 0.35;
+              var s = (target * baseH) / accH;
+              if (isFinite(s) && s>0 && s<10) obj.scale.set(s,s,s);
+            }
             if (obj.position) { obj.position.set(a.position[0], a.position[1], a.position[2]); }
             if (obj.rotation) { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); }
-            if (obj.scale)    { obj.scale.set(a.scale[0], a.scale[1], a.scale[2]); }
+            added.push(obj);
           } catch (e) {}
-          try { root.add(obj); added.push(obj); } catch (e) {}
         }
         mv.__attachments = added;
         return added.length > 0;
@@ -309,7 +323,7 @@
         if (it.kind==='cosmetic') {
           const slot = it.slot;
           const isEquipped = equipped && equipped[slot] === it.id;
-          action = `${equipBtn(isEquipped)} ${unequipBtn(!isEquipped)}`;
+          action = `${equipBtn(false)} ${unequipBtn(!isEquipped)}`;
         } else {
           action = ownedBadge;
         }
@@ -355,8 +369,23 @@
         const id = e.currentTarget.getAttribute('data-equip');
         if (e.currentTarget.disabled) return;
         try {
+          // Auto-buy if not owned
+          const ownedMap = _wallet.owned || {};
+          if (!ownedMap[id]) {
+            const buy = await api('/api/shop/purchase', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+            if (buy && buy.error) { alert(buy.error); return; }
+            _wallet.owned = buy?.owned || _wallet.owned || {};
+          }
           const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
           if (res && res.error) { alert(res.error); return; }
+          // Optimistic UI update
+          const it = (_items||[]).find(x=>x.id===id);
+          if (it && it.slot) {
+            _wallet.equipped = _wallet.equipped || {};
+            _wallet.equipped[it.slot] = id;
+          }
+          renderPreview();
+          renderItems();
           await loadAll();
         } catch (err) { console.error('Equip failed', err); }
       }));
@@ -366,6 +395,11 @@
         try {
           const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
           if (res && res.error) { alert(res.error); return; }
+          // Optimistic UI update
+          const it = (_items||[]).find(x=>x.id===id);
+          if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
+          renderPreview();
+          renderItems();
           await loadAll();
         } catch (err) { console.error('Unequip failed', err); }
       }));
@@ -375,6 +409,8 @@
   </script>
 </body>
 </html>
+
+
 
 
 
