@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759794003793
+          "updatedAt": 1759799229797
         }
       },
       "createdAt": 1759402120040,
@@ -42,11 +42,21 @@
           "cos-shirt": true,
           "cos-skirt": true,
           "cos-hat": true,
-          "cos-greenoutfit": true
+          "cos-greenoutfit": true,
+          "cos-armorshoe": true,
+          "cos-bottes": true,
+          "cos-bottesgreen": true,
+          "cos-ninjassuitshoe": true,
+          "cos-shoe": true,
+          "cos-armorceinturethighs": true
         },
         "equipped": {
-          "model": "model-student",
-          "outfit": "cos-greenoutfit"
+          "model": "model-basemesh",
+          "boots": "cos-bottes",
+          "hat": "cos-armorhelmet",
+          "legs": "cos-armorceinturethighs",
+          "mask": "cos-ninjassuitmask",
+          "misc": "cos-amorarm"
         }
       }
     }

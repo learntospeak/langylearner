@@ -36,6 +36,7 @@
           <div class="text-center">
             <div id="mvWrap" class="inline-block relative" style="display:none; width:140px; height:160px;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+              <div id="mvOverlays" class="absolute inset-0 pointer-events-none"></div>
             </div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
@@ -112,25 +113,6 @@
     // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
     const SLOT_ANCHORS_DEFAULT = {
       // General body regions
-    // Preferred anchor node names per slot (searched in order, case-insensitive)
-    const SLOT_NODES = {
-      head:  ["Head","mixamorigHead","Bip001 Head","head"],
-      hat:   ["Head","mixamorigHead","Bip001 Head","head"],
-      hair:  ["Head","mixamorigHead","Bip001 Head","head"],
-      mask:  ["Head","mixamorigHead","Bip001 Head","head"],
-      torso: ["Chest","UpperChest","Spine2","Spine1","Spine","mixamorigSpine2","mixamorigSpine","Bip001 Spine","body","torso"],
-      top:   ["Chest","UpperChest","Spine2","Spine1","Spine"],
-      outfit:["Hips","Spine","Chest","UpperChest","Pelvis"],
-      body:  ["Hips","Pelvis","Spine"],
-      legs:  ["Hips","Pelvis","LeftUpLeg","RightUpLeg","LeftLeg","RightLeg"],
-      feet:  ["LeftFoot","RightFoot","Foot","mixamorigLeftFoot","mixamorigRightFoot"],
-      boots: ["Hips","Pelvis"],
-      skirt: ["Hips","Pelvis"],
-      belt:  ["Hips","Pelvis","Spine"],
-      bag:   ["Spine","Chest","UpperChest"],
-      arms:  ["LeftArm","RightArm","LeftUpperArm","RightUpperArm"],
-      hands: ["LeftHand","RightHand","Hand"]
-    };
       head:  { position:[0, 0.16, 0], rotation:[0,0,0], scale:[1,1,1] },
       torso: { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       body:  { position:[0, 0.00, 0], rotation:[0,0,0], scale:[1,1,1] },
@@ -225,7 +207,7 @@
       renderItems();
     }
 
-    function renderPreview(){
+    async function renderPreview(){
       const equip = _wallet.equipped||{};
       const itemsMap = new Map((_items||[]).map(x=>[x.id,x]));
       const mv = document.getElementById('mvShop');
@@ -242,7 +224,44 @@
         } else { const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='none'; }
       } catch (e) {}
       // Attach clothing into the base viewer's scene (scene-graph)
-      try { attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
+      let attached = false;
+      try { attached = await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) { attached = false; }
+      // Fallback overlays if attach failed
+      try {
+        const host = document.getElementById('mvOverlays');
+        if (host) {
+          while (host.firstChild) host.removeChild(host.firstChild);
+          if (!attached) {
+            Object.keys(equip||{}).forEach(slot => {
+              if (slot==='model') return;
+              const it = itemsMap.get(equip[slot]); if (!it || !it.model) return;
+              const ov = document.createElement('model-viewer');
+              ov.setAttribute('src', it.model);
+              ov.setAttribute('interaction-prompt','none');
+              ov.setAttribute('disable-zoom','');
+              ov.setAttribute('disable-pan','');
+              ov.style.position='absolute'; ov.style.inset='0'; ov.style.pointerEvents='none';
+              host.appendChild(ov);
+            });
+            const sync = ()=>{
+              try {
+                const overlays = Array.from(host.querySelectorAll('model-viewer'));
+                const orbit = mv && mv.getCameraOrbit ? mv.getCameraOrbit() : null;
+                const target = mv && mv.getCameraTarget ? mv.getCameraTarget() : null;
+                const fov = mv && mv.getFieldOfView ? mv.getFieldOfView() : null;
+                overlays.forEach(ov=>{
+                  if (orbit) ov.setAttribute('camera-orbit', `${orbit.theta}rad ${orbit.phi}rad ${orbit.radius}m`);
+                  if (target) ov.setAttribute('camera-target', `${target.x}m ${target.y}m ${target.z}m`);
+                  if (fov != null) ov.setAttribute('field-of-view', typeof fov === 'string' ? fov : `${fov}deg`);
+                });
+              } catch (e) {}
+            };
+            mv?.addEventListener('camera-change', sync, { once:false });
+            mv?.addEventListener('load', sync, { once:true });
+            sync();
+          }
+        }
+      } catch (e) {}
       // Update equipped summary so user sees immediate feedback
       try {
         const eqList = [];
@@ -335,20 +354,20 @@
       catalogEl.querySelectorAll('[data-equip]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
         const id = e.currentTarget.getAttribute('data-equip');
         if (e.currentTarget.disabled) return;
-        const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
-        if (!res.ok && res.error) { alert(res.error); return; }
-        _wallet.equipped = res.equipped || _wallet.equipped || {};
-        renderPreview();
-        renderItems();
+        try {
+          const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+          if (res && res.error) { alert(res.error); return; }
+          await loadAll();
+        } catch (err) { console.error('Equip failed', err); }
       }));
       catalogEl.querySelectorAll('[data-unequip]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
         const id = e.currentTarget.getAttribute('data-unequip');
         if (e.currentTarget.disabled) return;
-        const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
-        if (!res.ok && res.error) { alert(res.error); return; }
-        _wallet.equipped = res.equipped || _wallet.equipped || {};
-        renderPreview();
-        renderItems();
+        try {
+          const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+          if (res && res.error) { alert(res.error); return; }
+          await loadAll();
+        } catch (err) { console.error('Unequip failed', err); }
       }));
     }
 
@@ -356,6 +375,7 @@
   </script>
 </body>
 </html>
+
 
 
 

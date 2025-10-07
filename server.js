@@ -1,4 +1,4 @@
-// Minimal Express server to host static files and a TTS proxy.
+﻿// Minimal Express server to host static files and a TTS proxy.
 // Requires: Node 18+ (global fetch), express, cors, dotenv (optional)
 
 const path = require('path');
@@ -240,7 +240,7 @@ async function loadClothingItems(){
     const id = `cos-${canon}`;
     const name = labelize(nameBaseRaw);
     const rel = path.relative(__dirname, p).replace(/\\/g,'/');
-    items.push({ id, kind:'cosmetic', slot, name, price: 100, model: rel });
+    items.push({ id, kind:'cosmetic', slot, name, price: 0, model: rel });
   }
   return items;
 }
@@ -531,3 +531,4 @@ app.get('/api/ping', (req, res) => res.json({ ok: true }));
 app.listen(PORT, () => {
   console.log(`[server] http://localhost:${PORT}  (OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'})`);
 });
+
