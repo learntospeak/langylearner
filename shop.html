@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KanaReader â€“ Shop</title>
+  <title>KanaReader - Shop</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,6 +39,34 @@
             </div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
+            <div class="mt-2">
+              <button id="anchorDebugToggle" class="btn btn-ghost text-xs">Anchor Debug</button>
+            </div>
+            <div id="anchorDebug" class="hidden text-left text-xs mt-2 p-2 border-2 border-black bg-white rounded">
+              <div class="mb-1 font-semibold">Adjust Slot</div>
+              <div class="mb-1">Slot:
+                <select id="adSlot" class="border px-1 py-0.5 text-xs"></select>
+              </div>
+              <div class="grid grid-cols-3 gap-1 mb-1">
+                <label>X <input id="adPosX" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
+                <label>Y <input id="adPosY" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
+                <label>Z <input id="adPosZ" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
+              </div>
+              <div class="grid grid-cols-3 gap-1 mb-1">
+                <label>RotX° <input id="adRotX" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
+                <label>RotY° <input id="adRotY" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
+                <label>RotZ° <input id="adRotZ" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
+              </div>
+              <div class="mb-1">
+                <label>Scale <input id="adScale" type="number" step="0.01" class="border px-1 py-0.5 w-24"></label>
+              </div>
+              <div class="flex gap-2">
+                <button id="adApply" class="btn btn-primary text-xs">Apply</button>
+                <button id="adReset" class="btn btn-amber text-xs">Reset</button>
+                <button id="adLog" class="btn btn-ghost text-xs">Log Nodes</button>
+              </div>
+              <div id="adInfo" class="mt-1 text-gray-600"></div>
+            </div>
             <div class="text-xs text-gray-600 mt-2">Tap a category and equip/buy to preview.</div>
           </div>
         </div>
@@ -82,8 +110,27 @@
     }
     let SELECTED = 'upgrades';
     // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
-    const SLOT_ANCHORS = {
+    const SLOT_ANCHORS_DEFAULT = {
       // General body regions
+    // Preferred anchor node names per slot (searched in order, case-insensitive)
+    const SLOT_NODES = {
+      head:  ["Head","mixamorigHead","Bip001 Head","head"],
+      hat:   ["Head","mixamorigHead","Bip001 Head","head"],
+      hair:  ["Head","mixamorigHead","Bip001 Head","head"],
+      mask:  ["Head","mixamorigHead","Bip001 Head","head"],
+      torso: ["Chest","UpperChest","Spine2","Spine1","Spine","mixamorigSpine2","mixamorigSpine","Bip001 Spine","body","torso"],
+      top:   ["Chest","UpperChest","Spine2","Spine1","Spine"],
+      outfit:["Hips","Spine","Chest","UpperChest","Pelvis"],
+      body:  ["Hips","Pelvis","Spine"],
+      legs:  ["Hips","Pelvis","LeftUpLeg","RightUpLeg","LeftLeg","RightLeg"],
+      feet:  ["LeftFoot","RightFoot","Foot","mixamorigLeftFoot","mixamorigRightFoot"],
+      boots: ["Hips","Pelvis"],
+      skirt: ["Hips","Pelvis"],
+      belt:  ["Hips","Pelvis","Spine"],
+      bag:   ["Spine","Chest","UpperChest"],
+      arms:  ["LeftArm","RightArm","LeftUpperArm","RightUpperArm"],
+      hands: ["LeftHand","RightHand","Hand"]
+    };
       head:  { position:[0, 0.16, 0], rotation:[0,0,0], scale:[1,1,1] },
       torso: { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       body:  { position:[0, 0.00, 0], rotation:[0,0,0], scale:[1,1,1] },
@@ -128,7 +175,7 @@
           const rec = accessoryViewerFor(it.id, it.model); await rec.ready;
           const srcScene = getSceneFromViewer(rec.mv); if(!srcScene || !srcScene.clone) continue;
           const obj = srcScene.clone(true);
-          const a = SLOT_ANCHORS[slot] || SLOT_ANCHORS.misc;
+          const a = (SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT)[slot] || (SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT).misc;
           try {
             if (obj.position) { obj.position.set(a.position[0], a.position[1], a.position[2]); }
             if (obj.rotation) { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); }
@@ -194,33 +241,8 @@
           try { mv.classList.remove('animate-pulse'); void mv.offsetWidth; mv.classList.add('animate-pulse'); setTimeout(()=>mv.classList.remove('animate-pulse'), 300); } catch (e) {}
         } else { const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='none'; }
       } catch (e) {}
-      // Try to attach clothing into the base viewer's scene; fallback overlays still render below if needed
+      // Attach clothing into the base viewer's scene (scene-graph)
       try { attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
-        let _camSyncBound = window.__mvCameraSyncBound || false;
-        const sync = ()=>{
-          try {
-            const overlays = host ? Array.from(host.querySelectorAll('model-viewer')) : [];
-            const mv = document.getElementById('mvShop');
-            const orbit = (mv && mv.getCameraOrbit) ? mv.getCameraOrbit() : null;
-            const target = (mv && mv.getCameraTarget) ? mv.getCameraTarget() : null;
-            const fov = (mv && mv.getFieldOfView) ? mv.getFieldOfView() : null;
-            overlays.forEach(ov => {
-              try {
-                if (orbit) ov.setAttribute('camera-orbit', `${orbit.theta}rad ${orbit.phi}rad ${orbit.radius}m`);
-                if (target) ov.setAttribute('camera-target', `${target.x}m ${target.y}m ${target.z}m`);
-                if (fov != null) ov.setAttribute('field-of-view', typeof fov === 'string' ? fov : `${fov}deg`);
-              } catch (e) {}
-            });
-          } catch (e) {}
-        };
-        const mvBase = document.getElementById('mvShop');
-        if (mvBase && !_camSyncBound) {
-          mvBase.addEventListener('camera-change', sync);
-          mvBase.addEventListener('load', sync, { once:true });
-          window.__mvCameraSyncBound = true;
-        }
-        sync();
-      } catch (e) {}
       // Update equipped summary so user sees immediate feedback
       try {
         const eqList = [];
@@ -334,6 +356,11 @@
   </script>
 </body>
 </html>
+
+
+
+
+
 
 
 

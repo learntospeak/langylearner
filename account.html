@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KanaReader – Account</title>
+  <title>KanaReader -  account.Value.ToUpper() ccount</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
       </div>
       <div class="mb-4">
         <div class="font-medium mb-2">Your Progress</div>
-        <div id="progress" class="text-sm text-gray-700">Loading…</div>
+        <div id="progress" class="text-sm text-gray-700">Loadingâ€¦</div>
       </div>
       <div class="flex gap-2">
         <a href="index.html" class="btn btn-ghost">Home</a>
@@ -142,7 +142,7 @@
         const checks = v?.stats?.checks || {};
         const attempts = Object.values(checks).reduce((a,c)=>a + Number(c?.attempts||0), 0);
         const correct = Object.values(checks).reduce((a,c)=>a + Number(c?.correct||0), 0);
-        return `<li><code>${k}</code> – step ${step}; total ${fmtMs(tt)}; attempts ${attempts}, correct ${correct} (updated ${(new Date(v?.updatedAt||Date.now())).toLocaleString()})</li>`;
+        return `<li><code>${k}</code> â€“ step ${step}; total ${fmtMs(tt)}; attempts ${attempts}, correct ${correct} (updated ${(new Date(v?.updatedAt||Date.now())).toLocaleString()})</li>`;
       }).join('') + '</ul>';
     }
 
@@ -202,3 +202,4 @@
   </script>
 </body>
 </html>
+
