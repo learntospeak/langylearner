@@ -57,7 +57,8 @@
           "hat": "cos-armorhelmet",
           "legs": "cos-armorceinturethighs",
           "mask": "cos-ninjassuitmask",
-          "misc": "cos-amorarm"
+          "misc": "cos-amorarm",
+          "top": "cos-shirt"
         }
       }
     }
