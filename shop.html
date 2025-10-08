@@ -100,6 +100,31 @@
       });
     }
 
+    // Anchor Debug toggle + Log wiring
+    (function(){
+      const anchorToggle = document.getElementById('anchorDebugToggle');
+      if (anchorToggle && !anchorToggle.__wired) {
+        anchorToggle.__wired = true;
+        anchorToggle.addEventListener('click', ()=>{
+          const panel = document.getElementById('anchorDebug');
+          if (!panel) return;
+          if (panel.classList.contains('hidden')) panel.classList.remove('hidden'); else panel.classList.add('hidden');
+        });
+      }
+      const adLog = document.getElementById('adLog');
+      if (adLog && !adLog.__wired) {
+        adLog.__wired = true;
+        adLog.addEventListener('click', ()=>{
+          try {
+            const names = (window.__ofp && typeof window.__ofp.getNodeNames === 'function') ? (window.__ofp.getNodeNames()||[]) : [];
+            const info = document.getElementById('adInfo');
+            if (info) info.textContent = (names && names.length) ? ('Nodes: ' + names.join(', ')) : 'No nodes or model not loaded yet.';
+            console.log('[Anchor Debug] Model nodes:', names);
+          } catch (e) {}
+        });
+      }
+    })();
+
     // No 2D mascot fallback; preview shows only 3D models
 
     async function api(path, opts){
@@ -144,8 +169,8 @@
       const ready = new Promise(res=>{ if(mv.model){ res(mv); return;} mv.addEventListener("load", async ()=>{ try{ await mv.updateComplete; }catch(e){} res(mv); }, {once:true}); });
       rec = { mv, ready }; accCache.set(id, rec); return rec;
     }
-    function getBaseRoot(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch (e) { return null; } }
-    function getSceneFromViewer(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch (e) { return null; } }
+    function getBaseRoot(mv){ try { return (mv?.model?.scene) || (mv?.scene) || (mv?.model) || null; } catch (e) { return null; } }
+    function getSceneFromViewer(mv){ try { return (mv?.model?.scene) || (mv?.scene) || (mv?.model) || null; } catch (e) { return null; } }
     function getThree(){ try { return (window.THREE||null); } catch (e) { return null; } }
     function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
@@ -213,7 +238,18 @@
         api('/api/shop/catalog'),
         api('/api/wallet')
       ]).catch(()=>[{items:[]},{coins:0,owned:{},equipped:{}}]);
-      _items = cat.items||[]; _wallet = wall||{coins:0,owned:{},equipped:{}};
+      _items = cat.items||[];
+      const safeWall = (wall && !wall.error) ? wall : { coins:0, owned:{}, equipped:{} };
+      _wallet = safeWall;
+      // Ensure a default model is selected client-side if server view omitted it
+      try {
+        if (!_wallet.equipped || !_wallet.equipped.model) {
+          const hasStudent = (_items||[]).some(x=>x.id==='model-student');
+          if (hasStudent) {
+            _wallet.equipped = Object.assign({}, _wallet.equipped||{}, { model:'model-student' });
+          }
+        }
+      } catch (e) {}
       coinsEl.textContent = String(_wallet.coins||0);
       renderPreview();
       _cats = categoriesFrom(_items);
@@ -225,6 +261,8 @@
       const equip = _wallet.equipped||{};
       const itemsMap = new Map((_items||[]).map(x=>[x.id,x]));
       const mv = document.getElementById('mvShop');
+      // Build summary list safely
+      const eqList = [];
       // Prefer 3D model when available
       try {
         const modelItem = equip.model && itemsMap.get(equip.model);
@@ -246,6 +284,8 @@
             window.__ofp = window.OutfitPreview.create({ mv: mv, overrides });
           } else {
             console.warn('OutfitPreview plugin not found');
+            // Fallback: try local attach helper
+            try { await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
           }
         } else {
           try { window.__ofp.state.mv = mv; } catch (e) {}

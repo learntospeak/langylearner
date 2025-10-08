@@ -1,8 +1,18 @@
 // Lightweight outfit preview helper for model-viewer (no frameworks)
 // Attaches equipped accessories (by slot) into the base model's scene.
 (function (global) {
-  function getRoot(mv){ try { return (mv && mv.model && (mv.model.scene || mv.model)) || null; } catch { return null; } }
-  function ensureLoaded(mv){ return new Promise(res=>{ if (mv && mv.model) return res(); mv?.addEventListener('load', ()=>res(), { once:true }); }); }
+  function getRoot(mv){
+    try {
+      // Support model-viewer v3 (mv.model.scene) and v4 (mv.scene)
+      return (mv?.model?.scene) || (mv?.scene) || (mv?.model) || null;
+    } catch { return null; }
+  }
+  function ensureLoaded(mv){
+    return new Promise(res=>{
+      try { if (mv && (mv.model || mv.scene)) return res(); } catch {}
+      mv?.addEventListener?.('load', ()=>res(), { once:true });
+    });
+  }
   async function loadGLB(src){
     const mv = document.createElement('model-viewer');
     mv.setAttribute('src', src);
@@ -26,7 +36,7 @@
         const it = items.get(eq[slot]); if(!it || !it.model) continue;
         let rec = state.cache.get(it.id);
         if (!rec){ const mvAcc = await loadGLB(it.model); rec = { mv: mvAcc }; state.cache.set(it.id, rec); }
-        const srcScene = rec.mv && rec.mv.model && rec.mv.model.scene; if(!srcScene || !srcScene.clone) continue;
+    const srcScene = (rec.mv?.model?.scene) || (rec.mv?.scene) || (rec.mv?.model) || null; if(!srcScene || !srcScene.clone) continue;
         const obj = srcScene.clone(true);
         // Apply overrides or defaults
         const ov = (state.overrides && state.overrides[slot]) || null;
