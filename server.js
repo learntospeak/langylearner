@@ -35,6 +35,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve /assets explicitly with proper content types for glTF
+try {
+  const ASSETS_DIR = path.join(__dirname, 'assets');
+  app.use('/assets', express.static(ASSETS_DIR, {
+    index: false,
+    fallthrough: true,
+    setHeaders: (res, p) => {
+      const lower = String(p).toLowerCase();
+      if (lower.endsWith('.glb')) res.setHeader('Content-Type', 'model/gltf-binary');
+      else if (lower.endsWith('.gltf')) res.setHeader('Content-Type', 'model/gltf+json');
+      else if (lower.endsWith('.bin')) res.setHeader('Content-Type', 'application/octet-stream');
+    },
+  }));
+} catch {}
+
 // Serve favicon to avoid 404 spam
 try {
   const favPath = path.join(__dirname, 'images', 'favicon.ico');
