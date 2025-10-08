@@ -10,8 +10,13 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="anime-theme.css" />
   <script src="./modules/outfit-preview.js"></script>
-  <script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
-  <script nomodule src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer-legacy.js"></script>
+  <script type="module" src="/vendor/model-viewer.min.js"></script>
+  <script type="module">
+    import * as THREE from '/vendor/three.module.js';
+    import { GLTFLoader } from '/vendor/GLTFLoader.js';
+    import { OrbitControls } from '/vendor/OrbitControls.js';
+    window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls;
+  </script>
 </head>
 <body class="anime-bg min-h-screen p-5">
   <main class="max-w-5xl mx-auto">
@@ -38,6 +43,7 @@
             <div id="mvWrap" class="inline-block relative" style="display:none; width:200px; height:220px; overflow:hidden; z-index:1;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             </div>
+            <div id="tvWrap" class="inline-block relative" style="display:none; width:200px; height:220px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
             <div class="mt-2">
@@ -128,11 +134,19 @@
     // No 2D mascot fallback; preview shows only 3D models
 
     async function api(path, opts){
-      const r = await fetch(path, opts||{});
-      let data = null;
-      try { data = await r.json(); } catch (e) { data = null; }
-      if (!r.ok) return data || { ok:false, error: `HTTP ${r.status}` };
-      return data;
+      try {
+        const url = (typeof path === 'string')
+          ? (path.startsWith('http') ? path : new URL(path, location.origin).toString())
+          : String(path||'');
+        const r = await fetch(url, opts||{});
+        let data = null;
+        try { data = await r.json(); } catch (e) { data = null; }
+        if (!r.ok) return data || { ok:false, error: `HTTP ${r.status}` };
+        return data;
+      } catch (e) {
+        console.warn('api failed', path, e);
+        return { ok:false, error: String(e) };
+      }
     }
     let SELECTED = 'upgrades';
     const FORCE_OVERLAY_SLOT = 'top';
@@ -159,55 +173,212 @@
       misc:  { position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] }
     };
     // Accessory pool (offscreen model-viewers) to load GLBs for scene-graph cloning
-    const accPool = document.createElement('div'); accPool.id = 'accPool'; accPool.style.display = 'none'; document.body.appendChild(accPool);
+    const accPool = document.createElement('div'); accPool.id = 'accPool';
+    accPool.style.position = 'absolute'; accPool.style.left = '-9999px'; accPool.style.top = '0'; accPool.style.width = '1px'; accPool.style.height = '1px'; accPool.style.overflow = 'hidden';
+    document.body.appendChild(accPool);
     const accCache = new Map(); // id -> { mv, ready:Promise }
-    function accessoryViewerFor(id, src){
+    async function accessoryViewerFor(id, src){
       let rec = accCache.get(id);
       if (rec && rec.mv && rec.mv.getAttribute('src') === src) return rec;
-      const mv = document.createElement('model-viewer'); mv.setAttribute('src', src); mv.setAttribute('reveal','auto');
+      // Ensure custom element is defined
+      try { if (window.customElements && window.customElements.whenDefined) await window.customElements.whenDefined('model-viewer'); } catch {}
+      const mv = document.createElement('model-viewer');
+      mv.setAttribute('src', src);
+      mv.setAttribute('reveal','auto');
+      mv.setAttribute('preload','true');
+      mv.style.width = '1px'; mv.style.height = '1px';
       accPool.appendChild(mv);
-      const ready = new Promise(res=>{ if(mv.model){ res(mv); return;} mv.addEventListener("load", async ()=>{ try{ await mv.updateComplete; }catch(e){} res(mv); }, {once:true}); });
+      const ready = new Promise(res=>{
+        const done = ()=>{ try { res(mv); } catch { res(mv); } };
+        let settled = false;
+        const mark = (label)=>{ try { console.log('[attach] event', label, src); } catch(_){} };
+        const tryDone = ()=>{
+          try {
+            if (settled) return;
+            if (mv && mv.model && (mv.model.scene || mv.scene)) { settled = true; return setTimeout(done, 0); }
+          } catch {}
+        };
+        try { if (mv && (mv.model && (mv.model.scene || mv.scene))) { settled=true; return done(); } } catch {}
+        try { mv.addEventListener('load', ()=>{ mark('load'); tryDone(); }, { once: true }); } catch {}
+        try { mv.addEventListener('scene-graph-ready', ()=>{ mark('scene-graph-ready'); tryDone(); }, { once: true }); } catch {}
+        // Fallback poll
+        let t0 = Date.now();
+        (function poll(){
+          tryDone();
+          if (settled) return;
+          if (Date.now() - t0 > 7000) { settled=true; return done(); }
+          try { window.requestAnimationFrame(poll); } catch { setTimeout(poll, 50); }
+        })();
+      });
       rec = { mv, ready }; accCache.set(id, rec); return rec;
     }
-    function getBaseRoot(mv){ try { return (mv?.model?.scene) || (mv?.scene) || (mv?.model) || null; } catch (e) { return null; } }
-    function getSceneFromViewer(mv){ try { return (mv?.model?.scene) || (mv?.scene) || (mv?.model) || null; } catch (e) { return null; } }
-    function getThree(){ try { return (window.THREE||null); } catch (e) { return null; } }
+    function getBaseRoot(mv){ try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : null; } catch (e) { return null; } }
+    function getSceneFromViewer(mv){ try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : null; } catch (e) { return null; } }
+    function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
     function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
     async function attachAccessoriesToBase(mv, equip, itemsMap){
       try {
-        let root = getBaseRoot(mv); if(!root){ await new Promise(res=> mv?.addEventListener("load", res, {once:true})); try{ await mv.updateComplete; }catch(e){} root = getBaseRoot(mv); if(!root) return false; }
+        let root = getBaseRoot(mv);
+        if(!root){
+          // Wait for model-viewer to finish building the scene graph
+          await new Promise(res=>{
+            let done=false;
+            const finish=()=>{ if(done) return; done=true; res(); };
+            try { mv.addEventListener('scene-graph-ready', finish, { once:true }); } catch {}
+            try { mv.addEventListener('load', finish, { once:true }); } catch {}
+            setTimeout(finish, 1000);
+          });
+          try{ await mv.updateComplete; }catch(e){}
+          root = getBaseRoot(mv);
+          if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root or add() missing'); }catch(_){} return false; }
+        }
         clearAttachments(mv);
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        try { console.log('[attach] slots', slots); } catch(_){ }
         const added = [];
-        for (const slot of slots){
-          const it = itemsMap.get(equip[slot]); if(!it || !it.model) continue;
-          const rec = accessoryViewerFor(it.id, it.model); await rec.ready;
-          const srcScene = getSceneFromViewer(rec.mv); if(!srcScene || !srcScene.clone) continue;
-          const obj = srcScene.clone(true);
-          const a = (SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT)[slot] || (SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT).misc;
+        // Helper: load accessory GLB via Three.js if available
+        async function loadWithThree(url){
           try {
-            // Attach first so world matrices are valid
-            try { root.add(obj); } catch (e) {}
-            // Auto-scale accessory height relative to base height
-            const baseBox = computeBounds(root);
-            const accBox0 = computeBounds(obj);
-            if (baseBox && accBox0) {
-              const baseH = Math.max(1e-6, baseBox.max.y - baseBox.min.y);
-              const accH  = Math.max(1e-6, accBox0.max.y - accBox0.min.y);
-              var target = 0.25; if (slot==='top' || slot==='torso' || slot==='body') target = 0.35;
-              var s = (target * baseH) / accH;
-              if (isFinite(s) && s>0 && s<10) obj.scale.set(s,s,s);
+            const THREE = getThree(); if (!THREE || !window.__GLTFLoader) return null;
+            const loader = new window.__GLTFLoader();
+            return await new Promise((resolve) => {
+              try {
+                loader.load(url, (gltf)=>{ try { console.log('[attach] three loaded', url); resolve(gltf && gltf.scene ? gltf.scene : null); } catch { resolve(null); } }, undefined, (err)=>{ console.warn('[attach] three load error', url, err); resolve(null); });
+              } catch { resolve(null); }
+            });
+          } catch { return null; }
+        }
+        for (const slot of slots){
+          const it = itemsMap.get(equip[slot]);
+          if(!it || !it.model){ try{ console.warn('[attach] missing item for slot', slot, equip[slot]); }catch(_){} continue; }
+          try { console.log('[attach] loading', slot, it.id, it.model); } catch(_){ }
+          // Probe that the GLB is reachable to surface network entries
+          try { const head = await fetch(it.model, { method:'HEAD', cache:'no-store' }); console.log('[attach] probe', head.status, it.model); } catch (e) { console.warn('[attach] probe failed', it.model, e); }
+          try {
+            // Try Three.js loader first
+            let srcScene = await loadWithThree(it.model);
+            if (!srcScene) {
+              const rec = await accessoryViewerFor(it.id, it.model);
+              await rec.ready;
+              srcScene = getSceneFromViewer(rec.mv);
             }
-            if (obj.position) { obj.position.set(a.position[0], a.position[1], a.position[2]); }
-            if (obj.rotation) { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); }
+            if(!srcScene){ console.warn('[attach] no srcScene', it.id); continue; }
+            let obj = null;
+            try {
+              if (typeof srcScene.clone === 'function') obj = srcScene.clone(true);
+            } catch (err) {
+              console.warn('[attach] clone failed', err);
+              obj = null;
+            }
+            if (!obj) {
+              try {
+                const first = (srcScene.children && srcScene.children[0]) || null;
+                if (first && typeof first.clone === 'function') obj = first.clone(true);
+              } catch (e) { obj = null; }
+            }
+            if (!obj) { console.warn('[attach] nothing cloneable for', it.id); continue; }
+            const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
+            const a = anchors[slot] || anchors.misc;
+            // Attach first so world matrices are valid
+            try { root.add(obj); } catch (e) { console.warn('[attach] add failed', e); continue; }
+            // Auto-scale: try precise, else fallback defaults
+            try {
+              const baseBox = computeBounds(root);
+              const accBox0 = computeBounds(obj);
+              if (baseBox && accBox0) {
+                const baseH = Math.max(1e-6, baseBox.max.y - baseBox.min.y);
+                const accH  = Math.max(1e-6, accBox0.max.y - accBox0.min.y);
+                var target = (slot==='top' || slot==='torso' || slot==='body') ? 0.35 : 0.25;
+                var s = (target * baseH) / accH;
+                if (isFinite(s) && s>0 && s<10) obj.scale.set(s,s,s); else obj.scale.set(target,target,target);
+              } else {
+                var def = (slot==='top' || slot==='torso' || slot==='body') ? 0.35 : 0.25;
+                obj.scale.set(def,def,def);
+              }
+            } catch (e) {
+              var def2 = (slot==='top' || slot==='torso' || slot==='body') ? 0.35 : 0.25;
+              try { obj.scale.set(def2,def2,def2); } catch(_){ }
+            }
+            try { if (obj.position) obj.position.set(a.position[0], a.position[1], a.position[2]); } catch(_){}
+            try { if (obj.rotation) obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch(_){}
             added.push(obj);
-          } catch (e) {}
+          } catch (e) { console.warn('[attach] slot failed', slot, e); }
         }
         mv.__attachments = added;
+        try { console.log('[attach] attached count', added.length); } catch(_){ }
         return added.length > 0;
       } catch (e) { return false; }
     }
+
+    // ---------- Lightweight Three.js viewer fallback ----------
+    const TV = (function(){
+      let initialized = false, scene=null, camera=null, renderer=null, baseGroup=null, attachGroup=null, controls=null;
+      function init(){
+        if (initialized) return true;
+        const THREE = getThree(); if (!THREE) return false;
+        const wrap = document.getElementById('tvWrap'); if(!wrap) return false;
+        const w = wrap.clientWidth||200, h = wrap.clientHeight||220;
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
+        camera.position.set(0, 0.35, 1.0);
+        const amb = new THREE.AmbientLight(0xffffff, 0.9); scene.add(amb);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir);
+        renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false, powerPreference:'low-power' });
+        renderer.setSize(w, h, false);
+        renderer.setPixelRatio(1);
+        wrap.innerHTML = '';
+        wrap.appendChild(renderer.domElement);
+        attachGroup = new THREE.Group(); scene.add(attachGroup);
+        try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.1,0); } } catch(_){ }
+        function tick(){ try { if(controls) controls.update(); renderer.render(scene, camera); } catch (_) {} requestAnimationFrame(tick); }
+        requestAnimationFrame(tick);
+        initialized = true; return true;
+      }
+      function clear(){ try { const THREE = getThree(); if(!THREE) return; if (baseGroup) { scene.remove(baseGroup); baseGroup=null; } while(attachGroup && attachGroup.children.length){ attachGroup.remove(attachGroup.children[0]); } } catch(_){}
+      }
+      async function loadBase(url){
+        const THREE = getThree(); if (!THREE) return false;
+        if (!init()) return false;
+        clear();
+        const loader = new window.__GLTFLoader();
+        const gltf = await new Promise(res=>{ try { loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+        if (!gltf || !gltf.scene) return false;
+        baseGroup = gltf.scene; scene.add(baseGroup);
+        // Fit camera roughly
+        try {
+          const box = new THREE.Box3().setFromObject(baseGroup);
+          const center = box.getCenter(new THREE.Vector3());
+          const sphere = box.getBoundingSphere(new THREE.Sphere());
+          baseGroup.position.sub(center);
+          const radius = Math.max(0.1, sphere.radius);
+          const z = radius * 2.2;
+          camera.position.set(0, radius*0.2, z);
+          if (window.__OrbitControls && controls) { controls.target.set(0, 0, 0); controls.update(); }
+        } catch(_){}
+        return true;
+      }
+      async function attachAll(equip, itemsMap, anchors){
+        const THREE = getThree(); if (!THREE || !initialized) return false;
+        if (!attachGroup) { attachGroup = new THREE.Group(); scene.add(attachGroup); }
+        while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
+        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        for (const slot of slots){
+          const it = itemsMap.get(equip[slot]); if(!it||!it.model) continue;
+          const loader = new window.__GLTFLoader();
+          const gltf = await new Promise(res=>{ try { loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+          if (!gltf || !gltf.scene) continue;
+          const obj = gltf.scene.clone(true);
+          const a = (anchors[slot]||anchors.misc);
+          try { const boxBase = new THREE.Box3().setFromObject(baseGroup); const boxObj = new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y), objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; let s=(target*baseH)/objH; if (isFinite(s)&&s>0&&s<10) obj.scale.set(s,s,s); else obj.scale.set(target,target,target);} catch(_) { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; obj.scale.set(def,def,def); }
+          try { obj.position.set(a.position[0], a.position[1], a.position[2]); } catch(_){ }
+          try { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch(_){ }
+          attachGroup.add(obj);
+        }
+        return true;
+      }
+      return { init, loadBase, attachAll };
+    })();
     function categoriesFrom(items){
       const cats = [];
       if ((items||[]).some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
@@ -263,12 +434,30 @@
       const mv = document.getElementById('mvShop');
       // Build summary list safely
       const eqList = [];
+      try { if (mv && !mv.__dbg) { mv.__dbg=true; mv.addEventListener('load', ()=>{ try { console.log('[shop] model-viewer load fired'); } catch(e){} }, { once:false }); } } catch(e){}
       // Prefer 3D model when available
       try {
         const modelItem = equip.model && itemsMap.get(equip.model);
+        try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
         if (modelItem && modelItem.model && mv) {
-          mv.src = modelItem.model;
-          (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
+          // Use Three.js fallback viewer (preferred)
+          const tvOk = TV && TV.init && TV.init();
+          if (tvOk) {
+            try {
+              const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
+              const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
+              await TV.loadBase(modelItem.model);
+              const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+              const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+              await TV.attachAll(equip, itemsMap, anchors);
+            } catch (_){ }
+          } else {
+            mv.src = modelItem.model;
+            try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
+            // Kick an early fallback attach pass as soon as a model is set
+            try { setTimeout(()=>{ try { attachAccessoriesToBase(mv, equip, itemsMap); } catch(e){} }, 0); } catch(e){}
+            (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
+          }
           // 3D only
           try { mv.pause(); } catch (e) {}
           // Nudge animation to show change
@@ -285,7 +474,7 @@
           } else {
             console.warn('OutfitPreview plugin not found');
             // Fallback: try local attach helper
-            try { await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
+            try { if (!window.__useTV) await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
           }
         } else {
           try { window.__ofp.state.mv = mv; } catch (e) {}
@@ -294,7 +483,14 @@
           try { window.__ofp.setOverrides(overrides); } catch (e) {}
           window.__ofp.update(equip, _items||[]);
           await window.__ofp.attachAll();
+          try {
+            const root = getBaseRoot(mv);
+            const hasAny = Array.isArray(mv.__attachments) ? mv.__attachments.length>0 : (root && root.children && root.children.length>0);
+            if (!hasAny) { if (!window.__useTV) await attachAccessoriesToBase(mv, equip, itemsMap); }
+          } catch (e) {}
         }
+        // Always run local fallback once to force accessory GLB requests for debugging
+        try { if (!window.__useTV) await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) { console.warn('fallback attach error', e); }
       } catch (e) { console.warn('preview attach failed', e); }
         try {
           Object.keys(equip||{}).forEach(slot => {
@@ -369,6 +565,13 @@
                   ov3[slot3] = { position:[Number(posX?.value)||0, Number(posY?.value)||0.05, Number(posZ?.value)||0], rotation:[rx,ry,rz], scale:[s,s,s] };
                   localStorage.setItem('anchorOverrides', JSON.stringify(ov3));
                   if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov3); await window.__ofp.attachAll(); }
+                  try {
+                    if (window.__useTV && TV && TV.attachAll) {
+                      const map = new Map((_items||[]).map(x=>[x.id,x]));
+                      const anchors = Object.assign({}, (window.SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT), ov3);
+                      await TV.attachAll(_wallet.equipped||{}, map, anchors);
+                    }
+                  } catch(_){}
                 } catch(e){ console.warn('apply failed', e); }
               });
             }
@@ -380,6 +583,13 @@
                   const ov4 = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
                   delete ov4[slot4]; localStorage.setItem('anchorOverrides', JSON.stringify(ov4));
                   if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov4); await window.__ofp.attachAll(); }
+                  try {
+                    if (window.__useTV && TV && TV.attachAll) {
+                      const map = new Map((_items||[]).map(x=>[x.id,x]));
+                      const anchors = Object.assign({}, (window.SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT), ov4);
+                      await TV.attachAll(_wallet.equipped||{}, map, anchors);
+                    }
+                  } catch(_){}
                   sel.onchange();
                 } catch(e){ console.warn('reset failed', e); }
               });

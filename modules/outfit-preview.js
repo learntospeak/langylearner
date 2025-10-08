@@ -14,11 +14,26 @@
     });
   }
   async function loadGLB(src){
+    try { if (window.customElements && window.customElements.whenDefined) await window.customElements.whenDefined('model-viewer'); } catch {}
     const mv = document.createElement('model-viewer');
     mv.setAttribute('src', src);
-    mv.style.display = 'none';
+    mv.setAttribute('reveal','auto');
+    mv.setAttribute('preload','true');
+    mv.style.position = 'absolute'; mv.style.left = '-9999px'; mv.style.top = '0'; mv.style.width = '1px'; mv.style.height = '1px';
     document.body.appendChild(mv);
-    await new Promise(res=> mv.addEventListener('load', res, { once:true }));
+    await new Promise(res=>{
+      let settled = false;
+      const done = ()=>{ if (settled) return; settled=true; res(); };
+      try { mv.addEventListener('scene-graph-ready', done, { once:true }); } catch {}
+      try { mv.addEventListener('load', done, { once:true }); } catch {}
+      // Fallback poll
+      let t0 = Date.now();
+      (function poll(){
+        try { if (mv && mv.model && (mv.model.scene || mv.scene)) return done(); } catch {}
+        if (Date.now() - t0 > 7000) return done();
+        try { window.requestAnimationFrame(poll); } catch { setTimeout(poll, 50); }
+      })();
+    });
     try { await mv.updateComplete; } catch {}
     return mv;
   }

@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759894181195
+          "updatedAt": 1759953438616
         }
       },
       "createdAt": 1759402120040,
@@ -54,11 +54,37 @@
         "equipped": {
           "model": "model-basemesh",
           "boots": "cos-bottes",
-          "hat": "cos-hat",
+          "hat": "cos-armorhelmet",
           "legs": "cos-armorceinturethighs",
           "mask": "cos-ninjassuitmask",
           "misc": "cos-amorarm",
-          "skirt": "cos-skirt",
+          "skirt": "cos-skirt"
+        }
+      }
+    },
+    "test1": {
+      "username": "test1",
+      "email": "hello@cleverfoxprint.com.au",
+      "password": "scrypt$094c564190b142e11246625e5d8e37a8$148a1d63a16799e0bef024c95c1dc0e8f4f8f3567b7cef0e989517434fbb9c6d",
+      "progress": {
+        "greetings-001": {
+          "stepIndex": 0,
+          "stats": {
+            "timeMsByStep": {},
+            "checks": {},
+            "reveals": {},
+            "totalTimeMs": 0
+          },
+          "updatedAt": 1759894580574
+        }
+      },
+      "createdAt": 1759894572161,
+      "wallet": {
+        "coins": 0,
+        "owned": {
+          "cos-amorplastron": true
+        },
+        "equipped": {
           "top": "cos-amorplastron"
         }
       }
