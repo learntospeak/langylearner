@@ -13,7 +13,7 @@
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1759953438616
+          "updatedAt": 1759997742752
         }
       },
       "createdAt": 1759402120040,
@@ -53,12 +53,7 @@
         },
         "equipped": {
           "model": "model-basemesh",
-          "boots": "cos-bottes",
-          "hat": "cos-armorhelmet",
-          "legs": "cos-armorceinturethighs",
-          "mask": "cos-ninjassuitmask",
-          "misc": "cos-amorarm",
-          "skirt": "cos-skirt"
+          "top": "cos-chemise"
         }
       }
     },

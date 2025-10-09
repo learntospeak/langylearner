@@ -11,6 +11,13 @@
   <link rel="stylesheet" href="anime-theme.css" />
   <script src="./modules/outfit-preview.js"></script>
   <script type="module" src="/vendor/model-viewer.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three.module.js"
+      }
+    }
+  </script>
   <script type="module">
     import * as THREE from '/vendor/three.module.js';
     import { GLTFLoader } from '/vendor/GLTFLoader.js';
@@ -60,9 +67,9 @@
                 <label>Z <input id="adPosZ" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
               </div>
               <div class="grid grid-cols-3 gap-1 mb-1">
-                <label>RotX° <input id="adRotX" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
-                <label>RotY° <input id="adRotY" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
-                <label>RotZ° <input id="adRotZ" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
+                <label>RotX� <input id="adRotX" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
+                <label>RotY� <input id="adRotY" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
+                <label>RotZ� <input id="adRotZ" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
               </div>
               <div class="mb-1">
                 <label>Scale <input id="adScale" type="number" step="0.01" class="border px-1 py-0.5 w-24"></label>
@@ -122,7 +129,12 @@
         adLog.__wired = true;
         adLog.addEventListener('click', ()=>{
           try {
-            const names = (window.__ofp && typeof window.__ofp.getNodeNames === 'function') ? (window.__ofp.getNodeNames()||[]) : [];
+            let names = [];
+            if (window.__useTV && window.TV && typeof window.TV.getNodeNames === 'function') {
+              names = window.TV.getNodeNames()||[];
+            } else if (window.__ofp && typeof window.__ofp.getNodeNames === 'function') {
+              names = window.__ofp.getNodeNames()||[];
+            }
             const info = document.getElementById('adInfo');
             if (info) info.textContent = (names && names.length) ? ('Nodes: ' + names.join(', ')) : 'No nodes or model not loaded yet.';
             console.log('[Anchor Debug] Model nodes:', names);
@@ -337,47 +349,79 @@
       }
       function clear(){ try { const THREE = getThree(); if(!THREE) return; if (baseGroup) { scene.remove(baseGroup); baseGroup=null; } while(attachGroup && attachGroup.children.length){ attachGroup.remove(attachGroup.children[0]); } } catch(_){}
       }
-      async function loadBase(url){
-        const THREE = getThree(); if (!THREE) return false;
-        if (!init()) return false;
-        clear();
-        const loader = new window.__GLTFLoader();
-        const gltf = await new Promise(res=>{ try { loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
-        if (!gltf || !gltf.scene) return false;
-        baseGroup = gltf.scene; scene.add(baseGroup);
-        // Fit camera roughly
-        try {
-          const box = new THREE.Box3().setFromObject(baseGroup);
-          const center = box.getCenter(new THREE.Vector3());
-          const sphere = box.getBoundingSphere(new THREE.Sphere());
-          baseGroup.position.sub(center);
-          const radius = Math.max(0.1, sphere.radius);
-          const z = radius * 2.2;
-          camera.position.set(0, radius*0.2, z);
-          if (window.__OrbitControls && controls) { controls.target.set(0, 0, 0); controls.update(); }
-        } catch(_){}
-        return true;
-      }
-      async function attachAll(equip, itemsMap, anchors){
-        const THREE = getThree(); if (!THREE || !initialized) return false;
-        if (!attachGroup) { attachGroup = new THREE.Group(); scene.add(attachGroup); }
-        while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
-        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
-        for (const slot of slots){
-          const it = itemsMap.get(equip[slot]); if(!it||!it.model) continue;
-          const loader = new window.__GLTFLoader();
-          const gltf = await new Promise(res=>{ try { loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
-          if (!gltf || !gltf.scene) continue;
-          const obj = gltf.scene.clone(true);
-          const a = (anchors[slot]||anchors.misc);
-          try { const boxBase = new THREE.Box3().setFromObject(baseGroup); const boxObj = new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y), objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; let s=(target*baseH)/objH; if (isFinite(s)&&s>0&&s<10) obj.scale.set(s,s,s); else obj.scale.set(target,target,target);} catch(_) { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; obj.scale.set(def,def,def); }
-          try { obj.position.set(a.position[0], a.position[1], a.position[2]); } catch(_){ }
-          try { obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch(_){ }
-          attachGroup.add(obj);
-        }
-        return true;
-      }
-      return { init, loadBase, attachAll };
+      \ \ \ \ \ \ async\ function\ loadBase\(url\)\{
+\ \ \ \ \ \ \ \ const\ THREE\ =\ getThree\(\);\ if\ \(!THREE\)\ return\ false;
+\ \ \ \ \ \ \ \ if\ \(!init\(\)\)\ return\ false;
+\ \ \ \ \ \ \ \ clear\(\);
+\ \ \ \ \ \ \ \ const\ loader\ =\ new\ window\.__GLTFLoader\(\);
+\ \ \ \ \ \ \ \ const\ gltf\ =\ await\ new\ Promise\(res=>\{\ try\ \{\ loader\.load\(url,\ \(g\)=>res\(g\),\ undefined,\ \(\)=>res\(null\)\);\ }\ catch\ \{\ res\(null\);\ }\ }\);
+\ \ \ \ \ \ \ \ if\ \(!gltf\ \|\|\ !gltf\.scene\)\ return\ false;
+\ \ \ \ \ \ \ \ baseGroup\ =\ gltf\.scene;\ scene\.add\(baseGroup\);
+\ \ \ \ \ \ \ \ try\ \{\ if\ \(!attachGroup\)\ attachGroup\ =\ new\ THREE\.Group\(\);\ if\ \(attachGroup\.parent\ !==\ baseGroup\)\ \{\ try\ \{\ if\ \(attachGroup\.parent\)\ attachGroup\.parent\.remove\(attachGroup\);\ }\ catch\(_\)\{}\ baseGroup\.add\(attachGroup\);\ }\ }\ catch\(_\)\{\ }
+\ \ \ \ \ \ \ \ //\ Fit\ camera\ precisely
+\ \ \ \ \ \ \ \ try\ \{
+\ \ \ \ \ \ \ \ \ \ const\ box\ =\ new\ THREE\.Box3\(\)\.setFromObject\(baseGroup\);
+\ \ \ \ \ \ \ \ \ \ const\ center\ =\ box\.getCenter\(new\ THREE\.Vector3\(\)\);
+\ \ \ \ \ \ \ \ \ \ baseGroup\.position\.sub\(center\);
+\ \ \ \ \ \ \ \ \ \ const\ sphere\ =\ new\ THREE\.Sphere\(\);\ box\.getBoundingSphere\(sphere\);
+\ \ \ \ \ \ \ \ \ \ const\ radius\ =\ Math\.max\(0\.1,\ sphere\.radius\);
+\ \ \ \ \ \ \ \ \ \ const\ dist\ =\ radius\ /\ Math\.tan\(\(camera\.fov\ \*\ Math\.PI\)\ /\ 360\);
+\ \ \ \ \ \ \ \ \ \ camera\.near\ =\ Math\.max\(0\.01,\ dist\ \*\ 0\.1\);
+\ \ \ \ \ \ \ \ \ \ camera\.far\ =\ Math\.max\(camera\.near\ \+\ 1,\ dist\ \*\ 10\);
+\ \ \ \ \ \ \ \ \ \ camera\.updateProjectionMatrix\(\);
+\ \ \ \ \ \ \ \ \ \ camera\.position\.set\(0,\ radius\ \*\ 0\.1,\ dist\ \*\ 1\.2\);
+\ \ \ \ \ \ \ \ \ \ if\ \(window\.__OrbitControls\ &&\ controls\)\ \{
+\ \ \ \ \ \ \ \ \ \ \ \ controls\.target\.set\(0,\ 0\.05,\ 0\);
+\ \ \ \ \ \ \ \ \ \ \ \ controls\.minDistance\ =\ radius\ \*\ 0\.5;
+\ \ \ \ \ \ \ \ \ \ \ \ controls\.maxDistance\ =\ radius\ \*\ 4\.0;
+\ \ \ \ \ \ \ \ \ \ \ \ controls\.enablePan\ =\ true;
+\ \ \ \ \ \ \ \ \ \ \ \ controls\.update\(\);
+\ \ \ \ \ \ \ \ \ \ }
+\ \ \ \ \ \ \ \ }\ catch\(_\)\{}
+\ \ \ \ \ \ \ \ return\ true;
+\ \ \ \ \ \ }
+      \ \ \ \ \ \ async\ function\ attachAll\(equip,\ itemsMap,\ anchors\)\{
+\ \ \ \ \ \ \ \ const\ THREE\ =\ getThree\(\);\ if\ \(!THREE\ \|\|\ !initialized\)\ return\ false;
+\ \ \ \ \ \ \ \ if\ \(!attachGroup\)\ \{\ attachGroup\ =\ new\ THREE\.Group\(\);\ }
+\ \ \ \ \ \ \ \ try\ \{\ if\ \(baseGroup\ &&\ attachGroup\.parent\ !==\ baseGroup\)\ \{\ if\ \(attachGroup\.parent\)\ attachGroup\.parent\.remove\(attachGroup\);\ baseGroup\.add\(attachGroup\);\ }\ }\ catch\(_\)\{\ }
+\ \ \ \ \ \ \ \ while\ \(attachGroup\.children\.length\)\ attachGroup\.remove\(attachGroup\.children\[0]\);
+\ \ \ \ \ \ \ \ const\ slots\ =\ Object\.keys\(equip\|\|\{}\)\.filter\(s=>s!=='model'\);
+\ \ \ \ \ \ \ \ for\ \(const\ slot\ of\ slots\)\{
+\ \ \ \ \ \ \ \ \ \ const\ it\ =\ itemsMap\.get\(equip\[slot]\);\ if\(!it\|\|!it\.model\)\ continue;
+\ \ \ \ \ \ \ \ \ \ const\ loader\ =\ new\ window\.__GLTFLoader\(\);
+\ \ \ \ \ \ \ \ \ \ const\ gltf\ =\ await\ new\ Promise\(res=>\{\ try\ \{\ loader\.load\(it\.model,\ \(g\)=>res\(g\),\ undefined,\ \(\)=>res\(null\)\);\ }\ catch\ \{\ res\(null\);\ }\ }\);
+\ \ \ \ \ \ \ \ \ \ if\ \(!gltf\ \|\|\ !gltf\.scene\)\ continue;
+\ \ \ \ \ \ \ \ \ \ //\ Center\ accessory\ around\ its\ own\ bounds\ so\ anchors\ behave\ predictably
+\ \ \ \ \ \ \ \ \ \ const\ src\ =\ gltf\.scene\.clone\(true\);
+\ \ \ \ \ \ \ \ \ \ const\ wrap\ =\ new\ THREE\.Group\(\);
+\ \ \ \ \ \ \ \ \ \ let\ obj\ =\ src;
+\ \ \ \ \ \ \ \ \ \ try\ \{
+\ \ \ \ \ \ \ \ \ \ \ \ const\ boxObj\ =\ new\ THREE\.Box3\(\)\.setFromObject\(src\);
+\ \ \ \ \ \ \ \ \ \ \ \ const\ centerObj\ =\ boxObj\.getCenter\(new\ THREE\.Vector3\(\)\);
+\ \ \ \ \ \ \ \ \ \ \ \ src\.position\.sub\(centerObj\);
+\ \ \ \ \ \ \ \ \ \ }\ catch\(_\)\{\ }
+\ \ \ \ \ \ \ \ \ \ wrap\.add\(obj\);
+\ \ \ \ \ \ \ \ \ \ //\ Scale
+\ \ \ \ \ \ \ \ \ \ const\ a\ =\ \(anchors\[slot]\|\|anchors\.misc\);
+\ \ \ \ \ \ \ \ \ \ try\ \{
+\ \ \ \ \ \ \ \ \ \ \ \ const\ boxBase\ =\ new\ THREE\.Box3\(\)\.setFromObject\(baseGroup\);
+\ \ \ \ \ \ \ \ \ \ \ \ const\ boxObj\ =\ new\ THREE\.Box3\(\)\.setFromObject\(src\);
+\ \ \ \ \ \ \ \ \ \ \ \ const\ baseH=Math\.max\(1e-6,\ boxBase\.max\.y-boxBase\.min\.y\);
+\ \ \ \ \ \ \ \ \ \ \ \ const\ objH=Math\.max\(1e-6,\ boxObj\.max\.y-boxObj\.min\.y\);
+\ \ \ \ \ \ \ \ \ \ \ \ let\ target=\(slot==='top'\|\|slot==='torso'\|\|slot==='body'\)\?0\.35:0\.25;
+\ \ \ \ \ \ \ \ \ \ \ \ let\ sAuto=\(target\*baseH\)/objH;
+\ \ \ \ \ \ \ \ \ \ \ \ const\ s\ =\ \(a\.scale\ &&\ a\.scale\[0]\)\ \?\ a\.scale\[0]\ :\ \(isFinite\(sAuto\)&&sAuto>0&&sAuto<10\ \?\ sAuto\ :\ target\);
+\ \ \ \ \ \ \ \ \ \ \ \ wrap\.scale\.set\(s,s,s\);
+\ \ \ \ \ \ \ \ \ \ }\ catch\(_\)\ \{\ let\ def=\(slot==='top'\|\|slot==='torso'\|\|slot==='body'\)\?0\.35:0\.25;\ wrap\.scale\.set\(def,def,def\);\ }
+\ \ \ \ \ \ \ \ \ \ //\ Transform
+\ \ \ \ \ \ \ \ \ \ try\ \{\ wrap\.position\.set\(a\.position\[0],\ a\.position\[1],\ a\.position\[2]\);\ }\ catch\(_\)\{\ }
+\ \ \ \ \ \ \ \ \ \ try\ \{\ wrap\.rotation\.order\ =\ 'XYZ';\ wrap\.rotation\.set\(a\.rotation\[0],\ a\.rotation\[1],\ a\.rotation\[2]\);\ }\ catch\(_\)\{\ }
+\ \ \ \ \ \ \ \ \ \ attachGroup\.add\(wrap\);
+\ \ \ \ \ \ \ \ }
+\ \ \ \ \ \ \ \ return\ true;
+\ \ \ \ \ \ }
+      function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
+      return { init, loadBase, attachAll, getNodeNames };
     })();
     function categoriesFrom(items){
       const cats = [];
@@ -444,6 +488,7 @@
           const tvOk = TV && TV.init && TV.init();
           if (tvOk) {
             try {
+              window.__useTV = true;
               const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
               const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
               await TV.loadBase(modelItem.model);
@@ -455,7 +500,7 @@
             mv.src = modelItem.model;
             try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
             // Kick an early fallback attach pass as soon as a model is set
-            try { setTimeout(()=>{ try { attachAccessoriesToBase(mv, equip, itemsMap); } catch(e){} }, 0); } catch(e){}
+            try { setTimeout(()=>{ try { if (!window.__useTV) attachAccessoriesToBase(mv, equip, itemsMap); } catch(e){} }, 0); } catch(e){}
             (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
           }
           // 3D only
