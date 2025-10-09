@@ -47,40 +47,13 @@
         <!-- Preview (sticky) -->
         <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
-            <div id="mvWrap" class="inline-block relative" style="display:none; width:200px; height:220px; overflow:hidden; z-index:1;">
+            <div id="mvWrap" class="inline-block relative" style="display:none; width:320px; height:360px; overflow:hidden; z-index:1;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             </div>
-            <div id="tvWrap" class="inline-block relative" style="display:none; width:200px; height:220px; overflow:hidden; z-index:1;"></div>
+            <div id="tvWrap" class="inline-block relative" style="display:none; width:320px; height:360px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
-            <div class="mt-2">
-              <button id="anchorDebugToggle" class="btn btn-ghost text-xs">Anchor Debug</button>
-            </div>
-            <div id="anchorDebug" class="hidden text-left text-xs mt-2 p-2 border-2 border-black bg-white rounded">
-              <div class="mb-1 font-semibold">Adjust Slot</div>
-              <div class="mb-1">Slot:
-                <select id="adSlot" class="border px-1 py-0.5 text-xs"></select>
-              </div>
-              <div class="grid grid-cols-3 gap-1 mb-1">
-                <label>X <input id="adPosX" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
-                <label>Y <input id="adPosY" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
-                <label>Z <input id="adPosZ" type="number" step="0.005" class="border px-1 py-0.5 w-20"></label>
-              </div>
-              <div class="grid grid-cols-3 gap-1 mb-1">
-                <label>RotX� <input id="adRotX" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
-                <label>RotY� <input id="adRotY" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
-                <label>RotZ� <input id="adRotZ" type="number" step="1" class="border px-1 py-0.5 w-20"></label>
-              </div>
-              <div class="mb-1">
-                <label>Scale <input id="adScale" type="number" step="0.01" class="border px-1 py-0.5 w-24"></label>
-              </div>
-              <div class="flex gap-2">
-                <button id="adApply" class="btn btn-primary text-xs">Apply</button>
-                <button id="adReset" class="btn btn-amber text-xs">Reset</button>
-                <button id="adLog" class="btn btn-ghost text-xs">Log Nodes</button>
-              </div>
-              <div id="adInfo" class="mt-1 text-gray-600"></div>
-            </div>
+            <!-- Anchor Debug removed -->
             <div class="text-xs text-gray-600 mt-2">Tap a category and equip/buy to preview.</div>
           </div>
         </div>
@@ -224,8 +197,12 @@
       });
       rec = { mv, ready }; accCache.set(id, rec); return rec;
     }
-    function getBaseRoot(mv){ try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : null; } catch (e) { return null; } }
-    function getSceneFromViewer(mv){ try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : null; } catch (e) { return null; } }
+    function getBaseRoot(mv){
+      try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
+    }
+    function getSceneFromViewer(mv){
+      try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
+    }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
     function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
@@ -246,6 +223,12 @@
           if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root or add() missing'); }catch(_){} return false; }
         }
         clearAttachments(mv);
+        // Compute base center so we can align anchors like the Anchor Tool (which recenters the base to origin)
+        let baseCenter = null; try {
+          const THREE = getThree();
+          const bb = computeBounds(root);
+          if (THREE && bb) { baseCenter = bb.getCenter(new (THREE||window.THREE).Vector3()); }
+        } catch {}
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
         try { console.log('[attach] slots', slots); } catch(_){ }
         const added = [];
@@ -291,30 +274,50 @@
             }
             if (!obj) { console.warn('[attach] nothing cloneable for', it.id); continue; }
             const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
-            const a = anchors[slot] || anchors.misc;
+            const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
+            const a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+            // Wrap and center like the Anchor Tool
+            const THREE = getThree();
+            const wrap = new (THREE?.Group||function(){})();
+            try {
+              const boxObj = new (THREE||window.THREE).Box3().setFromObject(obj);
+              const cObj = boxObj.getCenter(new (THREE||window.THREE).Vector3());
+              if (slot==='boots' || slot==='feet') {
+                obj.position.x -= cObj.x; obj.position.z -= cObj.z;
+                const btm = new (THREE||window.THREE).Box3().setFromObject(obj);
+                obj.position.y -= btm.min.y; // bottom align
+              } else {
+                obj.position.sub(cObj);
+              }
+            } catch {}
+            try { wrap.add(obj); } catch {}
             // Attach first so world matrices are valid
-            try { root.add(obj); } catch (e) { console.warn('[attach] add failed', e); continue; }
-            // Auto-scale: try precise, else fallback defaults
+            try { root.add(wrap); } catch (e) { console.warn('[attach] add failed', e); continue; }
+            // Auto-scale with override support
             try {
               const baseBox = computeBounds(root);
               const accBox0 = computeBounds(obj);
+              let target = (slot==='top'||slot==='torso'||slot==='body') ? 0.35 : ((slot==='boots'||slot==='feet')?0.12:0.25);
+              let s = target;
               if (baseBox && accBox0) {
                 const baseH = Math.max(1e-6, baseBox.max.y - baseBox.min.y);
                 const accH  = Math.max(1e-6, accBox0.max.y - accBox0.min.y);
-                var target = (slot==='top' || slot==='torso' || slot==='body') ? 0.35 : 0.25;
-                var s = (target * baseH) / accH;
-                if (isFinite(s) && s>0 && s<10) obj.scale.set(s,s,s); else obj.scale.set(target,target,target);
+                const sAuto = (target * baseH) / accH;
+                s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto) && sAuto>0 && sAuto<10 ? sAuto : target);
               } else {
-                var def = (slot==='top' || slot==='torso' || slot==='body') ? 0.35 : 0.25;
-                obj.scale.set(def,def,def);
+                s = (a.scale && a.scale[0]) ? a.scale[0] : target;
               }
-            } catch (e) {
-              var def2 = (slot==='top' || slot==='torso' || slot==='body') ? 0.35 : 0.25;
-              try { obj.scale.set(def2,def2,def2); } catch(_){ }
-            }
-            try { if (obj.position) obj.position.set(a.position[0], a.position[1], a.position[2]); } catch(_){}
-            try { if (obj.rotation) obj.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch(_){}
-            added.push(obj);
+              try { wrap.scale.set(s,s,s); } catch {}
+            } catch {}
+            // Apply anchor position/rotation on wrapper, offset by base center to match Anchor Tool
+            try {
+              const ox = a.position?.[0]||0, oy = a.position?.[1]||0.05, oz = a.position?.[2]||0;
+              if (baseCenter) { wrap.position.set(ox - baseCenter.x, oy - baseCenter.y, oz - baseCenter.z); }
+              else { wrap.position.set(ox, oy, oz); }
+            } catch{}
+            try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch{}
+            try { console.log('[attach] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
+            added.push(wrap);
           } catch (e) { console.warn('[attach] slot failed', slot, e); }
         }
         mv.__attachments = added;
@@ -403,7 +406,7 @@
             }
           } catch {}
           wrap.add(src);
-          const a = anchors[slot] || anchors.misc;
+          const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); const a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
           try {
             const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
             const boxObj  = new (window.__THREE||window.THREE).Box3().setFromObject(src);
@@ -500,8 +503,6 @@
           } else {
             mv.src = modelItem.model;
             try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
-            // Kick an early fallback attach pass as soon as a model is set
-            try { setTimeout(()=>{ try { if (!window.__useTV) attachAccessoriesToBase(mv, equip, itemsMap); } catch(e){} }, 0); } catch(e){}
             (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
           }
           // 3D only
@@ -535,8 +536,13 @@
             if (!hasAny) { if (!window.__useTV) await attachAccessoriesToBase(mv, equip, itemsMap); }
           } catch (e) {}
         }
-        // Always run local fallback once to force accessory GLB requests for debugging
-        try { if (!window.__useTV) await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) { console.warn('fallback attach error', e); }
+        // Only run local fallback if plugin unavailable or attached nothing
+        try {
+          if (!window.__useTV) {
+            const noneFromPlugin = (!window.__ofp || !window.__ofp.state || !Array.isArray(window.__ofp.state.attached) || window.__ofp.state.attached.length===0);
+            if (noneFromPlugin) await attachAccessoriesToBase(mv, equip, itemsMap);
+          }
+        } catch (e) { console.warn('fallback attach error', e); }
       } catch (e) { console.warn('preview attach failed', e); }
         try {
           Object.keys(equip||{}).forEach(slot => {

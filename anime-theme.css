@@ -206,7 +206,8 @@ body.anime-bg {
   align-items: start;
 }
 @media (min-width: 700px) {
-  .shop-grid { grid-template-columns: 220px 1fr 1.6fr; }
+  /* Give the preview (middle) column more room so the head isn't clipped */
+  .shop-grid { grid-template-columns: 240px 1.4fr 1fr; }
 }
 
 /* (old 2D mascot layering removed) */

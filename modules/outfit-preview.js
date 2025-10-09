@@ -46,26 +46,53 @@
       try { (state.attached||[]).forEach(o=>{ try{ root.remove(o); }catch{} }); } catch {}
       state.attached = [];
       const eq = state.equipped||{}; const items = new Map((state.items||[]).map(i=>[i.id, i]));
+      // Compute base center to match Anchor Tool's recentered coordinate space
+      let baseCenter = null; try {
+        const THREE = (window.__THREE||window.THREE);
+        if (THREE && root) {
+          const bb = new THREE.Box3().setFromObject(root);
+          baseCenter = bb.getCenter(new THREE.Vector3());
+        }
+      } catch {}
       const slots = Object.keys(eq||{}).filter(s=>s!=='model');
       for (const slot of slots){
         const it = items.get(eq[slot]); if(!it || !it.model) continue;
         let rec = state.cache.get(it.id);
         if (!rec){ const mvAcc = await loadGLB(it.model); rec = { mv: mvAcc }; state.cache.set(it.id, rec); }
-    const srcScene = (rec.mv?.model?.scene) || (rec.mv?.scene) || (rec.mv?.model) || null; if(!srcScene || !srcScene.clone) continue;
+        const srcScene = (rec.mv?.model?.scene) || (rec.mv?.scene) || (rec.mv?.model) || null; if(!srcScene || !srcScene.clone) continue;
         const obj = srcScene.clone(true);
-        // Apply overrides or defaults
-        const ov = (state.overrides && state.overrides[slot]) || null;
-        const s = ov && ov.scale ? (ov.scale[0]||1) : defaultScaleFor(slot);
-        obj.scale.set(s,s,s);
-        const px = ov && ov.position ? ov.position[0] : 0;
-        const py = ov && ov.position ? ov.position[1] : 0.05;
-        const pz = ov && ov.position ? ov.position[2] : 0;
-        obj.position.set(px, py, pz);
-        const rx = ov && ov.rotation ? ov.rotation[0] : 0;
-        const ry = ov && ov.rotation ? ov.rotation[1] : 0;
-        const rz = ov && ov.rotation ? ov.rotation[2] : 0;
-        obj.rotation.set(rx, ry, rz);
-        try { root.add(obj); state.attached.push(obj); } catch {}
+        // Wrap and center like the Anchor Tool so transforms behave as expected
+        const THREE = (window.__THREE||window.THREE);
+        const wrap = new (THREE?.Group||function(){})();
+        try {
+          const box = new THREE.Box3().setFromObject(obj);
+          const c = box.getCenter(new THREE.Vector3());
+          if (slot==='boots' || slot==='feet') {
+            obj.position.x -= c.x; obj.position.z -= c.z;
+            const btm = new THREE.Box3().setFromObject(obj);
+            obj.position.y -= btm.min.y; // bottom align
+          } else {
+            obj.position.sub(c);
+          }
+        } catch {}
+        try { wrap.add(obj); } catch {}
+        // Apply per-item override first, then per-slot, then defaults
+        const ovs = (state.overrides||{});
+        const ovItem = ovs[it.id];
+        const ovSlot = ovs[slot];
+        const defaults = (window.SLOT_ANCHORS || window.SLOT_ANCHORS_DEFAULT || {});
+        const base = defaults[slot] || defaults.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+        const a = ovItem || ovSlot || base;
+        const s = (a.scale && a.scale[0]) ? a.scale[0] : defaultScaleFor(slot);
+        try { wrap.scale.set(s,s,s); } catch {}
+        try {
+          const ox = a.position?.[0]||0, oy = a.position?.[1]||0.05, oz = a.position?.[2]||0;
+          if (baseCenter) { wrap.position.set(ox - baseCenter.x, oy - baseCenter.y, oz - baseCenter.z); }
+          else { wrap.position.set(ox, oy, oz); }
+        } catch {}
+        try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch {}
+        try { console.log('[ofp] used anchor for', slot, it.id, ( ovItem ? 'item' : (ovSlot ? 'slot' : 'default') ), a); } catch {}
+        try { root.add(wrap); state.attached.push(wrap); } catch {}
       }
       return state.attached.length>0;
     }
