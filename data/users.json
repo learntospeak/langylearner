@@ -53,7 +53,7 @@
         },
         "equipped": {
           "model": "model-basemesh",
-          "top": "cos-chemise"
+          "top": "cos-amorplastron"
         }
       }
     },

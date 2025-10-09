@@ -348,79 +348,78 @@
         initialized = true; return true;
       }
       function clear(){ try { const THREE = getThree(); if(!THREE) return; if (baseGroup) { scene.remove(baseGroup); baseGroup=null; } while(attachGroup && attachGroup.children.length){ attachGroup.remove(attachGroup.children[0]); } } catch(_){}
+      }      async function loadBase(url){
+        const THREE = getThree(); if (!THREE) return false;
+        if (!init()) return false;
+        clear();
+        const loader = new window.__GLTFLoader();
+        const gltf = await new Promise(res=>{ try{ loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+        if (!gltf || !gltf.scene) return false;
+        baseGroup = gltf.scene; scene.add(baseGroup);
+        try { if (!attachGroup) attachGroup = new THREE.Group(); if (attachGroup.parent !== baseGroup) { try { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); } catch{} baseGroup.add(attachGroup); } } catch{}
+        try {
+          const box = new THREE.Box3().setFromObject(baseGroup);
+          const center = box.getCenter(new THREE.Vector3());
+          baseGroup.position.sub(center);
+          const sphere = new THREE.Sphere(); box.getBoundingSphere(sphere);
+          const radius = Math.max(0.1, sphere.radius);
+          const dist = radius / Math.tan((camera.fov*Math.PI)/360);
+          camera.near = Math.max(0.01, dist*0.1);
+          camera.far  = Math.max(camera.near+1, dist*10);
+          camera.updateProjectionMatrix();
+          camera.position.set(0, radius*0.1, dist*1.2);
+          if (window.__OrbitControls && controls) {
+            controls.target.set(0, 0.05, 0);
+            controls.minDistance = radius*0.5;
+            controls.maxDistance = radius*4.0;
+            controls.enablePan = true;
+            controls.update();
+          }
+        } catch {}
+        return true;
       }
-      \ \ \ \ \ \ async\ function\ loadBase\(url\)\{
-\ \ \ \ \ \ \ \ const\ THREE\ =\ getThree\(\);\ if\ \(!THREE\)\ return\ false;
-\ \ \ \ \ \ \ \ if\ \(!init\(\)\)\ return\ false;
-\ \ \ \ \ \ \ \ clear\(\);
-\ \ \ \ \ \ \ \ const\ loader\ =\ new\ window\.__GLTFLoader\(\);
-\ \ \ \ \ \ \ \ const\ gltf\ =\ await\ new\ Promise\(res=>\{\ try\ \{\ loader\.load\(url,\ \(g\)=>res\(g\),\ undefined,\ \(\)=>res\(null\)\);\ }\ catch\ \{\ res\(null\);\ }\ }\);
-\ \ \ \ \ \ \ \ if\ \(!gltf\ \|\|\ !gltf\.scene\)\ return\ false;
-\ \ \ \ \ \ \ \ baseGroup\ =\ gltf\.scene;\ scene\.add\(baseGroup\);
-\ \ \ \ \ \ \ \ try\ \{\ if\ \(!attachGroup\)\ attachGroup\ =\ new\ THREE\.Group\(\);\ if\ \(attachGroup\.parent\ !==\ baseGroup\)\ \{\ try\ \{\ if\ \(attachGroup\.parent\)\ attachGroup\.parent\.remove\(attachGroup\);\ }\ catch\(_\)\{}\ baseGroup\.add\(attachGroup\);\ }\ }\ catch\(_\)\{\ }
-\ \ \ \ \ \ \ \ //\ Fit\ camera\ precisely
-\ \ \ \ \ \ \ \ try\ \{
-\ \ \ \ \ \ \ \ \ \ const\ box\ =\ new\ THREE\.Box3\(\)\.setFromObject\(baseGroup\);
-\ \ \ \ \ \ \ \ \ \ const\ center\ =\ box\.getCenter\(new\ THREE\.Vector3\(\)\);
-\ \ \ \ \ \ \ \ \ \ baseGroup\.position\.sub\(center\);
-\ \ \ \ \ \ \ \ \ \ const\ sphere\ =\ new\ THREE\.Sphere\(\);\ box\.getBoundingSphere\(sphere\);
-\ \ \ \ \ \ \ \ \ \ const\ radius\ =\ Math\.max\(0\.1,\ sphere\.radius\);
-\ \ \ \ \ \ \ \ \ \ const\ dist\ =\ radius\ /\ Math\.tan\(\(camera\.fov\ \*\ Math\.PI\)\ /\ 360\);
-\ \ \ \ \ \ \ \ \ \ camera\.near\ =\ Math\.max\(0\.01,\ dist\ \*\ 0\.1\);
-\ \ \ \ \ \ \ \ \ \ camera\.far\ =\ Math\.max\(camera\.near\ \+\ 1,\ dist\ \*\ 10\);
-\ \ \ \ \ \ \ \ \ \ camera\.updateProjectionMatrix\(\);
-\ \ \ \ \ \ \ \ \ \ camera\.position\.set\(0,\ radius\ \*\ 0\.1,\ dist\ \*\ 1\.2\);
-\ \ \ \ \ \ \ \ \ \ if\ \(window\.__OrbitControls\ &&\ controls\)\ \{
-\ \ \ \ \ \ \ \ \ \ \ \ controls\.target\.set\(0,\ 0\.05,\ 0\);
-\ \ \ \ \ \ \ \ \ \ \ \ controls\.minDistance\ =\ radius\ \*\ 0\.5;
-\ \ \ \ \ \ \ \ \ \ \ \ controls\.maxDistance\ =\ radius\ \*\ 4\.0;
-\ \ \ \ \ \ \ \ \ \ \ \ controls\.enablePan\ =\ true;
-\ \ \ \ \ \ \ \ \ \ \ \ controls\.update\(\);
-\ \ \ \ \ \ \ \ \ \ }
-\ \ \ \ \ \ \ \ }\ catch\(_\)\{}
-\ \ \ \ \ \ \ \ return\ true;
-\ \ \ \ \ \ }
-      \ \ \ \ \ \ async\ function\ attachAll\(equip,\ itemsMap,\ anchors\)\{
-\ \ \ \ \ \ \ \ const\ THREE\ =\ getThree\(\);\ if\ \(!THREE\ \|\|\ !initialized\)\ return\ false;
-\ \ \ \ \ \ \ \ if\ \(!attachGroup\)\ \{\ attachGroup\ =\ new\ THREE\.Group\(\);\ }
-\ \ \ \ \ \ \ \ try\ \{\ if\ \(baseGroup\ &&\ attachGroup\.parent\ !==\ baseGroup\)\ \{\ if\ \(attachGroup\.parent\)\ attachGroup\.parent\.remove\(attachGroup\);\ baseGroup\.add\(attachGroup\);\ }\ }\ catch\(_\)\{\ }
-\ \ \ \ \ \ \ \ while\ \(attachGroup\.children\.length\)\ attachGroup\.remove\(attachGroup\.children\[0]\);
-\ \ \ \ \ \ \ \ const\ slots\ =\ Object\.keys\(equip\|\|\{}\)\.filter\(s=>s!=='model'\);
-\ \ \ \ \ \ \ \ for\ \(const\ slot\ of\ slots\)\{
-\ \ \ \ \ \ \ \ \ \ const\ it\ =\ itemsMap\.get\(equip\[slot]\);\ if\(!it\|\|!it\.model\)\ continue;
-\ \ \ \ \ \ \ \ \ \ const\ loader\ =\ new\ window\.__GLTFLoader\(\);
-\ \ \ \ \ \ \ \ \ \ const\ gltf\ =\ await\ new\ Promise\(res=>\{\ try\ \{\ loader\.load\(it\.model,\ \(g\)=>res\(g\),\ undefined,\ \(\)=>res\(null\)\);\ }\ catch\ \{\ res\(null\);\ }\ }\);
-\ \ \ \ \ \ \ \ \ \ if\ \(!gltf\ \|\|\ !gltf\.scene\)\ continue;
-\ \ \ \ \ \ \ \ \ \ //\ Center\ accessory\ around\ its\ own\ bounds\ so\ anchors\ behave\ predictably
-\ \ \ \ \ \ \ \ \ \ const\ src\ =\ gltf\.scene\.clone\(true\);
-\ \ \ \ \ \ \ \ \ \ const\ wrap\ =\ new\ THREE\.Group\(\);
-\ \ \ \ \ \ \ \ \ \ let\ obj\ =\ src;
-\ \ \ \ \ \ \ \ \ \ try\ \{
-\ \ \ \ \ \ \ \ \ \ \ \ const\ boxObj\ =\ new\ THREE\.Box3\(\)\.setFromObject\(src\);
-\ \ \ \ \ \ \ \ \ \ \ \ const\ centerObj\ =\ boxObj\.getCenter\(new\ THREE\.Vector3\(\)\);
-\ \ \ \ \ \ \ \ \ \ \ \ src\.position\.sub\(centerObj\);
-\ \ \ \ \ \ \ \ \ \ }\ catch\(_\)\{\ }
-\ \ \ \ \ \ \ \ \ \ wrap\.add\(obj\);
-\ \ \ \ \ \ \ \ \ \ //\ Scale
-\ \ \ \ \ \ \ \ \ \ const\ a\ =\ \(anchors\[slot]\|\|anchors\.misc\);
-\ \ \ \ \ \ \ \ \ \ try\ \{
-\ \ \ \ \ \ \ \ \ \ \ \ const\ boxBase\ =\ new\ THREE\.Box3\(\)\.setFromObject\(baseGroup\);
-\ \ \ \ \ \ \ \ \ \ \ \ const\ boxObj\ =\ new\ THREE\.Box3\(\)\.setFromObject\(src\);
-\ \ \ \ \ \ \ \ \ \ \ \ const\ baseH=Math\.max\(1e-6,\ boxBase\.max\.y-boxBase\.min\.y\);
-\ \ \ \ \ \ \ \ \ \ \ \ const\ objH=Math\.max\(1e-6,\ boxObj\.max\.y-boxObj\.min\.y\);
-\ \ \ \ \ \ \ \ \ \ \ \ let\ target=\(slot==='top'\|\|slot==='torso'\|\|slot==='body'\)\?0\.35:0\.25;
-\ \ \ \ \ \ \ \ \ \ \ \ let\ sAuto=\(target\*baseH\)/objH;
-\ \ \ \ \ \ \ \ \ \ \ \ const\ s\ =\ \(a\.scale\ &&\ a\.scale\[0]\)\ \?\ a\.scale\[0]\ :\ \(isFinite\(sAuto\)&&sAuto>0&&sAuto<10\ \?\ sAuto\ :\ target\);
-\ \ \ \ \ \ \ \ \ \ \ \ wrap\.scale\.set\(s,s,s\);
-\ \ \ \ \ \ \ \ \ \ }\ catch\(_\)\ \{\ let\ def=\(slot==='top'\|\|slot==='torso'\|\|slot==='body'\)\?0\.35:0\.25;\ wrap\.scale\.set\(def,def,def\);\ }
-\ \ \ \ \ \ \ \ \ \ //\ Transform
-\ \ \ \ \ \ \ \ \ \ try\ \{\ wrap\.position\.set\(a\.position\[0],\ a\.position\[1],\ a\.position\[2]\);\ }\ catch\(_\)\{\ }
-\ \ \ \ \ \ \ \ \ \ try\ \{\ wrap\.rotation\.order\ =\ 'XYZ';\ wrap\.rotation\.set\(a\.rotation\[0],\ a\.rotation\[1],\ a\.rotation\[2]\);\ }\ catch\(_\)\{\ }
-\ \ \ \ \ \ \ \ \ \ attachGroup\.add\(wrap\);
-\ \ \ \ \ \ \ \ }
-\ \ \ \ \ \ \ \ return\ true;
-\ \ \ \ \ \ }
-      function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
+      async function attachAll(equip, itemsMap, anchors){
+        const THREE = getThree(); if (!THREE || !initialized) return false;
+        if (!attachGroup) { attachGroup = new THREE.Group(); }
+        try { if (baseGroup && attachGroup.parent !== baseGroup) { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); baseGroup.add(attachGroup); } } catch {}
+        while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
+        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        for (const slot of slots){
+          const it = itemsMap.get(equip[slot]); if (!it || !it.model) continue;
+          const loader = new window.__GLTFLoader();
+          const gltf = await new Promise(res=>{ try{ loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+          if (!gltf || !gltf.scene) continue;
+          const src = gltf.scene.clone(true);
+          const wrap = new THREE.Group();
+          try {
+            const boxObj = new THREE.Box3().setFromObject(src);
+            const centerObj = boxObj.getCenter(new THREE.Vector3());
+            if (slot==='boots' || slot==='feet') {
+              src.position.x -= centerObj.x;
+              src.position.z -= centerObj.z;
+              try { const btm = new (window.__THREE||window.THREE).Box3().setFromObject(src); src.position.y -= btm.min.y; } catch {}
+            } else {
+              src.position.sub(centerObj);
+            }
+          } catch {}
+          wrap.add(src);
+          const a = anchors[slot] || anchors.misc;
+          try {
+            const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
+            const boxObj  = new (window.__THREE||window.THREE).Box3().setFromObject(src);
+            const baseH = Math.max(1e-6, boxBase.max.y - boxBase.min.y);
+            const objH  = Math.max(1e-6, boxObj.max.y - boxObj.min.y);
+            let target = (slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25);
+            let sAuto = (target*baseH)/objH;
+            const s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto)&&sAuto>0&&sAuto<10 ? sAuto : target);
+            wrap.scale.set(s,s,s);
+          } catch { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; wrap.scale.set(def,def,def); }
+          try { wrap.position.set(a.position[0], a.position[1], a.position[2]); } catch {}
+          try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
+          attachGroup.add(wrap);
+        }
+        return true;
+      }function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
       return { init, loadBase, attachAll, getNodeNames };
     })();
     function categoriesFrom(items){

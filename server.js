@@ -138,6 +138,30 @@ function requireUser(req, res){
   return user;
 }
 
+// --- Admin helpers ---
+async function isAdminUser(username){
+  try {
+    const db = await readDb();
+    const rec = (db.users||{})[String(username)] || {};
+    return String(username).toLowerCase() === 'test' || !!rec.isAdmin;
+  } catch {
+    return false;
+  }
+}
+async function requireAdminPage(req, res){
+  try {
+    const { auth } = parseCookies(req);
+    const username = verifyToken(auth);
+    if (!username) { res.status(401).send('Unauthorized'); return null; }
+    const ok = await isAdminUser(username);
+    if (!ok) { res.status(403).send('Forbidden'); return null; }
+    return username;
+  } catch {
+    res.status(401).send('Unauthorized');
+    return null;
+  }
+}
+
 // --- Auth APIs ---
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -547,7 +571,11 @@ app.post('/api/tts', async (req, res) => {
 });
 
 // After APIs: serve static files (prevents any chance of POST being eaten by static)
-app.get(['/admin/anchor-tool','/anchor-tool.html'], async (req, res) => {\r\n  const u = await requireAdminPage(req, res); if (!u) return;\r\n  try { return res.sendFile(path.join(__dirname, 'anchor-tool.html')); } catch { return res.status(404).send('Missing'); }\r\n});\r\napp.use(express.static(path.join(__dirname), { redirect: false }));
+app.get(['/admin/anchor-tool','/anchor-tool.html'], async (req, res) => {
+  const u = await requireAdminPage(req, res); if (!u) return;
+  try { return res.sendFile(path.join(__dirname, 'anchor-tool.html')); } catch { return res.status(404).send('Missing'); }
+});
+app.use(express.static(path.join(__dirname), { redirect: false }));
 
 // Simple health check
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
