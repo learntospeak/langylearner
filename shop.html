@@ -239,8 +239,11 @@
           } catch { return null; }
         }
         for (const slot of slots){
-          const it = itemsMap.get(equip[slot]);
-          if(!it || !it.model){ try{ console.warn('[attach] missing item for slot', slot, equip[slot]); }catch(_){} continue; }
+          const rawVal = equip[slot];
+          const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
+          for (const id of ids){
+          const it = itemsMap.get(id);
+          if(!it || !it.model){ try{ console.warn('[attach] missing item for slot', slot, id); }catch(_){} continue; }
           try { console.log('[attach] loading', slot, it.id, it.model); } catch(_){ }
           // Probe that the GLB is reachable to surface network entries
           try { const head = await fetch(it.model, { method:'HEAD', cache:'no-store' }); console.log('[attach] probe', head.status, it.model); } catch (e) { console.warn('[attach] probe failed', it.model, e); }
@@ -309,6 +312,7 @@
             try { console.log('[attach] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
             added.push(wrap);
           } catch (e) { console.warn('[attach] slot failed', slot, e); }
+          }
         }
         mv.__attachments = added;
         try { console.log('[attach] attached count', added.length); } catch(_){ }
@@ -699,23 +703,24 @@
         } catch (e) {}
       } catch (e) {}
     }
-    function cardHtml(it, owned, equipped){
-      const curModel = (equipped||{}).model || 'model-basemesh';
-      const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
-      const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
-      const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
-      const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
-      const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
-      let action = buyBtn;
-      if (owned[it.id]) {
-        if (it.kind==='cosmetic') {
-          const slot = it.slot;
-          const isEquipped = equipped && equipped[slot] === it.id;
-          action = isCompat ? `${equipBtn(false)} ${unequipBtn(!isEquipped)}` : '<span class="text-xs text-gray-500">Not compatible</span>';
-        } else {
-          action = ownedBadge;
+      function cardHtml(it, owned, equipped){
+        const curModel = (equipped||{}).model || 'model-basemesh';
+        const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
+        const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
+        const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
+        const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
+        const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
+        let action = buyBtn;
+        if (owned[it.id]) {
+          if (it.kind==='cosmetic') {
+            const slot = it.slot;
+            const val = equipped && equipped[slot];
+            const isEquipped = Array.isArray(val) ? val.includes(it.id) : (val === it.id);
+            action = isCompat ? `${equipBtn(false)} ${unequipBtn(!isEquipped)}` : '<span class="text-xs text-gray-500">Not compatible</span>';
+          } else {
+            action = ownedBadge;
+          }
         }
-      }
       const sub = it.kind==='upgrade' ? 'Upgrade' : (it.slot ? it.slot : 'Cosmetic');
       return `
         <div class="p-3 rounded-xl border-2 border-black bg-white shadow">
