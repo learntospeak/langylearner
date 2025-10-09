@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"UTF-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>KanaReader - Characters</title>
+  <link href=\"https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css\" rel=\"stylesheet\" />
+  <link rel=\"stylesheet\" href=\"anime-theme.css\" />
+</head>
+<body class=\"anime-bg min-h-screen p-5\">
+  <main class=\"max-w-5xl mx-auto\">
+    <header class=\"flex items-center justify-between mb-3\">
+      <h1 class=\"site-title text-2xl font-bold accent-underline\">Choose Your Character</h1>
+      <div class=\"text-sm\"><a class=\"btn btn-ghost\" href=\"shop.html\">Back to Shop</a></div>
+    </header>
+
+    <section class=\"manga-bubble p-3\">
+      <p class=\"text-sm text-gray-700 mb-2\">The Basemesh character supports mix-and-match outfits. Other characters use their standard outfit for now.</p>
+      <div id=\"charGrid\" class=\"grid grid-cols-1 md:grid-cols-2 gap-3\"></div>
+    </section>
+  </main>
+
+  <script>
+    async function api(path, opts){ const r = await fetch(path, opts||{}); try{ return await r.json(); }catch{ return {}; } }
+    function card(m){
+      const isBase = m.id === 'model-basemesh';
+      return 
+        <div class=\"p-3 rounded-xl border-2 border-black bg-white shadow flex items-center justify-between\">
+          <div>
+            <div class=\"font-semibold\"></div>
+            <div class=\"text-xs text-gray-600\"></div>
+          </div>
+          <div class=\"flex items-center gap-2\">
+            <button data-set=\"\" class=\"btn \">Use </button>
+          </div>
+        </div>;
+    }
+    async function load(){
+      const cg = document.getElementById('charGrid'); cg.innerHTML='Loading...';
+      const cat = await api('/api/shop/catalog');
+      const models = (cat.items||[]).filter(i=>i.kind==='cosmetic' && i.slot==='model');
+      cg.innerHTML = '';
+      models.forEach(m=>{ const w=document.createElement('div'); w.innerHTML=card(m); cg.appendChild(w.firstElementChild); });
+      cg.querySelectorAll('[data-set]')?.forEach(btn=>btn.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.getAttribute('data-set');
+        try { await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) }); } catch {}
+        location.href = 'shop.html';
+      }));
+    }
+    load();
+  </script>
+</body>
+</html>

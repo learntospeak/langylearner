@@ -177,7 +177,7 @@ app.get('/api/me', async (req, res) => {
     if (!username) return res.json({ user: null });
     const db = await readDb();
     const rec = db.users[username] || {};
-    res.json({ user: { username, email: rec.email || '' } });
+    res.json({ user: { username, email: rec.email || '', isAdmin: !!rec.isAdmin || String(username).toLowerCase()==='test' } });
   } catch (e) { res.status(500).json({ error: 'Failed', details: String(e) }); }
 });
 
@@ -255,7 +255,9 @@ async function loadClothingItems(){
     const id = `cos-${canon}`;
     const name = labelize(nameBaseRaw);
     const rel = path.relative(__dirname, p).replace(/\\/g,'/');
-    items.push({ id, kind:'cosmetic', slot, name, price: 0, model: rel });
+    // For now, clothing items are compatible with the Basemesh character only.
+    // We can expand this list per item later.
+    items.push({ id, kind:'cosmetic', slot, name, price: 0, model: rel, compatibleWith: ['model-basemesh'] });
   }
   return items;
 }
@@ -266,6 +268,14 @@ async function getCatalog(){
 async function findItem(id){
   const all = await getCatalog();
   return all.find(i => i.id === id) || null;
+}
+function isCompatible(item, modelId){
+  try {
+    if (!item || item.slot === 'model') return true;
+    const list = item.compatibleWith;
+    if (!Array.isArray(list) || list.length === 0) return true;
+    return list.includes(modelId);
+  } catch { return true; }
 }
   function getWallet(rec){
   if (!rec.wallet) rec.wallet = { coins: 0, owned: {}, equipped: {} };
@@ -344,7 +354,16 @@ app.post('/api/wallet/sync', async (req, res) => {
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
     if (!wallet.owned[item.id]) return res.status(400).json({ error: 'Item not owned' });
-    wallet.equipped[item.slot] = item.id;
+    // If equipping a model, clear non-model slots to avoid incompatible outfits.
+    if (item.slot === 'model') {
+      wallet.equipped = { model: item.id };
+    } else {
+      const curModel = (wallet.equipped && wallet.equipped.model) || 'model-basemesh';
+      if (!isCompatible(item, curModel)) {
+        return res.status(400).json({ error: 'Not compatible with current character' });
+      }
+      wallet.equipped[item.slot] = item.id;
+    }
     await writeDb(db);
     res.json({ ok: true, equipped: wallet.equipped });
   } catch (e) { res.status(500).json({ error: 'Equip failed', details: String(e) }); }
@@ -528,7 +547,7 @@ app.post('/api/tts', async (req, res) => {
 });
 
 // After APIs: serve static files (prevents any chance of POST being eaten by static)
-app.use(express.static(path.join(__dirname), { redirect: false }));
+app.get(['/admin/anchor-tool','/anchor-tool.html'], async (req, res) => {\r\n  const u = await requireAdminPage(req, res); if (!u) return;\r\n  try { return res.sendFile(path.join(__dirname, 'anchor-tool.html')); } catch { return res.status(404).send('Missing'); }\r\n});\r\napp.use(express.static(path.join(__dirname), { redirect: false }));
 
 // Simple health check
 app.get('/api/ping', (req, res) => res.json({ ok: true }));

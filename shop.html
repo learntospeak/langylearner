@@ -425,14 +425,16 @@
     })();
     function categoriesFrom(items){
       const cats = [];
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
+      const compat = (it)=>{ try{ if(!it||it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} };
       if ((items||[]).some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
       // Characters category
       if ((items||[]).some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
       // Dynamic clothing categories by slot
-      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model').map(it=>it.slot)));
+      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it)).map(it=>it.slot)));
       const names = { outfit:'Outfits', hat:'Hats', hair:'Hair', mask:'Masks', top:'Tops', legs:'Legwear', boots:'Boots', skirt:'Skirts', belt:'Belts', bag:'Bags', misc:'Accessories' };
       const labelFor = (s)=> names[s] || (s.charAt(0).toUpperCase()+s.slice(1));
-      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s }));
+      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s && compat(it) }));
       return cats;
     }
     function renderCats(cats){
@@ -644,6 +646,8 @@
       } catch (e) {}
     }
     function cardHtml(it, owned, equipped){
+      const curModel = (equipped||{}).model || 'model-basemesh';
+      const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
       const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
       const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
       const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
@@ -653,7 +657,7 @@
         if (it.kind==='cosmetic') {
           const slot = it.slot;
           const isEquipped = equipped && equipped[slot] === it.id;
-          action = `${equipBtn(false)} ${unequipBtn(!isEquipped)}`;
+          action = isCompat ? `${equipBtn(false)} ${unequipBtn(!isEquipped)}` : '<span class="text-xs text-gray-500">Not compatible</span>';
         } else {
           action = ownedBadge;
         }
@@ -673,7 +677,7 @@
       const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
       const cat = cats.find(c=>c.id===SELECTED) || cats[0];
-      const list = (cat ? _items.filter(cat.filter) : _items);
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat);
       catalogEl.innerHTML='';
       list.forEach(it=>{
         const wrap = document.createElement('div');
