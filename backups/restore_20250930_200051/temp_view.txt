@@ -1,0 +1,47 @@
+export function initNinjaSlice(config) {
+  const {
+    containerId,
+    canvasId,
+    closeBtnId,
+    overlayId,
+
+    scoreElId,
+    timerElId,
+    kanaContainerId,
+    romajiContainerId,
+    englishContainerId,
+    phrase = "",
+    romaji = "",
+    english = "",
+    phrases = [],
+    // Tunables
+    heightRatio = 0.5,              // canvas height relative to container
+    spawnMsStart = 800,              // initial spawn interval
+    spawnMsEnd = 350,                // faster over time
+    roundSeconds = 60,               // total round time
+    bombChance = 0.15,               // probability a spawn is a bomb
+    speedMin = 1.2,
+    speedMax = 2.4,
+    comboWindowMs = 600,             // max gap between slices to continue combo
+  } = config;
+
+  // grab elements
+  const overlay = document.getElementById(overlayId);
+  const container = document.getElementById(containerId);
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  const closeBtn = document.getElementById(closeBtnId);
+  const scoreEl = document.getElementById(scoreElId);
+  const timerEl = document.getElementById(timerElId);
+  const kanaEl = document.getElementById(kanaContainerId);
+  const romajiEl = document.getElementById(romajiContainerId);
+  const englishEl = document.getElementById(englishContainerId);
+  const overPanel = config.gameOverId ? document.getElementById(config.gameOverId) : null;
+  const tryBtn = config.tryBtnId ? document.getElementById(config.tryBtnId) : null;
+  const finishBtn = config.finishBtnId ? document.getElementById(config.finishBtnId) : null;
+  const bubblesToggle = config.bubblesToggleId ? document.getElementById(config.bubblesToggleId) : null;
+  const progressEl = config.progressElId ? document.getElementById(config.progressElId) : null;
+  const progressBar = config.progressBarId ? document.getElementById(config.progressBarId) : null;
+  // Speak toggle
+  const speakCtl = document.getElementBy
+

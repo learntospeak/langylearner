@@ -1,0 +1,925 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#111111">
+    <title>KanaReader - Lesson</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
+    <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
+    <style type="text/tailwindcss">
+      .btn { @apply px-3 py-2 rounded font-medium transition focus:outline-none focus:ring; }
+      .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-300; }
+      .btn-amber   { @apply bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-300; }
+      .btn-dark    { @apply bg-gray-900 text-white hover:bg-black focus:ring-gray-400; }
+      .btn-ghost   { @apply bg-gray-200 hover:bg-gray-300 text-gray-900 focus:ring-gray-300; }
+      .field { @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400; }
+      .field.ok  { @apply border-green-400 ring-green-300; }
+      .field.bad { @apply border-red-400   ring-red-300; }
+    </style>
+    <style>
+      html, body { height: 100%; }
+      body { -webkit-overflow-scrolling: touch; overflow-x: hidden; }
+    </style>
+    <style>
+      .guide-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+      .guide-row .chip { padding:2px 8px; border-radius:8px; border:1px solid #e5e7eb; font-size:0.95rem; }
+      .guide-row .done { background:#dcfce7; border-color:#86efac; }
+      .guide-row .next { background:#fff7ed; border-color:#fdba74; }
+      .guide-row .todo { background:#f3f4f6; color:#6b7280; }
+      .guide-foot { font-size:0.85rem; color:#6b7280; margin-top:2px; }
+    </style>
+    <style>
+      /* Layout helpers + mascot animations */
+      #lesson-wrap { position: relative; }
+      #footer-controls { touch-action: pan-y; }
+      #page { padding-bottom: 7rem; }
+      #mascot .mouth { transform-origin: 50% 60%; }
+      @keyframes float { 0%{transform:translateY(0)} 50%{transform:translateY(-4px)} 100%{transform:translateY(0)} }
+      @keyframes talk { 0%,100%{transform:scaleY(0.6)} 50%{transform:scaleY(1.2)} }
+      @keyframes celebrate { 0%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.05)} 100%{transform:translateY(0) scale(1)} }
+      @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+    </style>
+    <style>
+      .morxrow { display:flex; flex-wrap:wrap; gap:8px; }
+      input.mora { width:2.2rem; text-align:center; }
+      /* Ensure gear is clickable above overlays */
+      #slice-settings-btn { pointer-events:auto; z-index:10050; }
+    </style>
+  </head>
+
+<body class="bg-white">
+    <div id="page" class="container mx-auto p-6">
+        <nav class="mb-4 flex items-center gap-4">
+            <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">Kana Reference</a>
+            <button id="openSlice" class="btn btn-ghost text-sm">Play Slice</button>
+        </nav>
+
+
+        <h1 id="pageTitle" class="text-3xl font-bold mb-2">KanaReader - Lesson</h1>
+        <div id="stepHeader" class="text-sm text-gray-500 mb-4"></div>
+
+        <!-- wrapper that positions the mascot beside the lesson -->
+        <div id="lesson-wrap">
+            <div id="jp-text" class="space-y-3"></div>
+            <div id="en-text" class="text-gray-700 mt-2"></div>
+            <div id="full-romaji" class="text-gray-500 mt-1"></div>
+
+            <!-- mascot lives INSIDE the wrapper -->
+            <!-- Mascot (drop-in, no inline <style> here) -->
+            <div id="mascot" class="w-16 h-20">
+                <svg viewBox="0 0 100 120" class="w-full h-full" aria-hidden="true">
+                    <!-- BODY -->
+                    <rect x="28" y="62" width="44" height="34" rx="10" fill="#FFD166" stroke="#E0A700"
+                        stroke-width="2" />
+                    <!-- Arms -->
+                    <path d="M28 72 q-10 6 -12 0" fill="none" stroke="#E0A700" stroke-width="3"
+                        stroke-linecap="round" />
+                    <path d="M72 72 q10 6 12 0" fill="none" stroke="#E0A700" stroke-width="3" stroke-linecap="round" />
+                    <!-- Feet -->
+                    <rect x="40" y="98" width="8" height="8" rx="3" fill="#333" />
+                    <rect x="52" y="98" width="8" height="8" rx="3" fill="#333" />
+
+                    <!-- HEAD -->
+                    <circle cx="50" cy="50" r="24" fill="#FFD166" stroke="#E0A700" stroke-width="2" />
+                    <!-- Eyes -->
+                    <circle cx="42" cy="46" r="3" fill="#333" />
+                    <circle cx="58" cy="46" r="3" fill="#333" />
+                    <!-- Cheeks -->
+                    <circle cx="37" cy="54" r="3" fill="#FFB4B4" opacity="0.9" />
+                    <circle cx="63" cy="54" r="3" fill="#FFB4B4" opacity="0.9" />
+                    <!-- Smile (animated mouth group) -->
+                    <g class="mouth">
+                        <path d="M38 58 Q50 66 62 58" fill="none" stroke="#333" stroke-width="3.5"
+                            stroke-linecap="round" />
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+
+
+       
+
+        <style>
+            /* Let users start a vertical scroll on the bar itself */
+            #footer-controls {
+                touch-action: pan-y;
+            }
+
+            /* Fallback padding in case JS doesnâ€™t run */
+            #page {
+                padding-bottom: 7rem;
+            }
+            /* Ensure gear always receives clicks */
+
+
+
+        <style>
+            /* Make wrapper the positioning context */
+            #lesson-wrap {
+                position: relative;
+            }
+
+            /* FORCE mascot to be positioned over the lesson area (top-right of wrapper) */
+            #lesson-wrap #mascot {
+
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 120px;
+                height: 120px;
+                z-index: 50;
+                pointer-events: auto;
+                user-select: none;
+                cursor: move;
+                touch-action: none;
+            }
+
+
+
+            /* SVG sizing + animations (unchanged) */
+            #lesson-wrap #mascot svg {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+            #lesson-wrap #mascot .mouth {
+                transform-origin: 50% 64%;
+            }
+
+            #lesson-wrap #mascot.mascot-idle {
+                animation: float 3s ease-in-out infinite;
+            }
+
+            #lesson-wrap #mascot.mascot-talk .mouth {
+                animation: talk 0.25s ease-in-out infinite;
+            }
+
+            #lesson-wrap #mascot.mascot-celebrate {
+                animation: celebrate 0.6s ease-in-out 0s 2;
+            }
+
+            #lesson-wrap #mascot.mascot-confused {
+                animation: shake 0.4s ease-in-out 0s 2;
+            }
+            /* Ensure gear always receives clicks */
+
+    </div>
+     <!-- Bottom toolbar (fixed, wraps on small screens) -->
+        <div id="footer-controls" class="fixed bottom-0 inset-x-0 z-50
+            flex flex-wrap justify-center gap-2
+            px-3 py-2
+            bg-white/95 backdrop-blur border-t
+            pb-[max(0px,env(safe-area-inset-bottom))]">
+
+            <button id="lsPrev" class="btn btn-ghost   flex-1 basis-[120px] max-w-[240px] min-h-10">< Prev</button>
+            <button id="lsCheck" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Check</button>
+            <button id="lsReveal" class="btn btn-amber   flex-1 basis-[120px] max-w-[240px] min-h-10">Reveal</button>
+            <button id="lsNext" class="btn btn-dark    flex-1 basis-[120px] max-w-[240px] min-h-10">Next ></button>
+
+            <button id="lsToggleRomaji"
+                class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-teal-600 text-white">Romaji</button>
+            <button id="lsSpeak" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-green-600 text-white">Speak</button>
+
+            <!-- Fallback Slice launcher (always visible on mobile) -->
+            <button id="openSliceFooter" class="btn flex-1 basis-[120px] max-w-[240px] min-h-10 bg-purple-600 text-white">Slice</button>
+
+            <label class="btn-ghost rounded flex items-center gap-2 px-3 py-2
+                w-full sm:w-auto justify-center">
+                Speed
+                <input id="lsSpeed" type="range" min="0.6" max="1.4" step="0.1" value="1" class="w-32" />
+                <span id="lsSpeedVal">1.0Ã—</span>
+            </label>
+        </div>
+    <!-- Kana Reference Modal -->
+    <div id="kanaModal" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50"></div>
+
+        <!-- Dialog -->
+        <div role="dialog" arixmodal="true" arixlabelledby="kanaTitle"
+            class="relative mx-auto my-8 w-[min(95vw,1000px)] max-h-[85vh] overflow-hidden rounded-xl bg-white shadow-xl">
+            <header class="flex items-center justify-between px-4 py-3 border-b">
+                <h2 id="kanaTitle" class="text-lg font-semibold">Kana Reference</h2>
+                <button id="closeKanaModal" class="btn btn-ghost" arixlabel="Close">âœ•</button>
+            </header>
+
+            <!-- Tabs -->
+            <div class="px-4 pt-3">
+                <div class="inline-flex rounded bg-gray-100 p-1">
+                    <button datxtab="hira" class="tab-btn px-3 py-1 rounded bg-white shadow text-sm">Hiragana</button>
+                    <button datxtab="kata" class="tab-btn px-3 py-1 rounded text-sm">Katakana</button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-4 overflow-auto max-h-[70vh]">
+                <!-- Hiragana -->
+                <div id="tab-hira">
+                    <table class="w-full table-fixed text-center text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="p-2 border"></th>
+                                <th class="p-2 border">a</th>
+                                <th class="p-2 border">i</th>
+                                <th class="p-2 border">u</th>
+                                <th class="p-2 border">e</th>
+                                <th class="p-2 border">o</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th class="p-2 border">-</th>
+                                <td class="p-2 border">ã‚</td>
+                                <td class="p-2 border">ã„</td>
+                                <td class="p-2 border">ã†</td>
+                                <td class="p-2 border">ãˆ</td>
+                                <td class="p-2 border">ãŠ</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">k</th>
+                                <td class="p-2 border">ã‹</td>
+                                <td class="p-2 border">ã</td>
+                                <td class="p-2 border">ã</td>
+                                <td class="p-2 border">ã‘</td>
+                                <td class="p-2 border">ã“</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">s</th>
+                                <td class="p-2 border">ã•</td>
+                                <td class="p-2 border">ã—</td>
+                                <td class="p-2 border">ã™</td>
+                                <td class="p-2 border">ã›</td>
+                                <td class="p-2 border">ã</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">t</th>
+                                <td class="p-2 border">ãŸ</td>
+                                <td class="p-2 border">ã¡</td>
+                                <td class="p-2 border">ã¤</td>
+                                <td class="p-2 border">ã¦</td>
+                                <td class="p-2 border">ã¨</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td class="p-2 border">ãª</td>
+                                <td class="p-2 border">ã«</td>
+                                <td class="p-2 border">ã¬</td>
+                                <td class="p-2 border">ã­</td>
+                                <td class="p-2 border">ã®</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">h</th>
+                                <td class="p-2 border">ã¯</td>
+                                <td class="p-2 border">ã²</td>
+                                <td class="p-2 border">ãµ</td>
+                                <td class="p-2 border">ã¸</td>
+                                <td class="p-2 border">ã»</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">m</th>
+                                <td class="p-2 border">ã¾</td>
+                                <td class="p-2 border">ã¿</td>
+                                <td class="p-2 border">ã‚€</td>
+                                <td class="p-2 border">ã‚</td>
+                                <td class="p-2 border">ã‚‚</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">y</th>
+                                <td class="p-2 border">ã‚„</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border">ã‚†</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border">ã‚ˆ</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">r</th>
+                                <td class="p-2 border">ã‚‰</td>
+                                <td class="p-2 border">ã‚Š</td>
+                                <td class="p-2 border">ã‚‹</td>
+                                <td class="p-2 border">ã‚Œ</td>
+                                <td class="p-2 border">ã‚</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">w</th>
+                                <td class="p-2 border">ã‚</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border">ã‚’</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td colspan="5" class="p-2 border">ã‚“</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Katakana -->
+                <div id="tab-kata" class="hidden">
+                    <table class="w-full table-fixed text-center text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="p-2 border"></th>
+                                <th class="p-2 border">a</th>
+                                <th class="p-2 border">i</th>
+                                <th class="p-2 border">u</th>
+                                <th class="p-2 border">e</th>
+                                <th class="p-2 border">o</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th class="p-2 border">-</th>
+                                <td class="p-2 border">ã‚¢</td>
+                                <td class="p-2 border">ã‚¤</td>
+                                <td class="p-2 border">ã‚¦</td>
+                                <td class="p-2 border">ã‚¨</td>
+                                <td class="p-2 border">ã‚ª</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">k</th>
+                                <td class="p-2 border">ã‚«</td>
+                                <td class="p-2 border">ã‚­</td>
+                                <td class="p-2 border">ã‚¯</td>
+                                <td class="p-2 border">ã‚±</td>
+                                <td class="p-2 border">ã‚³</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">s</th>
+                                <td class="p-2 border">ã‚µ</td>
+                                <td class="p-2 border">ã‚·</td>
+                                <td class="p-2 border">ã‚¹</td>
+                                <td class="p-2 border">ã‚»</td>
+                                <td class="p-2 border">ã‚½</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">t</th>
+                                <td class="p-2 border">ã‚¿</td>
+                                <td class="p-2 border">ãƒ</td>
+                                <td class="p-2 border">ãƒ„</td>
+                                <td class="p-2 border">ãƒ†</td>
+                                <td class="p-2 border">ãƒˆ</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td class="p-2 border">ãƒŠ</td>
+                                <td class="p-2 border">ãƒ‹</td>
+                                <td class="p-2 border">ãƒŒ</td>
+                                <td class="p-2 border">ãƒ</td>
+                                <td class="p-2 border">ãƒŽ</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">h</th>
+                                <td class="p-2 border">ãƒ</td>
+                                <td class="p-2 border">ãƒ’</td>
+                                <td class="p-2 border">ãƒ•</td>
+                                <td class="p-2 border">ãƒ˜</td>
+                                <td class="p-2 border">ãƒ›</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">m</th>
+                                <td class="p-2 border">ãƒž</td>
+                                <td class="p-2 border">ãƒŸ</td>
+                                <td class="p-2 border">ãƒ </td>
+                                <td class="p-2 border">ãƒ¡</td>
+                                <td class="p-2 border">ãƒ¢</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">y</th>
+                                <td class="p-2 border">ãƒ¤</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border">ãƒ¦</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border">ãƒ¨</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">r</th>
+                                <td class="p-2 border">ãƒ©</td>
+                                <td class="p-2 border">ãƒª</td>
+                                <td class="p-2 border">ãƒ«</td>
+                                <td class="p-2 border">ãƒ¬</td>
+                                <td class="p-2 border">ãƒ­</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">w</th>
+                                <td class="p-2 border">ãƒ¯</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border text-gray-300">â€¢</td>
+                                <td class="p-2 border">ãƒ²</td>
+                            </tr>
+                            <tr>
+                                <th class="p-2 border">n</th>
+                                <td colspan="5" class="p-2 border">ãƒ³</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            const modal = document.getElementById('kanaModal');
+            const open = document.getElementById('openKanaModal');
+            const close = document.getElementById('closeKanaModal');
+            const tabs = Array.from(document.querySelectorAll('.tab-btn'));
+            const hira = document.getElementById('tab-hira');
+            const kata = document.getElementById('tab-kata');
+
+            function showModal(e) {
+                // allow Cmd/Ctrl-click to open reference.html in a new tab
+                if (e && (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) return;
+                if (e) e.preventDefault();
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+            function hideModal() {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+            function switchTab(which) {
+                tabs.forEach(b => b.classList.toggle('bg-white', b.dataset.tab === which));
+                hira.classList.toggle('hidden', which !== 'hira');
+                kata.classList.toggle('hidden', which !== 'kata');
+            }
+
+            open?.addEventListener('click', showModal);
+            close?.addEventListener('click', hideModal);
+            modal?.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideModal(); });
+            tabs.forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+            switchTab('hira'); // default tab
+        })();
+    </script>
+
+
+
+    <!-- Libraries / App scripts -->
+<!-- Local Wanakana (vendor) -->
+<script src="./modules/wanakana.min.js"></script>
+<!-- Fallback shim removed to prevent stale 404s; local wanakana.min.js is present. -->
+
+<script type="module" src="./lesson-shim.js?v=15"></script>
+
+<!-- Your module that renders/boots the lesson -->
+<script type="module" src="./lesson-loader.js?v=10"></script>
+
+<!-- Optional mascot controller (if you actually use it) -->
+<script type="module" src="./modules/mascot-controller.js?v=2"></script>
+
+<script>
+(function () {
+  // If the footer sits inside #page, hoist it to <body> so transforms/overflow on
+  // containers can't affect its fixed positioning.
+  const f = document.getElementById('footer-controls');
+  if (f && f.parentElement !== document.body) {
+    document.body.appendChild(f);
+  }
+})();
+</script>
+
+
+<!-- Page helpers (keep this last) -->
+<script>
+(function () {
+  addEventListener('pageshow', () => document.body.classList.remove('overflow-hidden'));
+
+  const page = document.getElementById('page');
+  const footer = document.getElementById('footer-controls');
+  if (!page || !footer) return;
+
+  const supportsEnv = window.CSS && CSS.supports && CSS.supports('padding-bottom: env(safe-area-inset-bottom)');
+  const apply = () => {
+    const h = footer.offsetHeight || 0;
+    page.style.paddingBottom = supportsEnv
+      ? `calc(${h}px + env(safe-area-inset-bottom))`
+      : `${h + 16}px`;
+  };
+
+  // âœ… expose to lesson-shim.js
+  window.__padFooter = apply;
+
+  apply();
+  addEventListener('load', apply, { once: true });
+  addEventListener('resize', apply);
+  // âœ… fix rotation not applying
+  window.addEventListener('orientationchange', () => setTimeout(apply, 60));
+
+  if ('ResizeObserver' in window) new ResizeObserver(apply).observe(footer);
+  footer.style.touchAction = 'pan-y';
+})();
+</script>
+
+<script>
+  (function killSceneToggles(){
+    const zap = () => {
+      document.querySelectorAll('#sceneAuto, #sceneShowRomaji')
+        .forEach(i => i.closest('label')?.remove());
+    };
+    // run now and after scene render
+    zap();
+    document.addEventListener('lesson:rendered', zap, { once:true });
+    // or poll briefly if you don't dispatch events
+    let t = setInterval(() => { zap(); if (!document.querySelector('#sceneAuto')) clearInterval(t); }, 150);
+  })();
+</script>
+
+
+<script>
+  // Sanitize stray control characters in Kana modal cells (e.g., BEL \u0007)
+  (function sanitizeKanaModal(){
+    try {
+      const root = document.getElementById('kanaModal');
+      if (!root) return;
+      const bad = /[\u0000-\u001F\u007F]/g;
+      root.querySelectorAll('td, th').forEach(el => {
+        const txt = el.textContent;
+        if (typeof txt === 'string' && bad.test(txt)) {
+          const cleaned = txt.replace(bad, '').trim();
+          // keep placeholder look for disabled cells
+          el.textContent = cleaned || (el.classList.contains('text-gray-300') ? '\u00A0' : '');
+        }
+      });
+    } catch {}
+  })();
+  </script>
+
+
+<style>
+  body[datxstep="phrase_drill"] #page { scroll-padding-bottom: 7rem; }
+    /* Ensure gear always receives clicks */
+
+<style>
+  body[datxstep="dialogue"] #page { scroll-padding-bottom: 7rem; }
+    /* Ensure gear always receives clicks */
+
+
+
+</body>
+<!-- Ninja Slice Overlay -->
+<div id="slice-overlay" class="fixed inset-0 bg-black/60 hidden z-[9999]">
+  <div id="slice-wrap" class="absolute inset-0 flex flex-col items-center justify-center p-0 md:p-4">
+    <div class="bg-white rounded shadow w-[80vw] max-w-[1100px] p-3 relative">
+      <div class="relative pt-24 pb-16">
+        <!-- Unified top bar: status + controls + close -->
+        <div class="pointer-events-none absolute top-4 left-4 right-4 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
+          <div id="slice-status" class="ui-panel pointer-events-auto w-full flex items-center gap-6 bg-white/90 text-slate-900 px-5 py-3 rounded-xl shadow border border-amber-200">
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Score</span>
+              <span id="slice-score" class="font-semibold text-lg tracking-wide">0</span>
+            </div>
+            <div class="flex flex-col gap-1 text-right">
+              <span class="text-[11px] uppercase tracking-wide text-amber-900/70">Time</span>
+              <span id="slice-timer" class="font-semibold text-lg tracking-wide">60</span>
+            </div>
+            <div id="slice-combo-meter" class="pointer-events-none w-40 h-2.5 bg-white/70 rounded-full overflow-hidden opacity-0 transition-opacity">
+              <div id="slice-combo-meter-fill" class="h-full bg-amber-500" style="width:0%"></div>
+            </div>
+            <span id="slice-fever-label" class="text-[10px] uppercase tracking-wide text-amber-700 hidden">Fever</span>
+          </div>
+          <div class="slice-toolbar ui-panel pointer-events-auto w-full flex items-center gap-2 md:gap-2 bg-white/90 px-3 md:px-4 py-2 rounded-lg shadow border border-amber-200 text-slate-900 flex-wrap md:flex-nowrap overflow-visible">
+            <label class="flex items-center gap-1">
+              <span class="text-xs">Speed</span>
+              <select id="slice-speed" class="text-xs border rounded px-1 py-0.5 bg-white">
+                <option value="0.85">Slow</option>
+                <option value="1.0" selected>Normal</option>
+                <option value="1.25">Fast</option>
+                <option value="1.5">Turbo</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-1">
+              <span class="text-xs">Difficulty</span>
+              <select id="slice-diff" class="text-xs border rounded px-1 py-0.5 bg-white">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="checkbox" id="slice-showphrase" class="accent-teal-600" checked />
+              <span class="text-xs">Show phrase</span>
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="checkbox" id="slice-speak" class="accent-teal-600" checked />
+              <span class="text-xs">Speak on slice</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-bubbles" class="accent-teal-600" checked />
+              <span class="text-xs">Romaji bubbles</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-reduced" class="accent-teal-600" />
+              <span class="text-xs">Reduced motion</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-mute-sfx" class="accent-teal-600" />
+              <span class="text-xs">Mute SFX</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-speak-romaji" class="accent-teal-600" />
+              <span class="text-xs">Speak romaji</span>
+            </label>
+            <label class="flex items-center gap-1 ml-2 mobile-advanced">
+              <input type="checkbox" id="slice-skip-reveal" class="accent-teal-600" checked />
+              <span class="text-xs">Tap to skip reveal</span>
+            </label>
+            <button id="slice-close" class="ml-auto md:ml-2 shrink-0 px-3 py-2 rounded-lg bg-white/90 text-slate-900 shadow border border-amber-200 hover:bg-white transition focus:outline-none focus:ring-2 focus:ring-amber-300">Close</button>
+          </div>
+          <!-- Floating Settings Button (desktop) + Backdrop for modalized toolbar -->
+          <button id="slice-settings-btn" title="Settings" aria-label="Settings" class="flex items-center justify-center w-12 h-12 md:w-10 md:h-10 rounded-full bg-white shadow border border-amber-200 text-amber-700 hover:bg-white fixed md:absolute bottom-3 right-3 md:bottom-auto md:right-2 md:top-1/2 md:-translate-y-1/2 z-[10005] cursor-pointer select-none" onclick="window.__toggleSliceSettings && window.__toggleSliceSettings(event)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66.39 1.26 1 1.51H21a2 2 0 1 1 0 4h-.09c-.61.25-1 .85-1 1.49z"/>
+            </svg>
+          </button>
+          <div id="slice-settings-backdrop" class="hidden fixed inset-0 bg-black/40 z-[10000] pointer-events-none"></div>
+        </div>
+        <canvas id="slice-canvas" class="w-full h-[55vh] lg:h-[45vh] max-h-[560px] block"></canvas>
+        <div id="slice-instructions" class="absolute inset-x-0 top-32 mx-auto w-fit bg-white/80 text-gray-800 text-sm px-3 py-1 rounded shadow">
+          Slice kana. Red circles are bombs â€” avoid them. Swipe for combos.
+        </div>
+        <div id="slice-progress" class="mt-1 text-center text-sm text-gray-700"></div>
+        <div class="mt-0.5 h-2 bg-gray-200 rounded overflow-hidden">
+          <div id="slice-progressbar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div>
+        </div>
+        <div id="slice-combo" class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-6 text-2xl font-extrabold text-emerald-600 drop-shadow opacity-0 transition-opacity">x1</div>
+        <!-- Game Over panel -->
+        <div id="slice-gameover" class="hidden absolute inset-0 flex items-center justify-center">
+          <div class="bg-white/95 backdrop-blur rounded shadow p-4 text-center max-w-sm w-full">
+            <div id="slice-over-title" class="text-lg font-semibold mb-1">Game Over</div>
+            <div id="slice-over-reason" class="text-gray-700 mb-3">You hit a bomb.</div>
+            <div id="slice-over-stats" class="text-sm text-gray-600 mb-3"></div>
+            <div class="flex items-center justify-center gap-2">
+              <button id="slice-try" class="btn btn-primary">Try Again</button>
+              <button id="slice-finish" class="btn btn-ghost">Finish</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-1.5 grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-2 text-center">
+        <div id="slice-kana" class="text-2xl">ã“ã‚“ã«ã¡ã¯</div>
+        <div id="slice-romaji" class="text-gray-600">konnichiwa</div>
+        <div id="slice-en" class="text-gray-600">Hello</div>
+      </div>
+    </div>
+  </div>
+  <style>
+    #slice-overlay.hidden{ display:none; }
+      /* Ensure gear always receives clicks */
+
+  <style>
+    /* Theme tokens */
+    :root{
+      --slice-primary: #f59e0b; /* amber-500 */
+      --slice-accent:  #10b981; /* emerald-500 */
+      --slice-panel-bg: rgba(255,255,255,0.92);
+      --slice-border:  rgba(245,158,11,0.5);
+      --slice-shadow:  0 8px 24px rgba(0,0,0,0.18);
+      --slice-radius:  12px;
+    }
+    /* Unified panel styling */
+    #slice-wrap .ui-panel{
+      background: var(--slice-panel-bg) !important;
+      border: 1px solid var(--slice-border) !important;
+      border-radius: var(--slice-radius) !important;
+      box-shadow: var(--slice-shadow) !important;
+      overflow: visible !important;
+    }
+    /* Allow vertical scroll within overlay */
+    #slice-overlay{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #slice-wrap{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    /* Mobile tweaks */
+    @media (max-width: 768px){
+      #slice-wrap .ui-panel{ padding: 8px 10px !important; }
+      #slice-status span.text-[11px]{ font-size: 10px; }
+      #slice-wrap .slice-toolbar{ row-gap: 6px; }
+      #slice-wrap .slice-toolbar label{ margin-right: 6px; }
+    }
+    @media (max-width: 480px){
+      /* Compact bottom kana chips */
+      #slice-wrap .kana-ch{ transform: scale(0.85); margin: 0 1px !important; }
+      #slice-progressbar{ height: 6px !important; }
+      /* Put Close on its own line to avoid clipping */
+      #slice-close{ width: 100% !important; margin-left: 0 !important; margin-top: 6px; text-align: center; }
+      #slice-wrap .slice-toolbar{ padding-right: 10px !important; }
+      /* Make example phrase (kana chips) horizontally scrollable to prevent cut-off */
+      #slice-kana{
+        display: block;
+        white-space: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px 10px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.92);
+        margin: 0 2px;
+      }
+      #slice-kana::-webkit-scrollbar{ height: 6px; }
+      #slice-kana::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.2); border-radius: 6px; }
+    }
+    /* Animated background for the play area */
+    #slice-wrap{
+      background: linear-gradient(120deg, #fff7ed 0%, #fde68a 50%, #fff 100%);
+      background-size: 200% 200%;
+      animation: sliceBgPan 18s ease-in-out infinite;
+      position: relative;
+    }
+    #slice-canvas{ touch-action: none; }
+    /* Ensure gear is always clickable above overlays */
+    #slice-settings-btn{ pointer-events: auto; z-index: 10050; }
+    @keyframes sliceBgPan{ 0%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } 100%{ background-position: 0% 50%; } }
+    /* Make bottom kana tiles span full modal and center-wrap; place romaji/english below */
+    #slice-kana {
+      grid-column: 1 / -1; /* span all grid columns */
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      gap: 8px 6px !important;
+      width: 100%;
+    }
+    #slice-romaji, #slice-en {
+      grid-column: 1 / -1; /* ensure on a new row under kana */
+    }
+    /* Enlarge kana chips for focus */
+    #slice-wrap .kana-ch {
+      font-size: clamp(22px, 4vw, 34px) !important;
+      min-width: 2.2em !important;
+      padding: 6px 8px !important;
+      margin: 3px 3px !important;
+    }
+    /* Override previous mobile horizontal scroll for kana; wrap instead */
+    @media (max-width: 480px){
+      #slice-kana{ white-space: normal !important; overflow-x: visible !important; }
+    }
+    /* Mobile simplification: hide advanced controls */
+    @media (max-width: 768px){
+      #slice-wrap .mobile-advanced{ display:none !important; }
+      #slice-wrap .slice-toolbar{ display:none !important; }
+      #slice-wrap.settings-open .slice-toolbar{ display:flex !important; position:fixed; left:0; right:0; bottom:0; top:auto; transform:none; width:100vw; z-index:10010; border-radius:16px 16px 0 0; }
+      #slice-settings-backdrop{ display:none; }
+      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; pointer-events:auto !important; }
+      /* Full-bleed play area */
+      #slice-wrap{ background:#ffffff !important; padding:0 !important; overflow:hidden !important; }
+    }
+    /* Desktop: hide inline toolbar; show as modal when settings-open */
+    @media (min-width: 768px){
+      #slice-wrap .slice-toolbar{ display:none !important; }
+      #slice-wrap.settings-open .slice-toolbar{ display:flex !important; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:min(92vw, 640px); z-index:10010; }
+      #slice-wrap.settings-open #slice-settings-backdrop{ display:block !important; pointer-events:auto !important; }
+    }
+      /* Ensure gear always receives clicks */
+
+</div>
+
+  <script type="module">
+  import { initNinjaSlice } from './modules/ninjaSlice.js?v=9';
+  const by = (sel, root=document) => root.querySelector(sel);
+  const overlay = by('#slice-overlay');
+  const btnOpen = by('#openSlice');
+  const btnOpenFooter = by('#openSliceFooter');
+  const btnClose = by('#slice-close');
+  // Settings modal (toggle toolbar as modal)
+  const wrapEl = by('#slice-wrap');
+  const settingsBtn = by('#slice-settings-btn');
+  const settingsBackdrop = by('#slice-settings-backdrop');
+  function toggleSettings(e){ try { e?.preventDefault(); e?.stopPropagation(); } catch {} wrapEl?.classList.toggle('settings-open'); }
+  function closeSettings(e){ try { e?.preventDefault(); e?.stopPropagation(); } catch {} wrapEl?.classList.remove('settings-open'); }
+  ;['click','pointerdown','touchstart'].forEach(evt => settingsBtn?.addEventListener(evt, toggleSettings, { passive:false }));
+  ;['click','pointerdown','touchstart'].forEach(evt => settingsBackdrop?.addEventListener(evt, closeSettings, { passive:false }));
+  // Fallback delegation in case the button is re-rendered
+  document.addEventListener('click', (ev) => {
+    const t = ev.target && (ev.target.closest ? ev.target.closest('#slice-settings-btn') : null);
+    if (t) { toggleSettings(ev); }
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { wrapEl?.classList.remove('settings-open'); } });
+  // Expose togglers for inline onclick fallback
+  try { window.__toggleSliceSettings = toggleSettings; window.__closeSliceSettings = closeSettings; } catch {}
+  // Ensure intro instructions reflect current visuals (sumo bombs)
+  try {
+    const help = by('#slice-instructions');
+    if (help) help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
+  } catch {}
+  function currentPhraseFromPage(){
+    try {
+      const cached = window.__kanaSliceSource;
+      if (cached && cached.phrase) {
+        const phrase = (cached.phrase || '').trim();
+        const english = (cached.english || '').trim() || 'Hello';
+        const romajiCached = (cached.romaji || '').trim();
+        const romaji = romajiCached || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa');
+        const stages = Array.isArray(cached.stages) ? cached.stages : [];
+        if (phrase) {
+          return { phrase, romaji, english, stages };
+          }
+      }
+    } catch {}
+    try {
+      const list = document.querySelector('#jp-text');
+      const jpEl = list?.querySelector('.jp');
+      const enEl = list?.querySelector('.en');
+      const phrase = (jpEl?.textContent || '').trim() || '\\u3053\\u3093\\u306B\\u3061\\u306F';
+      const english = (enEl?.textContent || '').trim() || 'Hello';
+      const romaji = (window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa';
+      return { phrase, romaji, english, stages: [] };
+    } catch {
+      return { phrase:'ã“ã‚“ã«ã¡ã¯', romaji:'konnichiwa', english:'Hello' , stages: [] };
+    }
+  }
+  function launchSlice(){
+    const data = currentPhraseFromPage();
+    const phrase = (data?.phrase || '').trim();
+    if (!phrase) { alert('Pick a phrase first, then try Slice.'); return; }
+    const romaji = data?.romaji || ((window.wanakana && phrase) ? wanakana.toRomaji(phrase) : '') || 'konnichiwa';
+    const english = data?.english || '';
+    initNinjaSlice({
+      containerId: 'slice-wrap',
+      canvasId: 'slice-canvas',
+      closeBtnId: 'slice-close',
+      overlayId: 'slice-overlay',
+      scoreElId: 'slice-score',
+      timerElId: 'slice-timer',
+      kanaContainerId: 'slice-kana',
+      romajiContainerId: 'slice-romaji',
+      englishContainerId: 'slice-en',
+      gameOverId: 'slice-gameover',
+      tryBtnId: 'slice-try',
+      finishBtnId: 'slice-finish',
+      bubblesToggleId: 'slice-bubbles',
+      progressElId: 'slice-progress',
+      progressBarId: 'slice-progressbar',
+      statsElId: 'slice-over-stats',
+      phrases: Array.isArray(data?.stages) ? data.stages : [],
+      phrase, romaji, english,
+      heightRatio: 0.55,
+      // Faster spawn for higher challenge
+      spawnMsStart: 650,
+      spawnMsEnd: 280,
+      roundSeconds: 45,
+      bombChance: 0.08,
+      launchBoost: 1.8,
+      gravity: 0.015,
+      // Visual: spin bubbles but keep kana upright
+      bubbleSpinStyle: 'upright', // 'upright' | 'flip' | 'none'
+      bubbleSpinSpeed: 1.0,
+      // Quiz mode disabled (scrapped)
+      quizMode: false,
+      quizShowPrompt: true,
+      quizChoices: 4,
+      memoryCue: true,
+      sequenceMode: true,
+      // Distractors (noise) in normal play
+      noiseSpawnChance: 0.18,
+      noisePenalty: 50,
+      // Free-for-All coin bonus
+      freeForAllEnabled: true,
+      ffaSeconds: 5,
+      ffaSpawnRateBoost: 2.0,
+      ffaBombs: false,
+      coinPerKana: 1,
+      // Coin face styling in FFA
+      coinFaceStyle: 'embossed',
+      // Normal kana face styling
+      bubbleFaceStyle: 'embossed',
+      // Slice showcase (zoom/coin/speak)
+      sliceShowcaseEnabled: true,
+      // Stage banner: cascading reveal of phrase/romaji
+      stageCascadeRevealEnabled: true,
+      stageCascadeStepMs: 60,
+      // UX toggles
+      reducedMotionEnabled: false,
+      sfxEnabled: true,
+      speakRomajiInstead: false,
+      enableSkipRevealTap: true,
+      // New behavior toggles
+      timerPerStage: true,
+      bombEndsRound: false,
+      // Fever tuning (can be adjusted later)
+      feverEnabled: true,
+      feverDurationMs: 7000,
+      feverMultiplier: 2.0,
+      feverDecayPerSec: 0.09,
+      feverChargeSlice: 0.22,
+      feverSeqChargeBoost: 1.8,
+    });
+  }
+  btnOpen?.addEventListener('click', launchSlice);
+  btnOpenFooter?.addEventListener('click', launchSlice);
+  btnClose?.addEventListener('click', () => overlay.classList.add('hidden'));
+</script>
+
+</html>
+
+
+
+
+
+
+
+

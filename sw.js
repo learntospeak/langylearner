@@ -1,14 +1,22 @@
 // service-worker.js
-const VERSION = 'v1.0.10';                      // bump when core changes
+const VERSION = 'v1.0.44';                      // bump when core changes
 const CACHE_NAME = `jp-lesson-${VERSION}`;
 
 const CORE = [
   './',
   './index.html',
+  './signin.html',
+  './signup.html',
+  './forgot.html',
+  './reset.html',
+  './shop.html',
+  './tutor.html',
+  './account.html',
   './lesson.html',
   './stories.json',
   './lesson-loader.js',
   './lesson-shim.js',
+  './anime-theme.css',
   './images/favicon.ico'
 ];
 
@@ -55,13 +63,23 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // ignore cross-origin
+  // Never intercept API calls (always go to network)
+  if (url.pathname.startsWith('/api/')) return;
 
-  // 1) Real page navigations: try requested page from cache, else network, else offline fallback to index.html
+  // 1) Real page navigations: network-first so HTML reflects latest changes
   if (req.mode === 'navigate') {
     event.respondWith(
-      caches.match(req)
-        .then((cached) => cached || fetch(req))
-        .catch(() => caches.match('./index.html'))
+      fetch(req)
+        .then((res) => {
+          try {
+            if (shouldCache(req, res)) {
+              const copy = res.clone();
+              event.waitUntil(caches.open(CACHE_NAME).then((c) => c.put(req, copy)));
+            }
+          } catch {}
+          return res;
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html')))
     );
     return;
   }
