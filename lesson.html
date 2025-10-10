@@ -1,4 +1,4 @@
-?<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -13,6 +13,56 @@
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <!-- Shared anime theme -->
     <link rel="stylesheet" href="anime-theme.css" />
+    <!-- 3D web component -->
+    <script type="module" src="/vendor/model-viewer.min.js"></script>
+    <!-- Three.js (for OutfitPreview transforms on lesson page) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three.module.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import { GLTFLoader } from '/vendor/GLTFLoader.js';
+      window.__GLTFLoader = GLTFLoader;
+    </script>
+    <script type="module">
+      import { OrbitControls } from '/vendor/OrbitControls.js';
+      window.__OrbitControls = OrbitControls;
+    </script>
+    <script type="module">
+      import * as THREE from '/vendor/three.module.js';
+      window.__THREE = THREE; window.THREE = window.THREE || THREE;
+    </script>
+    <script>
+      // Prevent old attach scripts from running heavy work
+      window.__LV_INIT = true;
+      window.OutfitPreview = {
+        create(){ return { update(){}, setOverrides(){}, async attachAll(){ return false; } }; }
+      };
+    </script>
+    <script src="./modules/outfit-preview.js"></script>
+    <script>
+      // Default slot anchors (shared with Shop) so accessories position correctly on lesson page
+      window.SLOT_ANCHORS = window.SLOT_ANCHORS || {
+        head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
+        torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
+        body:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
+        legs:{position:[0,-0.06,0],rotation:[0,0,0],scale:[1,1,1]},
+        feet:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+        hat:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
+        hair:{position:[0,0.12,0],rotation:[0,0,0],scale:[1,1,1]},
+        mask:{position:[0,0.08,0.06],rotation:[0,0,0],scale:[1,1,1]},
+        top:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
+        outfit:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
+        boots:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+        skirt:{position:[0,-0.02,0],rotation:[0,0,0],scale:[1,1,1]},
+        belt:{position:[0,-0.01,0.01],rotation:[0,0,0],scale:[1,1,1]},
+        bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
+        misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
+      };
+    </script>
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
     <style type="text/tailwindcss">
@@ -160,8 +210,7 @@
 
 
 </head>
-<script type="module" src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
-<script nomodule src="https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer-legacy.js"></script>
+
 <style>
   /* Ensure anime theme button styles override Tailwind @apply block */
   .anime-bg .btn {
@@ -219,7 +268,53 @@
         <!-- wrapper that positions the mascot beside the lesson -->
         <div id="lesson-wrap">
             <div id="jp-text" class="space-y-3"></div>
-            <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+            <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;display:none;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+            <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:180px;height:220px;z-index:50;"></div>
+            <script>
+              (async function(){
+                try {
+                  const wrap = document.getElementById('lvWrap'); const mv = document.getElementById('mvLesson');
+                  if (!wrap) return; if (mv) mv.style.display='none';
+                  // Wait for module scripts to define THREE + GLTFLoader
+                  const waitReady = async(ms=5000)=>{ const t0=Date.now(); await new Promise(r=>{ (function poll(){ if (window.__THREE&&window.__GLTFLoader){ return r(); } if (Date.now()-t0>ms) return r(); try{ requestAnimationFrame(poll); }catch{ setTimeout(poll,16);} })(); }); };
+                  await waitReady();
+                  const THREE = window.__THREE||window.THREE; const GLTFLoader = window.__GLTFLoader;
+                  if (!THREE || !GLTFLoader) { console.warn('[lesson-lv] missing THREE/GLTFLoader'); return; }
+                  console.log('[lesson-lv] ready');
+                  const w = wrap.clientWidth||180, h = wrap.clientHeight||220;
+                  const scene = new THREE.Scene();
+                  const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
+                  const amb = new THREE.AmbientLight(0xffffff, 0.6); scene.add(amb);
+                  const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(1,1,1); scene.add(dir);
+                  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+                  renderer.setSize(w, h, false); renderer.setPixelRatio(1);
+                  wrap.innerHTML=''; wrap.appendChild(renderer.domElement);
+                  let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch{}
+                  function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                  const loader = new GLTFLoader();
+                  const [wRes, catRes] = await Promise.all([
+                    fetch('/api/wallet', { cache:'no-store' }).then(r=>r.json()).catch(()=>({})),
+                    fetch('/api/shop/catalog').then(r=>r.json()).catch(()=>({ items:[] }))
+                  ]);
+                  let eq = (wRes && wRes.equipped) || {}; try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (Object.keys(snap).length) eq = snap; } } catch {}
+                  const items = (catRes && catRes.items) || []; const idToItem = new Map(items.map(i=>[i.id,i]));
+                  const modelItem = idToItem.get(eq.model) || items.find(i=>i.id==='model-basemesh'); if (!modelItem) return;
+                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); return; }
+                  const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base);
+                  try { const box = new THREE.Box3().setFromObject(base); const c = box.getCenter(new THREE.Vector3()); base.position.sub(c); const size=new THREE.Vector3(); box.getSize(size); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=2.34; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size.y*0.06,dist); if (controls) { controls.target.set(0, size.y*0.54, 0); controls.update(); } } catch {}
+                  const anchors = window.SLOT_ANCHORS || {};
+                  const slots = Object.keys(eq||{}).filter(s=>s!=='model');
+                  const wanted = []; slots.forEach(s=>{ const v=eq[s]; if(Array.isArray(v)) v.forEach(id=>wanted.push(id)); else if (v) wanted.push(v); });
+                  const loadAll = await Promise.all(wanted.map(id=> new Promise(res=>{ const it=idToItem.get(id); if(!it||!it.model) return res([id,null]); try{ loader.load(it.model,g=>res([id,g]),undefined,()=>res([id,null])); } catch { res([id,null]); } })));
+                  const loaded = new Map(loadAll.filter(([id,g])=>g&&g.scene));
+                  console.log('[lesson-lv] items loaded', loaded.size);
+                  function getAnchor(slot,id){ try{ const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch { return anchors[slot]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
+                  for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:((target*baseH)/objH); if(!(s>0&&s<10)) s=target; wrapG.scale.set(s,s,s);}catch{} try{ wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
+                  // Reframe to include accessories (hats etc.)
+                  try { const whole = new THREE.Box3().setFromObject(rootG); const size2 = new THREE.Vector3(); whole.getSize(size2); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=2.34; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size2.y*0.06,dist); if (controls) { controls.target.set(0, size2.y*0.54, 0); controls.update(); } } catch {}
+                } catch (e) { console.warn('[lesson] LV error', e); }
+              })();
+            </script>
             <div id="en-text" class="text-gray-700 mt-2"></div>
             <div id="full-romaji" class="text-gray-500 mt-1"></div>
 
@@ -540,21 +635,10 @@
 
             switchTab('hira'); // default tab
         })();
-        </script>
+    </script>
         <script>
-          (async function(){
-            try {
-              const [w, cat] = await Promise.all([
-                fetch('/api/wallet', { cache:'no-store' }).then(r=>r.json()),
-                fetch('/api/shop/catalog', { cache:'no-store' }).then(r=>r.json())
-              ]);
-              const eq = (w && w.equipped) || {}; const items = (cat && cat.items) || [];
-              const it = items.find(x=> x.id === eq.model && x.model);
-              const mv = document.getElementById('mvLesson');
-              if (it && mv) { mv.src = it.model; mv.style.display='block'; try{ mv.pause(); }catch{} }
-              else if (mv) { mv.style.display='none'; }
-            } catch {}
-          })();
+          // Early preloader removed to avoid resetting attachments; handled later below
+          window.__mvLessonPreInit = true;
         </script>
         <!-- Removed legacy 2D layered mascot rendering -->
 
@@ -1024,21 +1108,87 @@
 
 
 <script>
-(function(){
+(function(){ if (window.__LV_INIT) return;
   try {
     Promise.all([
       fetch('/api/wallet', {cache:'no-store'}).then(r=>r.json()),
       fetch('/api/shop/catalog', {cache:'no-store'}).then(r=>r.json()),
-    ]).then(([w, cat]) => {
-      const eq = (w && w.equipped) || {}; const items=(cat&&cat.items)||[];
-      const it = items.find(x=> x.id === eq.model && x.model);
+    ]).then(async ([w, cat]) => {
+      let eq = (w && w.equipped) || {};
+      const usedWallet = !!(w && w.equipped && Object.keys(w.equipped).length);
+      try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (snap && Object.keys(snap).length) { eq = snap; console.log('[lesson] using snapshot fallback', eq); } } } catch {}
+      console.log('[lesson] wallet equipped', (w&&w.equipped)||{});
+      console.log('[lesson] effective equipped', eq);
+      const items=(cat&&cat.items)||[];
+      console.log('[lesson] catalog items', items.length);
+      const it = items.find(x=> x.id === eq.model && x.model) || items.find(x=> x.id==='model-basemesh' && x.model);
       const mv = document.getElementById('mvLesson'); if (!mv) return;
       if (it && it.model){
         mv.src = it.model;
         const setRate=()=>{ try{ mv.animationPlayRate=0.3 }catch{}; try{ mv.animationPlaybackRate=0.3 }catch{}; mv.pause(); };
         if(!mv.dataset.rateBound){ mv.addEventListener('load', setRate, {once:true}); mv.dataset.rateBound='1'; }
+        const doAttach = async ()=>{
+          try {
+            const overrides = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+            if (window.OutfitPreview) {
+              const ofp = window.OutfitPreview.create({ mv, overrides });
+              ofp.update(eq, items);
+              const ok = await ofp.attachAll();
+              console.log('[lesson] attachments applied', ok);
+              if (!ok) {
+                // Fallback to lightweight Three.js viewer (same as Shop TV)
+                try {
+                  await (async function useLV(){
+                    const THREE = (window.__THREE||window.THREE);
+                    if (!THREE || !window.__GLTFLoader) return;
+                    const wrap = document.getElementById('lvWrap'); if (!wrap) return;
+                    const w = wrap.clientWidth||160, h = wrap.clientHeight||190;
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
+                    const amb = new THREE.AmbientLight(0xffffff, 0.6); scene.add(amb);
+                    const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(1,1,1); scene.add(dir);
+                    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+                    renderer.setSize(w,h,false); renderer.setPixelRatio(1);
+                    wrap.innerHTML=''; wrap.style.display='block';
+                    const mvEl = document.getElementById('mvLesson'); if (mvEl) mvEl.style.display='none';
+                    wrap.appendChild(renderer.domElement);
+                    let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch{}
+                    function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                    // Load base
+                    const loader = new window.__GLTFLoader();
+                    const gltf = await new Promise(res=>{ try{ loader.load(it.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+                    if (!gltf || !gltf.scene) return;
+                    const base = gltf.scene; scene.add(base);
+                    try {
+                      const box = new THREE.Box3().setFromObject(base); const c = box.getCenter(new THREE.Vector3()); base.position.sub(c); const size=new THREE.Vector3(); box.getSize(size);
+                      const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+                      const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH);
+                      const VIEW_SCALE = 2.34; const dist=baseDist*VIEW_SCALE;
+                      camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
+                      camera.position.set(0,size.y*0.06,dist);
+                      if (controls) { controls.target.set(0, size.y*0.54, 0); controls.update(); }
+                    } catch {}
+                    // Attach items
+                    const anchors = window.SLOT_ANCHORS || {};
+                    async function addOne(slot, id){ const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return; const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch{ res(null);} }); if(!gltf2||!gltf2.scene) return; const obj = gltf2.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); let a = ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG);} 
+                    const slots = Object.keys(eq||{}).filter(s=>s!=='model');
+                    for (const slot of slots){ const raw = eq[slot]; const ids = Array.isArray(raw) ? raw : [raw]; for (const id of ids){ await addOne(slot, id); } }
+                  })();
+                } catch (_) {}
+              }
+            } else {
+              console.warn('[lesson] OutfitPreview not found');
+            }
+          } catch (e) { console.warn('[lesson] attach failed', e); }
+        };
+        if (mv.model || mv.scene) { await doAttach(); }
+        else { mv.addEventListener('load', ()=>{ doAttach(); }, { once:true }); }
       }
     }).catch(()=>{});
   } catch {}
 })();
 </script>
+
+
+
+

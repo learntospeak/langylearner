@@ -8,12 +8,24 @@
         "greetings-001": {
           "stepIndex": 0,
           "stats": {
-            "timeMsByStep": {},
-            "checks": {},
+            "timeMsByStep": {
+              "0": 867514,
+              "1": 119909,
+              "2": 190205
+            },
+            "checks": {
+              "2": {
+                "attempts": 1,
+                "correct": 0,
+                "lastOk": false,
+                "lastAt": 1760068847479,
+                "type": "translate_to_jp"
+              }
+            },
             "reveals": {},
             "totalTimeMs": 0
           },
-          "updatedAt": 1760053972510
+          "updatedAt": 1760083282292
         }
       },
       "createdAt": 1759402120040,
@@ -50,11 +62,28 @@
           "cos-shoe": true,
           "cos-armorceinturethighs": true,
           "cos-bag": true,
-          "cos-armorknees": true
+          "cos-armorknees": true,
+          "cos-armorthigh": true,
+          "cos-ninjassuitthigh": true,
+          "cos-pants": true,
+          "cos-ceinture": true,
+          "cos-greenoutfitbelt": true,
+          "cos-hairone": true,
+          "cos-hairt": true,
+          "cos-hairvariant": true,
+          "cos-armorlegs": true,
+          "cos-hairtailknight": true,
+          "cos-hairtail": true,
+          "cos-greenoutfitneckless": true,
+          "cos-ninjasuitshort": true,
+          "cos-ninjassuit": true
         },
         "equipped": {
           "model": "model-basemesh",
-          "top": "cos-amorplastron"
+          "hair": "cos-hairtail",
+          "outfit": "cos-greenoutfitneckless",
+          "top": "cos-chemise",
+          "boots": "cos-bottes"
         }
       }
     },

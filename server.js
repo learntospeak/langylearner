@@ -1,4 +1,4 @@
-﻿// Minimal Express server to host static files and a TTS proxy.
+// Minimal Express server to host static files and a TTS proxy.
 // Requires: Node 18+ (global fetch), express, cors, dotenv (optional)
 
 const path = require('path');
@@ -43,9 +43,9 @@ try {
     fallthrough: true,
     setHeaders: (res, p) => {
       const lower = String(p).toLowerCase();
-      if (lower.endsWith('.glb')) res.setHeader('Content-Type', 'model/gltf-binary');
-      else if (lower.endsWith('.gltf')) res.setHeader('Content-Type', 'model/gltf+json');
-      else if (lower.endsWith('.bin')) res.setHeader('Content-Type', 'application/octet-stream');
+      if (lower.endsWith('.glb')) res.setHeader('Content-Type', 'model/gltf-binary'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      else if (lower.endsWith('.gltf')) res.setHeader('Content-Type', 'model/gltf+json'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      else if (lower.endsWith('.bin')) res.setHeader('Content-Type', 'application/octet-stream'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     },
   }));
 } catch {}
@@ -583,4 +583,5 @@ app.get('/api/ping', (req, res) => res.json({ ok: true }));
 app.listen(PORT, () => {
   console.log(`[server] http://localhost:${PORT}  (OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'})`);
 });
+
 
