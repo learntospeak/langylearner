@@ -1,0 +1,181 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Anchor Tool</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .panel { border:2px solid #000; border-radius:12px; background:#fff; padding:10px; }
+    .canvas-wrap { width: 560px; height: 420px; border:2px solid #000; border-radius:12px; background:#f9fafb; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from '/vendor/three.module.js';
+    import { GLTFLoader } from '/vendor/GLTFLoader.js';
+    import { OrbitControls } from '/vendor/OrbitControls.js';
+    import { TransformControls } from '/vendor/TransformControls.js';
+
+    const $ = (s)=>document.querySelector(s);
+    const wrap = $('#canvas');
+    const modelSel = $('#modelSel');
+    const itemSel = $('#itemSel');
+    const slotSel = $('#slotSel');
+    const posX=$('#posX'), posY=$('#posY'), posZ=$('#posZ');
+    const rotX=$('#rotX'), rotY=$('#rotY'), rotZ=$('#rotZ');
+    const scaleF=$('#scaleF');
+    const saveBtn=$('#saveBtn');
+    const copyBtn=$('#copyBtn');
+    const resetBtn=$('#resetBtn');
+
+    let scene, camera, renderer, orbit, tctl, baseGroup=null, accWrap=null;
+    const loader = new GLTFLoader();
+
+    const SLOT_ANCHORS_DEFAULT = {
+      head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
+      torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
+      body:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
+      legs:{position:[0,-0.06,0],rotation:[0,0,0],scale:[1,1,1]},
+      feet:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+      hat:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
+      hair:{position:[0,0.12,0],rotation:[0,0,0],scale:[1,1,1]},
+      mask:{position:[0,0.08,0.06],rotation:[0,0,0],scale:[1,1,1]},
+      top:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
+      outfit:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
+      boots:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+      skirt:{position:[0,-0.02,0],rotation:[0,0,0],scale:[1,1,1]},
+      belt:{position:[0,-0.01,0.01],rotation:[0,0,0],scale:[1,1,1]},
+      bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
+      misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
+    };
+
+    function init(){
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(30, w/h, 0.01, 100);
+      camera.position.set(0, 0.25, 1);
+      renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'low-power' });
+      renderer.setSize(w, h, false);
+      renderer.setPixelRatio(1);
+      wrap.appendChild(renderer.domElement);
+      const amb = new THREE.AmbientLight(0xffffff, 0.9); scene.add(amb);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir);
+      orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.target.set(0,0.05,0);
+      tctl = new TransformControls(camera, renderer.domElement);
+      tctl.addEventListener('dragging-changed', e=>{ orbit.enabled = !e.value; syncFields(); });
+      scene.add(tctl);
+      (function tick(){ try{ orbit.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick); })();
+    }
+
+    function fitCameraTo(obj){
+      try{
+        const box = new THREE.Box3().setFromObject(obj);
+        const center = box.getCenter(new THREE.Vector3());
+        obj.position.sub(center);
+        const sphere = new THREE.Sphere(); box.getBoundingSphere(sphere);
+        const r = Math.max(0.1, sphere.radius), d = r / Math.tan((camera.fov*Math.PI)/360);
+        camera.position.set(0, r*0.1, d*1.2);
+        orbit.target.set(0,0.05,0); orbit.update();
+      }catch{}
+    }
+
+    async function loadGLB(url){ return await new Promise(res=>{ try{ loader.load(url,g=>res(g?.scene||null),undefined,()=>res(null)); }catch{ res(null); } }); }
+
+    async function loadBase(url){
+      try{
+        if (tctl && tctl.object) { try { tctl.detach(); } catch {} }
+        if(baseGroup){ scene.remove(baseGroup); baseGroup=null; }
+        if(accWrap){ scene.remove(accWrap); accWrap=null; }
+      }catch{}
+      const sceneObj = await loadGLB(url); if(!sceneObj) return false; baseGroup = sceneObj; scene.add(baseGroup); fitCameraTo(baseGroup); return true;
+    }
+
+    async function loadAccessory(url){
+      if(!baseGroup) return false;
+      if(accWrap){ try{ if (tctl && tctl.object===accWrap) tctl.detach(); scene.remove(accWrap);}catch{} accWrap=null; }
+      const obj=await loadGLB(url); if(!obj) return false; const wrap = new THREE.Group();
+      try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
+      wrap.add(obj); accWrap = wrap; scene.add(wrap); tctl.attach(wrap); return true;
+    }
+
+    function syncFields(){ if(!accWrap) return; try{ posX.value=accWrap.position.x.toFixed(3); posY.value=accWrap.position.y.toFixed(3); posZ.value=accWrap.position.z.toFixed(3); rotX.value=Math.round(accWrap.rotation.x*180/Math.PI); rotY.value=Math.round(accWrap.rotation.y*180/Math.PI); rotZ.value=Math.round(accWrap.rotation.z*180/Math.PI); scaleF.value=accWrap.scale.x.toFixed(3);}catch{} }
+
+    function applyFields(){ if(!accWrap) return; const rx=(+rotX.value||0)*Math.PI/180, ry=(+rotY.value||0)*Math.PI/180, rz=(+rotZ.value||0)*Math.PI/180, s=(+scaleF.value||1)||1; try{ accWrap.position.set(+posX.value||0,+posY.value||0,+posZ.value||0); accWrap.rotation.order='XYZ'; accWrap.rotation.set(rx,ry,rz); accWrap.scale.set(s,s,s);}catch{} }
+
+    function saveAnchor(){
+      const slot=slotSel.value||'misc';
+      const itemOpt = itemSel.options[itemSel.selectedIndex];
+      const itemId = itemOpt && itemOpt.dataset && itemOpt.dataset.id;
+      const key = (scopeItem && scopeItem.checked && itemId) ? itemId : slot;
+      const a={ position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1, (+scaleF.value||1)||1,(+scaleF.value||1)||1] };
+      const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+      ov[key]=a; localStorage.setItem('anchorOverrides', JSON.stringify(ov));
+    }
+
+    copyBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const itemOpt=itemSel.options[itemSel.selectedIndex]; const itemId=itemOpt?.dataset?.id; const key=(scopeItem&&scopeItem.checked&&itemId)?itemId:slot; const data={ [key]: { position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ] } }; const t=JSON.stringify(data, null, 2); navigator.clipboard?.writeText(t).catch(()=>{}); });
+    saveBtn?.addEventListener('click', ()=>{ applyFields(); saveAnchor(); });
+    resetBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); });
+
+    posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
+
+    async function populate(){
+      try{ const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[]; const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model'); const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model'); models.forEach(m=>{ const o=document.createElement('option'); o.value=m.model; o.textContent=m.name; modelSel.appendChild(o); }); acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.model; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); }); const uniqSlots=[...new Set(acc.map(a=>a.slot))]; uniqSlots.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; slotSel.appendChild(o); }); if(models[0]){ await loadBase(models[0].model);} if(acc[0]){ slotSel.value=acc[0].slot; await loadAccessory(acc[0].model); const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); } }catch{}
+    }
+
+    modelSel.onchange=async()=>{ await loadBase(modelSel.value); if(accWrap) { applyFields(); } };
+    itemSel.onchange=async()=>{ const opt=itemSel.options[itemSel.selectedIndex]; slotSel.value=opt?.dataset?.slot||'misc'; await loadAccessory(itemSel.value); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })(); const itemId=opt?.dataset?.id; const a = ov[itemId] || ov[slotSel.value] || SLOT_ANCHORS_DEFAULT[slotSel.value] || SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round((a.rotation[0]||0)*180/Math.PI); rotY.value=Math.round((a.rotation[1]||0)*180/Math.PI); rotZ.value=Math.round((a.rotation[2]||0)*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); };
+
+    init(); populate();
+  </script>
+</head>
+<body class="p-4">
+  <h1 class="text-2xl font-bold mb-2">Anchor Tool</h1>
+  <div class="flex flex-wrap gap-4">
+    <div class="panel w-[580px]">
+      <div id="canvas" class="canvas-wrap"></div>
+      <div class="text-xs text-gray-600 mt-1">Tip: drag to rotate, wheel to zoom. Use the colored gizmo to move/rotate/scale the accessory. Then Save.</div>
+    </div>
+    <div class="panel grow max-w-[420px]">
+      <div class="mb-2">
+        <div class="font-semibold">Base Model</div>
+        <select id="modelSel" class="border p-1 w-full"></select>
+      </div>
+      <div class="mb-2">
+        <div class="font-semibold">Accessory</div>
+        <select id="itemSel" class="border p-1 w-full"></select>
+      </div>
+      <div class="mb-2">
+<div class="font-semibold">Slot</div>
+<select id="slotSel" class="border p-1 w-full"></select>
+</div>
+<div class="mb-2">
+<div class="font-semibold">Save Scope</div>
+<label class="mr-3"><input type="radio" name="scope" id="scopeItem" checked> Per item</label>
+<label><input type="radio" name="scope" id="scopeSlot"> Per slot</label>
+</div>
+      <div class="grid grid-cols-3 gap-2 mb-2">
+        <label>X <input id="posX" type="number" step="0.005" class="border px-1 py-0.5 w-full"></label>
+        <label>Y <input id="posY" type="number" step="0.005" class="border px-1 py-0.5 w-full"></label>
+        <label>Z <input id="posZ" type="number" step="0.005" class="border px-1 py-0.5 w-full"></label>
+        <label>RotX° <input id="rotX" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
+        <label>RotY° <input id="rotY" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
+        <label>RotZ° <input id="rotZ" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
+        <label>Scale <input id="scaleF" type="number" step="0.01" class="border px-1 py-0.5 w-full"></label>
+      </div>
+      <div class="flex gap-2">
+        <button id="saveBtn" class="btn btn-primary">Save (local)</button> <button id="copyBtn" class="btn btn-ghost">Copy JSON</button> <button id="resetBtn" class="btn btn-amber">Reset Defaults</button> <button id="camReset" class="btn btn-ghost">Reset Camera</button>
+      </div>
+      <div class="text-xs text-gray-600 mt-2">Saved anchors are written to localStorage under <code>anchorOverrides</code>. Shop uses the same key.</div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
+
