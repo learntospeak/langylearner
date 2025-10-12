@@ -232,7 +232,7 @@
             <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">Kana Reference</a>
             <button id="openSlice" class="btn btn-ghost text-sm">Play Slice</button>
             <span id="userBadge" class="ml-auto text-xs text-gray-600">Player: Guest</span>
-            <a href="shop.html" class="btn btn-ghost text-xs">Shop</a>
+            <a id="shopNav" href="shop.html" class="btn btn-ghost text-xs hidden">Shop</a>
             <a id="tutorNav" href="tutor.html" class="btn btn-dark text-xs hidden">Tutor</a>
         </nav>
         <script>
@@ -245,6 +245,13 @@
                 .then(j => {
                   const name = (j && j.user && j.user.username) || 'Guest';
                   el.textContent = 'Player: ' + name;
+                  try {
+                    const shop = document.getElementById('shopNav');
+                    if (shop) {
+                      if (j && j.user && j.user.username) shop.classList.remove('hidden');
+                      else shop.classList.add('hidden');
+                    }
+                  } catch {}
                 })
                 .catch(() => { try { el.textContent = 'Player: Guest'; } catch {} });
             } catch {}

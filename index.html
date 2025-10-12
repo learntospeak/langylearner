@@ -4,7 +4,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>KanaReader</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style type="text/tailwindcss">
+    .field { @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400; }
+    .field.ok  { @apply border-green-400 ring-green-300; }
+    .field.bad { @apply border-red-400   ring-red-300; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css" />
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,32 +21,158 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-gray-50">
-  <main class="text-center">
-    <h1 class="text-3xl font-bold mb-6">KanaReader</h1>
+<body class="anime-bg min-h-screen">
+  <main class="max-w-3xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="site-title accent-underline text-3xl font-bold">KanaReader</h1>
+      <div id="authStatus" class="text-sm text-gray-600">Checking...</div>
+    </header>
 
-    <!-- Button that opens lesson.html with a lesson ID -->
-    <form action="lesson.html" method="get" target="_blank">
-      <input type="hidden" name="lesson" value="greetings-001" />
-      <button type="submit" class="px-6 py-3 rounded bg-blue-600 text-white hover:bg-blue-700">
-        Start Lesson
-      </button>
-    </form>
-    <p>Copyright (c) 2025 <Jellcap>. All rights reserved.
-Unauthorized copying, modification, or distribution is prohibited.
-</p>
+    <section id="guestSection" class="hidden">
+      <div class="manga-bubble p-5">
+        <h2 class="text-xl font-semibold mb-2">Welcome</h2>
+        <p class="text-gray-700 mb-4">Learn Japanese with bite-sized lessons. Log in to earn coins and unlock 3D chibi characters and outfits.</p>
+
+        <div class="flex flex-wrap gap-3">
+          <a href="lesson.html?lesson=greetings-001" class="btn btn-primary">Start Lesson</a>
+          <a href="#login" id="openLogin" class="btn btn-ghost">Log In</a>
+          <a href="#signup" id="openSignup" class="btn btn-ghost">Create Account</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="userSection" class="hidden">
+      <div class="manga-bubble p-5">
+        <h2 class="text-xl font-semibold mb-2">Welcome back</h2>
+        <p class="text-gray-700 mb-4">You're signed in. Visit the shop to equip your character or jump straight into a lesson.</p>
+        <div class="flex flex-wrap gap-3 items-center">
+          <a href="lesson.html?lesson=greetings-001" class="btn btn-primary">Continue Learning</a>
+          <a href="shop.html" class="btn btn-dark">Go to Shop</a>
+          <button id="logoutBtn" class="btn btn-ghost">Log Out</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="authForms" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div id="loginCard" class="manga-bubble p-5">
+        <h3 class="text-lg font-semibold mb-3">Log In</h3>
+        <div class="space-y-3">
+          <input id="liUser" class="field w-full" type="text" placeholder="Username" autocomplete="username" />
+          <input id="liPass" class="field w-full" type="password" placeholder="Password" autocomplete="current-password" />
+          <button id="loginBtn" class="btn btn-primary w-full">Log In</button>
+          <div id="loginMsg" class="text-sm text-red-600"></div>
+        </div>
+      </div>
+
+      <div id="signupCard" class="manga-bubble p-5">
+        <h3 class="text-lg font-semibold mb-3">Create Account</h3>
+        <div class="space-y-3">
+          <input id="suUser" class="field w-full" type="text" placeholder="Username (3-32 letters/numbers/_ )" autocomplete="username" />
+          <input id="suEmail" class="field w-full" type="email" placeholder="Email (optional)" autocomplete="email" />
+        
+          <input id="suPass" class="field w-full" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" />
+          <button id="signupBtn" class="btn btn-amber w-full">Sign Up</button>
+          <div id="signupMsg" class="text-sm text-red-600"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-8 text-xs text-gray-500">
+      <p>Copyright (c) 2025 &lt;Jellcap&gt;. All rights reserved. Unauthorized copying, modification, or distribution is prohibited.</p>
+    </footer>
   </main>
+
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=4')
-      .catch(console.error);
+  // Tiny helper
+  const $ = (s) => document.querySelector(s);
+
+  async function fetchJSON(url, opts) {
+    const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+    let data = null; try { data = await r.json(); } catch {}
+    if (!r.ok) throw new Error((data && data.error) || (data && data.details) || r.statusText || 'Request failed');
+    return data;
+  }
+
+  async function refreshAuth() {
+    try {
+      const me = await fetchJSON('/api/me', { cache: 'no-store' });
+      const user = me && me.user;
+      if (user && user.username) {
+        $('#authStatus').textContent = `Signed in as ${user.username}`;
+        $('#userSection').classList.remove('hidden');
+        $('#guestSection').classList.add('hidden');
+      } else {
+        $('#authStatus').textContent = 'Not signed in';
+        $('#userSection').classList.add('hidden');
+        $('#guestSection').classList.remove('hidden');
+      }
+    } catch (e) {
+      $('#authStatus').textContent = 'Not signed in';
+      $('#userSection').classList.add('hidden');
+      $('#guestSection').classList.remove('hidden');
+    }
+  }
+
+  // Wire buttons
+  window.addEventListener('DOMContentLoaded', () => {
+    refreshAuth();
+
+    const openLogin = $('#openLogin');
+    const openSignup = $('#openSignup');
+    if (openLogin) openLogin.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('liUser')?.focus(); window.scrollTo({ top: document.getElementById('loginCard').offsetTop - 16, behavior: 'smooth' }); });
+    if (openSignup) openSignup.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('suUser')?.focus(); window.scrollTo({ top: document.getElementById('signupCard').offsetTop - 16, behavior: 'smooth' }); });
+
+    const loginBtn = $('#loginBtn');
+    if (loginBtn) loginBtn.addEventListener('click', async () => {
+      const username = String($('#liUser').value || '').trim();
+      const password = String($('#liPass').value || '');
+      $('#loginMsg').textContent = '';
+      if (!username || !password) { $('#loginMsg').textContent = 'Enter your username and password.'; return; }
+      loginBtn.disabled = true; loginBtn.textContent = 'Signing in...';
+      try {
+        await fetchJSON('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+        await refreshAuth();
+      } catch (e) {
+        $('#loginMsg').textContent = e.message || 'Login failed';
+      } finally {
+        loginBtn.disabled = false; loginBtn.textContent = 'Log In';
+      }
+    });
+
+    const signupBtn = $('#signupBtn');
+    if (signupBtn) signupBtn.addEventListener('click', async () => {
+      const username = String($('#suUser').value || '').trim();
+      const email = String($('#suEmail').value || '').trim();
+      const password = String($('#suPass').value || '');
+      $('#signupMsg').textContent = '';
+      if (!username || !password) { $('#signupMsg').textContent = 'Username and password are required.'; return; }
+      signupBtn.disabled = true; signupBtn.textContent = 'Creating...';
+      try {
+        await fetchJSON('/api/auth/signup', { method: 'POST', body: JSON.stringify({ username, password, email }) });
+        await refreshAuth();
+      } catch (e) {
+        $('#signupMsg').textContent = e.message || 'Signup failed';
+      } finally {
+        signupBtn.disabled = false; signupBtn.textContent = 'Sign Up';
+      }
+    });
+
+    const logoutBtn = $('#logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+      try { await fetchJSON('/api/auth/logout', { method: 'POST' }); } catch {}
+      await refreshAuth();
+    });
   });
-}
+
+  // Service worker for offline shell
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js?v=5').catch(console.error);
+    });
+  }
 </script>
 
 
 </body>
 
 </html>
-
