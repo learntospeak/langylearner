@@ -43,9 +43,16 @@ try {
     fallthrough: true,
     setHeaders: (res, p) => {
       const lower = String(p).toLowerCase();
-      if (lower.endsWith('.glb')) res.setHeader('Content-Type', 'model/gltf-binary'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      else if (lower.endsWith('.gltf')) res.setHeader('Content-Type', 'model/gltf+json'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      else if (lower.endsWith('.bin')) res.setHeader('Content-Type', 'application/octet-stream'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      if (lower.endsWith('.glb')) {
+        res.setHeader('Content-Type', 'model/gltf-binary');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (lower.endsWith('.gltf')) {
+        res.setHeader('Content-Type', 'model/gltf+json');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (lower.endsWith('.bin')) {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     },
   }));
 } catch {}
