@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿<
+function toonifyGroup(root){ try { if (!isAnimeMode()||!root) return; const THREE = getThree(); if(!THREE) return; const grad = (function(){ try { const c=document.createElement('canvas'); c.width=4; c.height=1; const g=c.getContext('2d'); const cols=['#0f172a','#475569','#94a3b8','#e2e8f0']; for(let i=0;i<4;i++){ g.fillStyle=cols[i]; g.fillRect(i,0,1,1);} const t=new THREE.CanvasTexture(c); t.minFilter=THREE.NearestFilter; t.magFilter=THREE.NearestFilter; t.generateMipmaps=false; return t; } catch(e){ return null; } })(); root.traverse?.(o=>{ try { if(o.isMesh){ const baseCol = (o.material&&o.material.color)?o.material.color:new THREE.Color(0xffffff); const toon = new THREE.MeshToonMaterial({ color: baseCol, gradientMap: grad, skinning: !!(o.material&&o.material.skinning) }); if (o.material && o.material.transparent) { toon.transparent = true; toon.opacity = o.material.opacity ?? 1; toon.alphaTest = o.material.alphaTest ?? 0; } o.material = toon; const outline = o.clone(); outline.material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }); outline.scale.multiplyScalar(1.02); o.add(outline); } } catch(_){} }); } catch(_){} }!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -23,6 +24,30 @@
     import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
     import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
     window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls;
+  </script>
+  
+  <script>
+    // Cleanup any stray text nodes accidentally inserted (defensive)
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const rm = [];
+        document.body.childNodes.forEach(n => {
+          if (n && n.nodeType === 3) {
+            const t = (n.textContent||'').trim();
+            if (/^<\s*function\s+toonifyGroup|applyAnimeToMV\(|toonifyGroup\(/i.test(t)) rm.push(n);
+          }
+        });
+        rm.forEach(n => { try { n.remove(); } catch {} });
+        const mvWrap = document.getElementById('mvWrap');
+        if (mvWrap) {
+          const rm2 = [];
+          mvWrap.childNodes.forEach(n => {
+            if (n && n.nodeType === 3 && /<script>/.test(n.textContent||'')) rm2.push(n);
+          });
+          rm2.forEach(n => { try { n.remove(); } catch {} });
+        }
+      } catch {}
+    });
   </script>
 </head>
 <body class="anime-bg min-h-screen p-5">
@@ -84,6 +109,8 @@ function isAnimeMode(){ return !!__ANIME_MODE; }
 function applyAnimeToMV(mv){ try { if(!isAnimeMode()||!mv) return; mv.environmentImage = null; mv.exposure = 0.9; const mats = (mv.model && mv.model.materials) || []; for (const m of mats){ try { const p = m.pbrMetallicRoughness; if (p && p.setMetallicFactor) p.setMetallicFactor(0); if (p && p.setRoughnessFactor) p.setRoughnessFactor(1); m.emissiveFactor = [0.04,0.04,0.08]; } catch{} } } catch{} }
 function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root.traverse?.(o=>{ try { if(o.isMesh && o.material){ if ('metalness' in o.material) o.material.metalness = 0; if ('roughness' in o.material) o.material.roughness = 1; if ('envMap' in o.material) o.material.envMap = null; o.material.needsUpdate = true; } } catch{} }); } catch{} }
     const catalogEl = $('#catalog');
+ function toonifyGroup(root){ try { if(!isAnimeMode()||!root) return; const THREE=getThree(); if(!THREE) return; const grad=(function(){ try { const c=document.createElement("canvas"); c.width=4; c.height=1; const g=c.getContext("2d"); const cols=["#0f172a","#475569","#94a3b8","#e2e8f0"]; for(let i=0;i<4;i++){ g.fillStyle=cols[i]; g.fillRect(i,0,1,1);} const t=new THREE.CanvasTexture(c); t.minFilter=THREE.NearestFilter; t.magFilter=THREE.NearestFilter; t.generateMipmaps=false; return t; } catch(e){ return null; } })(); root.traverse?.(o=>{ try { if(o.isMesh){ const baseCol=(o.material&&o.material.color)?o.material.color:new THREE.Color(0xffffff); const toon=new THREE.MeshToonMaterial({ color: baseCol, gradientMap: grad, skinning: !!(o.material&&o.material.skinning) }); if (o.material && o.material.transparent){ toon.transparent=true; toon.opacity=o.material.opacity??1; toon.alphaTest=o.material.alphaTest??0; } o.material=toon; const outline=o.clone(); outline.material=new THREE.MeshBasicMaterial({ color:0x000000, side: THREE.BackSide }); outline.scale.multiplyScalar(1.06); o.add(outline); } } catch(_){} }); } catch(_){} }
+
     const coinsEl = $('#coins');
     const tutorLink = $('#tutorLink');
     const catList = $('#catList');
@@ -91,6 +118,7 @@ function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root
     const backBtn = document.getElementById('backBtn');
     if (backBtn) {
       backBtn.addEventListener('click', (e) => {
+    try { const mv=document.getElementById("mvShop"); if (mv && !mv.__animeWire) { mv.__animeWire=true; mv.addEventListener("scene-graph-ready", ()=>applyAnimeToMV(mv)); } } catch {}
         e.preventDefault();
         try { if (history.length > 1) history.back(); else location.href = 'lesson.html'; }
         catch (e) { location.href = 'lesson.html'; }
@@ -98,6 +126,20 @@ function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root
     }
 
     // Anchor Debug toggle + Log wiring
+    // Anime toggle wiring
+    try {
+      const t = document.getElementById("animeToggle");
+      if (t && !t.__wired) {
+        t.__wired = true;
+        t.checked = (localStorage.getItem("animeMode") !== "0");
+        t.addEventListener("change", ()=>{
+          setAnimeMode(!!t.checked);
+          try { if (window.__useTV && typeof renderPreview === "function") renderPreview(); } catch {}
+          try { const mv=document.getElementById("mvShop"); if(mv && mv.model) applyAnimeToMV(mv); } catch {}
+        });
+      }
+    } catch {}
+
     (function(){
       const anchorToggle = document.getElementById('anchorDebugToggle');
       if (anchorToggle && !anchorToggle.__wired) {
@@ -412,6 +454,7 @@ function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root
         const gltf = await new Promise(res=>{ try{ loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
         if (!gltf || !gltf.scene) return false;
         baseGroup = gltf.scene; scene.add(baseGroup);
+        try { if (isAnimeMode()) { toonifyGroup(baseGroup); } } catch {}
         try {
           if (!attachGroup) attachGroup = new THREE.Group();
           // Keep attachments in world space (scene), matching Anchor Tool coordinates
@@ -468,6 +511,7 @@ function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root
           const wrap = new THREE.Group();
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
+          try { if (isAnimeMode()) { toonifyGroup(src); } } catch {}
           const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
           try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
           try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
@@ -898,6 +942,8 @@ function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root
   </script>
 </body>
 </html>
+
+
 
 
 

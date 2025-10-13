@@ -12,15 +12,10 @@
         "owned": {
           "model-allinone": true,
           "model-basemesh": true,
-          "upgrade-tutor-basic": true,
-          "cos-bottes": true,
-          "cos-bottesgreen": true,
-          "cos-ninjassuitshoe": true,
-          "cos-shoe": true,
-          "model-ninja": true
+          "upgrade-tutor-basic": true
         },
         "equipped": {
-          "model": "model-ninja"
+          "model": "model-basemesh"
         }
       }
     },
