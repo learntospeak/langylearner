@@ -9,6 +9,7 @@
     .field { @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400; }
     .field.ok  { @apply border-green-400 ring-green-300; }
     .field.bad { @apply border-red-400   ring-red-300; }
+    .btn-clearer { @apply font-bold tracking-wide; }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,21 +35,36 @@
         <p class="text-gray-700 mb-4">Learn Japanese with bite-sized lessons. Log in to earn coins and unlock 3D chibi characters and outfits.</p>
 
         <div class="flex flex-wrap gap-3">
-          <a href="lesson.html?lesson=greetings-001" class="btn btn-primary">Start Lesson</a>
-          <a href="#login" id="openLogin" class="btn btn-ghost">Log In</a>
-          <a href="#signup" id="openSignup" class="btn btn-ghost">Create Account</a>
+          <a id="continueBtn" href="lesson.html?lesson=greetings-001" class="btn btn-primary btn-clearer">Continue Learning</a>
+          <a href="#login" id="openLogin" class="btn btn-ghost btn-clearer">Log In</a>
+          <a href="#signup" id="openSignup" class="btn btn-ghost btn-clearer">Create Account</a>
+          <a id="shopBtn" href="shop.html" class="btn btn-dark btn-clearer">Go to Shop</a>
         </div>
       </div>
     </section>
+
+    <!-- Need Auth Modal -->
+    <div id="needAuthModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+      <div class="manga-bubble p-5 max-w-md w-full relative">
+        <h3 class="text-lg font-semibold mb-2">Sign in to continue</h3>
+        <p class="text-sm text-gray-700 mb-4">Log in to earn coins, save progress, and access your chibi character.</p>
+        <div class="flex flex-wrap gap-2">
+          <button id="modalLogin" class="btn btn-primary btn-clearer">Log In</button>
+          <button id="modalSignup" class="btn btn-amber btn-clearer">Create Account</button>
+          <button id="modalGuest" class="btn btn-ghost btn-clearer">Continue as Guest</button>
+        </div>
+        <button id="modalClose" class="absolute top-2 right-2 btn btn-ghost px-2 py-1">✕</button>
+      </div>
+    </div>
 
     <section id="userSection" class="hidden">
       <div class="manga-bubble p-5">
         <h2 class="text-xl font-semibold mb-2">Welcome back</h2>
         <p class="text-gray-700 mb-4">You're signed in. Visit the shop to equip your character or jump straight into a lesson.</p>
         <div class="flex flex-wrap gap-3 items-center">
-          <a href="lesson.html?lesson=greetings-001" class="btn btn-primary">Continue Learning</a>
-          <a href="shop.html" class="btn btn-dark">Go to Shop</a>
-          <button id="logoutBtn" class="btn btn-ghost">Log Out</button>
+          <a href="lesson.html?lesson=greetings-001" class="btn btn-primary btn-clearer">Continue Learning</a>
+          <a href="shop.html" class="btn btn-dark btn-clearer">Go to Shop</a>
+          <button id="logoutBtn" class="btn btn-ghost btn-clearer">Log Out</button>
         </div>
       </div>
     </section>
@@ -59,7 +75,7 @@
         <div class="space-y-3">
           <input id="liUser" class="field w-full" type="text" placeholder="Username" autocomplete="username" />
           <input id="liPass" class="field w-full" type="password" placeholder="Password" autocomplete="current-password" />
-          <button id="loginBtn" class="btn btn-primary w-full">Log In</button>
+          <button id="loginBtn" class="btn btn-primary btn-clearer w-full">Log In</button>
           <div id="loginMsg" class="text-sm text-red-600"></div>
         </div>
       </div>
@@ -71,7 +87,7 @@
           <input id="suEmail" class="field w-full" type="email" placeholder="Email (optional)" autocomplete="email" />
         
           <input id="suPass" class="field w-full" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" />
-          <button id="signupBtn" class="btn btn-amber w-full">Sign Up</button>
+          <button id="signupBtn" class="btn btn-amber btn-clearer w-full">Sign Up</button>
           <div id="signupMsg" class="text-sm text-red-600"></div>
         </div>
       </div>
@@ -87,7 +103,7 @@
   const $ = (s) => document.querySelector(s);
 
   async function fetchJSON(url, opts) {
-    const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+    const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' }, credentials: 'include' }, opts));
     let data = null; try { data = await r.json(); } catch {}
     if (!r.ok) throw new Error((data && data.error) || (data && data.details) || r.statusText || 'Request failed');
     return data;
@@ -101,17 +117,22 @@
         $('#authStatus').textContent = `Signed in as ${user.username}`;
         $('#userSection').classList.remove('hidden');
         $('#guestSection').classList.add('hidden');
+        __isAuthed = true;
       } else {
         $('#authStatus').textContent = 'Not signed in';
         $('#userSection').classList.add('hidden');
         $('#guestSection').classList.remove('hidden');
+        __isAuthed = false;
       }
     } catch (e) {
       $('#authStatus').textContent = 'Not signed in';
       $('#userSection').classList.add('hidden');
       $('#guestSection').classList.remove('hidden');
+      __isAuthed = false;
     }
   }
+
+  let __isAuthed = false; let __pendingNav = null;
 
   // Wire buttons
   window.addEventListener('DOMContentLoaded', () => {
@@ -132,12 +153,16 @@
       try {
         await fetchJSON('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
         await refreshAuth();
+        if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; }
       } catch (e) {
         $('#loginMsg').textContent = e.message || 'Login failed';
       } finally {
         loginBtn.disabled = false; loginBtn.textContent = 'Log In';
       }
     });
+
+    // Enter to submit
+    ;['liUser','liPass'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('keyup', (e)=>{ if (e.key==='Enter') loginBtn?.click(); }); });
 
     const signupBtn = $('#signupBtn');
     if (signupBtn) signupBtn.addEventListener('click', async () => {
@@ -150,6 +175,7 @@
       try {
         await fetchJSON('/api/auth/signup', { method: 'POST', body: JSON.stringify({ username, password, email }) });
         await refreshAuth();
+        if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; }
       } catch (e) {
         $('#signupMsg').textContent = e.message || 'Signup failed';
       } finally {
@@ -162,6 +188,19 @@
       try { await fetchJSON('/api/auth/logout', { method: 'POST' }); } catch {}
       await refreshAuth();
     });
+
+    // Need-auth modal wiring
+    const modal = $('#needAuthModal');
+    const modalOpen = ()=>{ try { modal.classList.remove('hidden'); modal.classList.add('flex'); } catch {} };
+    const modalClose = ()=>{ try { modal.classList.add('hidden'); modal.classList.remove('flex'); } catch {} };
+    $('#modalClose')?.addEventListener('click', modalClose);
+    $('#modalLogin')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); document.getElementById('liUser')?.focus(); window.scrollTo({ top: document.getElementById('loginCard').offsetTop - 16, behavior: 'smooth' }); });
+    $('#modalSignup')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); document.getElementById('suUser')?.focus(); window.scrollTo({ top: document.getElementById('signupCard').offsetTop - 16, behavior: 'smooth' }); });
+    $('#modalGuest')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; } });
+
+    function guardNav(id){ const el = document.getElementById(id); if (!el) return; el.addEventListener('click', (e)=>{ if (__isAuthed) return; e.preventDefault(); __pendingNav = el.getAttribute('href'); modalOpen(); }); }
+    guardNav('continueBtn');
+    guardNav('shopBtn');
   });
 
   // Service worker for offline shell

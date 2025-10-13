@@ -1,3 +1,17 @@
 {
-  "users": {}
+  "users": {
+    "Hello": {
+      "username": "Hello",
+      "email": "hello@cleverfoxprint.com.au",
+      "password": "scrypt$ea8550d94e2cc511fee6b7e9d9076b13$02902c35cff6509bb7c645511f21486e8e731adbba4dfbb0d42d522c06736ff1",
+      "progress": {},
+      "createdAt": 1760305585197,
+      "isAdmin": true,
+       "wallet": {
+        "coins": 2000000,
+        "owned": {},
+        "equipped": {}
+      }
+    }
+  }
 }

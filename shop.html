@@ -10,18 +10,18 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="anime-theme.css" />
   <script src="./modules/outfit-preview.js"></script>
-  <script type="module" src="/vendor/model-viewer.min.js"></script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <script type="importmap">
     {
       "imports": {
-        "three": "/vendor/three.module.js"
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
       }
     }
   </script>
   <script type="module">
-    import * as THREE from '/vendor/three.module.js';
-    import { GLTFLoader } from '/vendor/GLTFLoader.js';
-    import { OrbitControls } from '/vendor/OrbitControls.js';
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
     window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls;
   </script>
 </head>

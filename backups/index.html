@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>KanaReader</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- Anime/Manga fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Shared anime theme -->
+  <link rel="stylesheet" href="anime-theme.css" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111111">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+
+<body class="anime-bg min-h-screen flex items-center justify-center">
+  <main class="text-center stack" style="--stack-gap: 2.25rem">
+    <h1 class="site-title text-3xl font-bold mb-6 accent-underline">KanaReader</h1>
+
+    <!-- Button that opens lesson.html with a lesson ID -->
+    <form action="lesson.html" method="get" target="_blank">
+      <input type="hidden" name="lesson" value="greetings-001" />
+      <button type="submit" class="btn btn-primary">
+        Start Lesson
+      </button>
+    </form>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+      <a href="signin.html" class="btn btn-dark w-full sm:w-auto">Sign In</a>
+      <a href="signup.html" class="btn btn-primary w-full sm:w-auto">Sign Up</a>
+    </div>
+    <div class="text-center">
+      <a href="forgot.html" class="inline-block px-1 py-1 text-sm text-blue-700 hover:underline">Forgot your password?</a>
+    </div>
+    <p>Copyright (c) 2025 <Jellcap>. All rights reserved.
+Unauthorized copying, modification, or distribution is prohibited.
+</p>
+  </main>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js?v=6')
+      .catch(console.error);
+  });
+}
+</script>
+
+
+</body>
+
+</html>
+

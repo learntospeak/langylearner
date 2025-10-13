@@ -13,15 +13,15 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "/vendor/three.module.js"
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
       }
     }
   </script>
   <script type="module">
-    import * as THREE from '/vendor/three.module.js';
-    import { GLTFLoader } from '/vendor/GLTFLoader.js';
-    import { OrbitControls } from '/vendor/OrbitControls.js';
-    import { TransformControls } from '/vendor/TransformControls.js';
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+    import { TransformControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/TransformControls.js';
 
     const $ = (s)=>document.querySelector(s);
     const wrap = $('#canvas');

@@ -1,0 +1,7 @@
+﻿Styloo “Chibi” Characters — License: CC0 (Public Domain)
+Source: https://styloo.itch.io/chibi
+No attribution required. Free for all uses, including modification and redistribution.
+
+Add any additional asset licenses here as you include them.
+
+Includes Styloo chibi .blend and .kra sources (extracted from 'blend and krita files for chibi characters.rar'). License: CC0 (Public Domain).

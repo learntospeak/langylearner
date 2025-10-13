@@ -1,0 +1,104 @@
+{
+  "users": {
+    "test": {
+      "username": "test",
+      "email": "hello@cleverfoxprint.com.au",
+      "password": "scrypt$3ec677e6cb39f9d303c3c0ab1c293bf9$7c269c32830ba06fa5854ccd82f36baf56adb1bcde0fbca6990d238fd6a052b4",
+      "progress": {
+        "greetings-001": {
+          "stepIndex": 0,
+          "stats": {
+            "timeMsByStep": {
+              "0": 563175,
+              "1": 8144
+            },
+            "checks": {},
+            "reveals": {},
+            "totalTimeMs": 0
+          },
+          "updatedAt": 1760066275510
+        }
+      },
+      "createdAt": 1759402120040,
+      "wallet": {
+        "coins": 2000000,
+        "owned": {
+          "upgrade-tutor-basic": true,
+          "upgrade-tutor-pro": true,
+          "upgrade-hint-plus": true,
+          "upgrade-coin-boost": true,
+          "upgrade-freeze-plus": true,
+          "upgrade-shield-start": true,
+          "model-student": true,
+          "model-ninja": true,
+          "model-knight": true,
+          "model-archer": true,
+          "model-merchant": true,
+          "model-basemesh": true,
+          "model-allinone": true,
+          "cos-amorplastron": true,
+          "cos-chemise": true,
+          "cos-armorhelmet": true,
+          "cos-amorarm": true,
+          "cos-ninjassuitmask": true,
+          "cos-armorskirt": true,
+          "cos-shirt": true,
+          "cos-skirt": true,
+          "cos-hat": true,
+          "cos-greenoutfit": true,
+          "cos-armorshoe": true,
+          "cos-bottes": true,
+          "cos-bottesgreen": true,
+          "cos-ninjassuitshoe": true,
+          "cos-shoe": true,
+          "cos-armorceinturethighs": true,
+          "cos-bag": true,
+          "cos-armorknees": true,
+          "cos-armorthigh": true,
+          "cos-ninjassuitthigh": true,
+          "cos-pants": true,
+          "cos-ceinture": true,
+          "cos-greenoutfitbelt": true,
+          "cos-hairone": true,
+          "cos-hairt": true,
+          "cos-hairvariant": true,
+          "cos-armorlegs": true
+        },
+        "equipped": {
+          "model": "model-basemesh",
+          "boots": "cos-shoe",
+          "top": "cos-chemise",
+          "hat": "cos-hat",
+          "legs": "cos-pants"
+        }
+      }
+    },
+    "test1": {
+      "username": "test1",
+      "email": "hello@cleverfoxprint.com.au",
+      "password": "scrypt$094c564190b142e11246625e5d8e37a8$148a1d63a16799e0bef024c95c1dc0e8f4f8f3567b7cef0e989517434fbb9c6d",
+      "progress": {
+        "greetings-001": {
+          "stepIndex": 0,
+          "stats": {
+            "timeMsByStep": {},
+            "checks": {},
+            "reveals": {},
+            "totalTimeMs": 0
+          },
+          "updatedAt": 1759894580574
+        }
+      },
+      "createdAt": 1759894572161,
+      "wallet": {
+        "coins": 0,
+        "owned": {
+          "cos-amorplastron": true
+        },
+        "equipped": {
+          "top": "cos-amorplastron"
+        }
+      }
+    }
+  }
+}

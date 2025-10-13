@@ -14,25 +14,25 @@
     <!-- Shared anime theme -->
     <link rel="stylesheet" href="anime-theme.css" />
     <!-- 3D web component -->
-    <script type="module" src="/vendor/model-viewer.min.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
     <!-- Three.js (for OutfitPreview transforms on lesson page) -->
     <script type="importmap">
       {
         "imports": {
-          "three": "/vendor/three.module.js"
+          "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
         }
       }
     </script>
     <script type="module">
-      import { GLTFLoader } from '/vendor/GLTFLoader.js';
+      import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
       window.__GLTFLoader = GLTFLoader;
     </script>
     <script type="module">
-      import { OrbitControls } from '/vendor/OrbitControls.js';
+      import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
       window.__OrbitControls = OrbitControls;
     </script>
     <script type="module">
-      import * as THREE from '/vendor/three.module.js';
+      import * as THREE from 'three';
       window.__THREE = THREE; window.THREE = window.THREE || THREE;
     </script>
     <script>
