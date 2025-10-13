@@ -20,11 +20,10 @@
           "cos-bag": true,
           "model-ninja": true,
           "model-knight": true,
-          "model-archer": true,
-          "model-merchant": true
+          "model-archer": true
         },
         "equipped": {
-          "model": "model-basemesh"
+          "model": "model-ninja"
         }
       }
     },

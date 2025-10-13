@@ -16,15 +16,11 @@
           "cos-bottes": true,
           "cos-bottesgreen": true,
           "cos-ninjassuitshoe": true,
-          "cos-shoe": true,
-          "cos-bag": true,
-          "model-ninja": true,
-          "model-knight": true,
-          "model-archer": true,
-          "model-merchant": true
+          "cos-shoe": true
         },
         "equipped": {
-          "model": "model-basemesh"
+          "model": "model-basemesh",
+          "boots": "cos-shoe"
         }
       }
     },

@@ -24,7 +24,7 @@
           "model-merchant": true
         },
         "equipped": {
-          "model": "model-basemesh"
+          "model": "model-knight"
         }
       }
     },

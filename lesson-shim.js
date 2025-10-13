@@ -882,9 +882,22 @@ window.LessonShim = (() => {
     const quiz = box.querySelector('#varQuiz');
     // Keep button labels clean inside variations list
     const sanitizeList = () => {
-      try { (list?.querySelectorAll('[data-jp]') || []).forEach(b => b.textContent = 'Listen'); } catch {}
+      try {
+        (list?.querySelectorAll('[data-jp]') || []).forEach(b => {
+          // Only update when needed to avoid mutation feedback loops
+          if (b.textContent !== 'Listen') b.textContent = 'Listen';
+        });
+      } catch {}
     };
-    try { sanitizeList(); new MutationObserver(sanitizeList).observe(list, { childList: true, subtree: true }); } catch {}
+    try {
+      sanitizeList();
+      const obsList = new MutationObserver(() => {
+        try { obsList.disconnect(); } catch {}
+        try { sanitizeList(); } catch {}
+        try { obsList.observe(list, { childList: true, subtree: true }); } catch {}
+      });
+      obsList.observe(list, { childList: true, subtree: true });
+    } catch {}
 
     function renderList(arr) {
       list.innerHTML = "";
@@ -936,15 +949,32 @@ window.LessonShim = (() => {
       // Sanitize option labels
       try {
         const sanitizeQuiz = () => {
-          [...quiz.querySelectorAll('button[data-i]')].forEach(btn => {
-            const span = btn.querySelector('span'); const roma = span ? span.textContent : '';
-            let jp = (btn.textContent || '').replace(roma,'').trim();
-            const m = jp && jp.match(/[\u3040-\u30FF\u4E00-\u9FFF].*/);
-            if (m) jp = m[0];
-            if (span) { const spanHTML = span.outerHTML; btn.innerHTML = `- ${jp}${spanHTML}`; } else { btn.textContent = `- ${jp}`; }
-          });
+          try {
+            [...quiz.querySelectorAll('button[data-i]')].forEach(btn => {
+              const span = btn.querySelector('span');
+              const roma = span ? span.textContent : '';
+              let jp = (btn.textContent || '').replace(roma, '').trim();
+              const m = jp && jp.match(/[\u3040-\u30FF\u4E00-\u9FFF].*/);
+              if (m) jp = m[0];
+              if (span) {
+                const spanHTML = span.outerHTML;
+                const expected = `- ${jp}${spanHTML}`;
+                if (btn.innerHTML.trim() !== expected) btn.innerHTML = expected;
+              } else {
+                const expected = `- ${jp}`;
+                if (btn.textContent !== expected) btn.textContent = expected;
+              }
+            });
+          } catch {}
         };
-        sanitizeQuiz(); new MutationObserver(sanitizeQuiz).observe(quiz, { childList: true, subtree: true });
+        // Run once, then observe while avoiding feedback loops
+        sanitizeQuiz();
+        const obsQuiz = new MutationObserver(() => {
+          try { obsQuiz.disconnect(); } catch {}
+          sanitizeQuiz();
+          try { obsQuiz.observe(quiz, { childList: true, subtree: true }); } catch {}
+        });
+        obsQuiz.observe(quiz, { childList: true, subtree: true });
       } catch {}
 
       [...quiz.querySelectorAll('[data-i]')].forEach(btn => {
