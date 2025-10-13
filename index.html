@@ -118,17 +118,21 @@
         $('#userSection').classList.remove('hidden');
         $('#guestSection').classList.add('hidden');
         __isAuthed = true;
+        try { document.getElementById('authForms')?.classList.add('hidden'); } catch {}
+        try { document.getElementById('needAuthModal')?.classList.add('hidden'); document.getElementById('needAuthModal')?.classList.remove('flex'); } catch {}
       } else {
         $('#authStatus').textContent = 'Not signed in';
         $('#userSection').classList.add('hidden');
         $('#guestSection').classList.remove('hidden');
         __isAuthed = false;
+        try { document.getElementById('authForms')?.classList.remove('hidden'); } catch {}
       }
     } catch (e) {
       $('#authStatus').textContent = 'Not signed in';
       $('#userSection').classList.add('hidden');
       $('#guestSection').classList.remove('hidden');
       __isAuthed = false;
+      try { document.getElementById('authForms')?.classList.remove('hidden'); } catch {}
     }
   }
 

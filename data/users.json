@@ -7,10 +7,15 @@
       "progress": {},
       "createdAt": 1760305585197,
       "isAdmin": true,
-       "wallet": {
+      "wallet": {
         "coins": 2000000,
-        "owned": {},
-        "equipped": {}
+        "owned": {
+          "model-allinone": true,
+          "model-basemesh": true
+        },
+        "equipped": {
+          "model": "model-basemesh"
+        }
       }
     }
   }
