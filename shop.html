@@ -25,6 +25,12 @@
     window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls;
   </script>
   <script type="module">
+    import { Line2 } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/Line2.js';
+    import { LineMaterial } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/LineMaterial.js';
+    import { LineSegmentsGeometry } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/LineSegmentsGeometry.js';
+    window.__Line2 = Line2; window.__LineMaterial = LineMaterial; window.__LineSegmentsGeometry = LineSegmentsGeometry;
+  </script>
+  <script type="module">
     import { EffectComposer } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/EffectComposer.js';
     import { RenderPass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/RenderPass.js';
     import { OutlinePass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/OutlinePass.js';
@@ -58,96 +64,42 @@
   <script>
     // Flatten shading to manga-style: use unlit materials for non-skinned meshes
 function applyFlatPbrToThree(root){
+  try {
+    const THREE = (window.__THREE || window.THREE || null);
+    if (!THREE || !root) return;
+    root.traverse(o => {
       try {
-        const THREE = (window.__THREE || window.THREE || null);
-        if (!THREE) return;
-        const steps = (function(){ try { const n = parseInt(localStorage.getItem('toonSteps')||'4',10); return Math.max(2, Math.min(8, n||4)); } catch { return 4; } })();
-        const makeGrad = (stops)=>{ try { const c=document.createElement('canvas'); c.width=steps; c.height=1; const g=c.getContext('2d'); for(let i=0;i<steps;i++){ const idx=Math.floor(i*(stops.length-1)/(steps-1)); g.fillStyle=stops[idx]; g.fillRect(i,0,1,1);} const t=new THREE.CanvasTexture(c); t.minFilter=THREE.NearestFilter; t.magFilter=THREE.NearestFilter; t.generateMipmaps=false; return t; } catch { return null; } };
-        const gradNormal = makeGrad(['#0f172a','#334155','#94a3b8','#e2e8f0','#f8fafc']);
-        const gradSkin   = makeGrad(['#5b3a2e','#b8745e','#e9b5a1','#ffe7db']);
-        const KEEP_TEX = (function(){ try { return (localStorage.getItem('toonKeepTextures') ?? '1') !== '0'; } catch { return true; } })();
-        function isLikelySkin(o, mat){ try { const n=(o?.name||'').toLowerCase(); const mn=(mat?.name||'').toLowerCase(); const map=((mat?.map?.name)||(mat?.map?.source?.data?.src)||'').toLowerCase(); const keys=['skin','face','head','hand','body','palm']; return keys.some(k=> n.includes(k)||mn.includes(k)||map.includes(k)); } catch { return false; } }
-        const OUTLINE_SCALE = (function(){ try { return Math.max(1.0, parseFloat(localStorage.getItem('outlineScale'))||1.02); } catch { return 1.02; } })();
-        const OUTLINE_COLOR = (function(){ try { return new (window.__THREE||window.THREE).Color(String(localStorage.getItem('outlineColor')||'#000000')); } catch { return null; } })();
-        // Palettes for normal vs. skin surfaces (darker skin shading)
-        root?.traverse?.(o => {
-          try {
-            if (!o || !o.isMesh) return;
-            const mat = o.material; if (!mat) return;
-            // Keep textures by default so assets don't wash out; if no texture, tint to a soft pastel
-            const KEEP_TEX = (function(){ try { return (localStorage.getItem('toonKeepTextures') ?? '1') !== '0'; } catch { return true; } })();
-            const hasMap = !!(mat && mat.map);
-            let base = new THREE.Color(0xffffff);
-            if (!hasMap || !KEEP_TEX) {
-              // Build a pastel base color from the source material color
-              base = (mat.color || new THREE.Color(0xffffff)).clone();
-              try {
-                const hsl = { h:0, s:0, l:0 };
-                base.getHSL(hsl);
-                // push toward soft pastel: reduce saturation, raise lightness
-                hsl.s = Math.max(0.15, Math.min(0.4, hsl.s * 0.5 + 0.2));
-                hsl.l = Math.max(0.75, Math.min(0.92, hsl.l * 0.5 + 0.5));
-                base = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l);
-              } catch {}
-            }
-            const toon = new THREE.MeshToonMaterial({ color: base, gradientMap: (isLikelySkin(o, mat) ? gradSkin : gradNormal) });
-            // Use original texture if allowed so characters keep their colors
-            try { toon.map = (KEEP_TEX && hasMap) ? mat.map : null; } catch {}
-            try { toon.transparent = !!mat.transparent; } catch {}
-            try { if (typeof mat.opacity === 'number') toon.opacity = mat.opacity; } catch {}
-            try { if (typeof mat.alphaTest === 'number') toon.alphaTest = mat.alphaTest; } catch {}
-            try { if (typeof mat.side !== 'undefined') toon.side = mat.side; } catch {}
-            try { if (o.isSkinnedMesh || o.skeleton) toon.skinning = true; } catch {}
-            o.material = toon;
-
-            // Add a thin black outline per mesh: sibling for skinned, child for others
-            const srcId = o.uuid;
-            const isSkinned = !!o.isSkinnedMesh || !!o.skeleton;
-            if (isSkinned && THREE.SkinnedMesh) {
-              const parent = o.parent;
-              if (parent) {
-                const already = parent.children && parent.children.some(ch => ch && ch.userData && ch.userData.__flatOutlineSrc === srcId);
-                if (!already) {
-                  try {
-                    const basic = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR || 0x000000, side: THREE.BackSide });
-                    basic.skinning = true;
-                    const outline = new THREE.SkinnedMesh(o.geometry, basic);
-                    try { outline.bind(o.skeleton, o.bindMatrix); } catch {}
-                    try { outline.position.copy(o.position); outline.quaternion.copy(o.quaternion); outline.scale.copy(o.scale); } catch {}
-                    try { outline.scale.multiplyScalar(OUTLINE_SCALE); } catch {}
-                    outline.userData = outline.userData || {};
-                    outline.userData.__flatOutline = true;
-                    outline.userData.__flatOutlineSrc = srcId;
-                    try { outline.renderOrder = (o.renderOrder||0) - 1; } catch {}
-                    parent.add(outline);
-                  } catch {}
-                }
-              }
-            } else {
-              const hasOutline = Array.isArray(o.children) && o.children.some(ch => ch && ch.userData && ch.userData.__flatOutline);
-              if (!hasOutline) {
-                try {
-                  const outline = o.clone();
-                  outline.material = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR || 0x000000, side: THREE.BackSide });
-                  outline.scale.multiplyScalar(OUTLINE_SCALE);
-                  outline.userData = outline.userData || {};
-                  outline.userData.__flatOutline = true;
-                  outline.userData.__flatOutlineSrc = srcId;
-                  try { outline.renderOrder = (o.renderOrder||0) - 1; } catch {}
-                  o.add(outline);
-                } catch {}
-              }
-            }
-          } catch {}
-        });
+        if (!o || !o.isMesh) return;
+        const mat = o.material; if (!mat) return;
+        const hasMap = !!mat.map;
+        const isSkinned = !!o.isSkinnedMesh || !!o.skeleton;
+        if (!isSkinned && THREE && THREE.MeshBasicMaterial) {
+          const opts = {};
+          try { if (hasMap) opts.map = mat.map; } catch {}
+          try { if (mat.color) opts.color = mat.color; } catch {}
+          const basic = new THREE.MeshBasicMaterial(opts);
+          try { if (mat.transparent) basic.transparent = true; } catch {}
+          try { if (typeof mat.opacity === "number") basic.opacity = mat.opacity; } catch {}
+          try { if (typeof mat.alphaTest === "number") basic.alphaTest = mat.alphaTest; } catch {}
+          try { if (typeof mat.side !== "undefined") basic.side = mat.side; } catch {}
+          try { if (o.isSkinnedMesh || o.skeleton) basic.skinning = true; } catch {}
+          o.material = basic;
+        } else {
+          try { if ("metalness" in mat) mat.metalness = 0; } catch {}
+          try { if ("roughness" in mat) mat.roughness = 1; } catch {}
+          try { if ("envMap" in mat) mat.envMap = null; } catch {}
+          try { mat.needsUpdate = true; } catch {}
+        }
       } catch {}
-    }
-    // Apply to <model-viewer> base once ready
+    });
+  } catch {}
+}
+            // Apply to <model-viewer> base once ready
     function applyAnimeToMV(mv){
       try {
         try { mv.environmentImage = null; mv.exposure = 1.0; } catch {}
         const scene = (mv && mv.model && mv.model.scene) || mv.scene || null;
-        if (scene) applyToonShadingToThree(scene);
+        if (scene) applyFlatPbrToThree(scene);
       } catch {}
     }
   </script>
@@ -485,9 +437,8 @@ function applyFlatPbrToThree(root){
         camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
         camera.position.set(0, 0.35, 1.0);
         // Flat lighting: ambient-only to remove per-pixel shading/contrast
-        // Soft, warm lighting: high ambient + gentle warm directional for light cel shading
-        const amb = new THREE.AmbientLight(0xffffff, 0.9); scene.add(amb);
-        const dir = new THREE.DirectionalLight(0xffe8d0, 0.35); dir.position.set(1,1,1); scene.add(dir);
+        // Flat, bright lighting: ambient-only (no directional shading)
+        const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
         renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false, powerPreference:'low-power' });
         renderer.setSize(w, h, false);
         renderer.setPixelRatio(1);
@@ -514,8 +465,14 @@ function applyFlatPbrToThree(root){
             if (window.__OutlinePass) {
               outlinePass = new window.__OutlinePass(new (THREE.Vector2)(w, h), scene, camera);
               try { outlinePass.visibleEdgeColor.set(0x000000); outlinePass.hiddenEdgeColor.set(0x000000); } catch {}
-              try { outlinePass.edgeStrength = Number(localStorage.getItem('outlineStrength') || 10.0); } catch {}
-              try { outlinePass.edgeThickness = Number(localStorage.getItem('outlineThickness') || 3.0); } catch {}
+              // Approximate 0.1mm line in screen space
+              try {
+                const mm = parseFloat(localStorage.getItem('outlineMM') || '0.1');
+                const dpi = 96 * (window.devicePixelRatio || 1);
+                const px = Math.max(1, Math.round(dpi * (mm / 25.4)));
+                outlinePass.edgeThickness = px; // use px-equivalent
+                outlinePass.edgeStrength = Number(localStorage.getItem('outlineStrength') || 8.0);
+              } catch {}
               composer.addPass(outlinePass);
               window.__OutlinePassActive = true;
             }
@@ -1081,6 +1038,8 @@ function applyFlatPbrToThree(root){
   </script>
 </body>
 </html>
+
+
 
 
 
