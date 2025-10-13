@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -307,6 +307,15 @@
                   const items = (catRes && catRes.items) || []; const idToItem = new Map(items.map(i=>[i.id,i]));
                   const modelItem = idToItem.get(eq.model) || items.find(i=>i.id==='model-basemesh'); if (!modelItem) return;
                   const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); return; }
+                  // Anime Mode toonify
+                  try {
+                    const anime = (function(){ try { return localStorage.getItem('animeMode') !== '0'; } catch { return true; } })();
+                    if (anime) {
+                      const makeGrad = ()=>{ try { const c=document.createElement('canvas'); c.width=5; c.height=1; const g=c.getContext('2d'); const cols=['#0f172a','#334155','#64748b','#94a3b8','#e2e8f0']; for(let i=0;i<5;i++){ g.fillStyle=cols[i]; g.fillRect(i,0,1,1);} const t=new THREE.CanvasTexture(c); t.minFilter=THREE.NearestFilter; t.magFilter=THREE.NearestFilter; t.generateMipmaps=false; return t; } catch(e){ return null; } };
+                      const grad = makeGrad();
+                      rootG.traverse(o=>{ try{ if(o.isMesh){ const baseCol = (o.material && o.material.color) ? o.material.color : new THREE.Color(0xffffff); const toon = new THREE.MeshToonMaterial({ color: baseCol, gradientMap: grad }); toon.skinning = !!(o.material && o.material.skinning); o.material = toon; const outline = o.clone(); outline.material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide }); outline.scale.multiplyScalar(1.02); o.add(outline);} }catch(_){} });
+                    }
+                  } catch(_){ }
                   const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base);
                   try { const box = new THREE.Box3().setFromObject(base); const c = box.getCenter(new THREE.Vector3()); base.position.sub(c); const size=new THREE.Vector3(); box.getSize(size); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=2.34; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size.y*0.06,dist); if (controls) { controls.target.set(0, size.y*0.54, 0); controls.update(); } } catch {}
                   const anchors = window.SLOT_ANCHORS || {};

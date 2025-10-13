@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -32,7 +32,9 @@
         <a href="#" id="backBtn" class="btn btn-ghost text-sm">Back</a>
         <h1 class="site-title text-2xl font-bold accent-underline">Shop</h1>
       </div>
-      <div class="text-sm">Coins: <strong id="coins">0</strong></div>
+      <div class="text-sm flex items-center gap-3">Coins: <strong id="coins">0</strong>
+        <label class="text-xs inline-flex items-center gap-1"><input type="checkbox" id="animeToggle" class="accent-pink-500"> Anime Mode</label>
+      </div>
     </header>
 
     <section class="manga-bubble p-3">
@@ -48,7 +50,7 @@
         <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
             <div id="mvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;">
-              <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+              \n<script>document.addEventListener('DOMContentLoaded',()=>{ try{ const mv=document.getElementById('mvShop'); if(mv){ mv.addEventListener('scene-graph-ready',()=>applyAnimeToMV(mv)); } const t=document.getElementById('animeToggle'); if(t){ t.checked = (localStorage.getItem('animeMode')!=='0'); t.addEventListener('change',()=>{ setAnimeMode(!!t.checked); try{ const mv=document.getElementById('mvShop'); if(mv && mv.model) applyAnimeToMV(mv);}catch{} }); } }catch{} });</script>\n<model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none" reveal="interaction" loading="lazy"></model-viewer>
             </div>
             <div id="tvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
@@ -75,6 +77,12 @@
 
   <script>
     const $ = (s) => document.querySelector(s);
+// Anime Mode helpers
+let __ANIME_MODE = (function(){ try { return localStorage.getItem('animeMode') !== '0'; } catch { return true; } })();
+function setAnimeMode(on){ try { __ANIME_MODE = !!on; localStorage.setItem('animeMode', on? '1':'0'); } catch {} }
+function isAnimeMode(){ return !!__ANIME_MODE; }
+function applyAnimeToMV(mv){ try { if(!isAnimeMode()||!mv) return; mv.environmentImage = null; mv.exposure = 0.9; const mats = (mv.model && mv.model.materials) || []; for (const m of mats){ try { const p = m.pbrMetallicRoughness; if (p && p.setMetallicFactor) p.setMetallicFactor(0); if (p && p.setRoughnessFactor) p.setRoughnessFactor(1); m.emissiveFactor = [0.04,0.04,0.08]; } catch{} } } catch{} }
+function applyFlatPbrToThree(root){ try { if(!isAnimeMode()||!root) return; root.traverse?.(o=>{ try { if(o.isMesh && o.material){ if ('metalness' in o.material) o.material.metalness = 0; if ('roughness' in o.material) o.material.roughness = 1; if ('envMap' in o.material) o.material.envMap = null; o.material.needsUpdate = true; } } catch{} }); } catch{} }
     const catalogEl = $('#catalog');
     const coinsEl = $('#coins');
     const tutorLink = $('#tutorLink');
@@ -890,6 +898,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 
 
