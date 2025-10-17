@@ -21,10 +21,23 @@
           "model-ninja": true,
           "model-knight": true,
           "model-archer": true,
-          "model-merchant": true
+          "model-merchant": true,
+          "cos-armorskirt": true,
+          "cos-hairone": true,
+          "cos-hairt": true,
+          "cos-hairtail": true,
+          "cos-hairtailknight": true,
+          "cos-hairvariant": true,
+          "cos-armorhelmet": true,
+          "cos-hat": true,
+          "model-student": true,
+          "cos-armorshoe": true,
+          "cos-amorarm": true,
+          "cos-ceinture": true,
+          "cos-greenoutfitbelt": true
         },
         "equipped": {
-          "model": "model-merchant"
+          "model": "model-basemesh"
         }
       }
     },

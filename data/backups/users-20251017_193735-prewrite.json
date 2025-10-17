@@ -8,7 +8,7 @@
       "createdAt": 1760305585197,
       "isAdmin": true,
       "wallet": {
-        "coins": 1999800,
+        "coins": 1999500,
         "owned": {
           "model-allinone": true,
           "model-basemesh": true,
@@ -21,10 +21,33 @@
           "model-ninja": true,
           "model-knight": true,
           "model-archer": true,
-          "model-merchant": true
+          "model-merchant": true,
+          "cos-armorskirt": true,
+          "cos-hairone": true,
+          "cos-hairt": true,
+          "cos-hairtail": true,
+          "cos-hairtailknight": true,
+          "cos-hairvariant": true,
+          "cos-armorhelmet": true,
+          "cos-hat": true,
+          "model-student": true,
+          "cos-armorshoe": true,
+          "cos-amorarm": true,
+          "cos-ceinture": true,
+          "cos-greenoutfitbelt": true,
+          "cos-amorplastron": true,
+          "cos-chemise": true,
+          "cos-shirt": true,
+          "upgrade-hint-plus": true,
+          "cos-skirt": true
         },
         "equipped": {
-          "model": "model-knight"
+          "model": "model-basemesh",
+          "bag": "cos-bag",
+          "boots": "cos-ninjassuitshoe",
+          "skirt": "cos-skirt",
+          "top": "cos-shirt",
+          "hair": "cos-hairvariant"
         }
       }
     },

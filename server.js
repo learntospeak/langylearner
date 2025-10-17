@@ -436,9 +436,15 @@ function isCompatible(item, modelId){
       if (seeded) { try { await writeDb(db); } catch {} }
       const catalog = await getCatalog();
       const validIds = new Set(catalog.map(i => i.id));
+      // Persist default base model ownership/equipped to avoid mismatch
+      let wrote = false;
+      if (!wallet.owned['model-student']) { wallet.owned['model-student'] = true; wrote = true; }
+      if (!wallet.equipped.model) { wallet.equipped.model = 'model-student'; wrote = true; }
+      if (wrote) { try { await writeDb(db); } catch {} }
       // Build a response view without writing to disk (avoids file locking issues)
       const owned = Object.fromEntries(Object.entries(wallet.owned||{}).filter(([id])=>validIds.has(id)));
       const equipped = Object.fromEntries(Object.entries(wallet.equipped||{}).filter(([slot,id])=>validIds.has(id)));
+      // Ensure the response also reflects the default
       owned['model-student'] = true;
       if (!equipped.model) equipped.model = 'model-student';
       let coins = wallet.coins|0;
@@ -491,7 +497,16 @@ app.post('/api/wallet/sync', async (req, res) => {
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
-    if (!wallet.owned[item.id]) return res.status(400).json({ error: 'Item not owned' });
+    // Allow equipping free base models even if not explicitly persisted as owned.
+    // This prevents a mismatch where /api/wallet shows the default model as owned
+    // (for UX) but the DB doesn't have it yet.
+    const isFreeModel = (item.slot === 'model') && ((item.price|0) === 0);
+    if (!wallet.owned[item.id] && !isFreeModel) {
+      return res.status(400).json({ error: 'Item not owned' });
+    }
+    if (isFreeModel && !wallet.owned[item.id]) {
+      wallet.owned[item.id] = true; // persist implied ownership of free base model
+    }
     // If equipping a model, clear non-model slots to avoid incompatible outfits.
     if (item.slot === 'model') {
       wallet.equipped = { model: item.id };

@@ -39,22 +39,10 @@
           "cos-chemise": true,
           "cos-shirt": true,
           "upgrade-hint-plus": true,
-          "cos-skirt": true,
-          "cos-armorceinturethighs": true,
-          "cos-armorknees": true,
-          "cos-armorlegs": true,
-          "cos-armorthigh": true,
-          "cos-ninjassuitthigh": true,
-          "cos-pants": true
+          "cos-skirt": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "hair": "cos-hairt",
-          "boots": "cos-bottesgreen",
-          "bag": "cos-bag",
-          "top": "cos-amorplastron",
-          "misc": "cos-amorarm",
-          "legs": "cos-pants"
+          "model": "model-student"
         }
       }
     },

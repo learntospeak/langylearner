@@ -1,0 +1,21 @@
+{
+  "workbench.startupEditor": "none",
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/backups/**": true,
+    "**/temp_backup/**": true,
+    "**/data/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/backups": true,
+    "**/temp_backup": true,
+    "**/data": true
+  },
+  "git.autorefresh": false
+}

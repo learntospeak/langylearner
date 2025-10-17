@@ -34,6 +34,7 @@
     const saveBtn=$('#saveBtn');
     const copyBtn=$('#copyBtn');
     const resetBtn=$('#resetBtn');
+    const hideBuiltInChk = $('#hideBuiltIn');
 
     let scene, camera, renderer, orbit, tctl, baseGroup=null, accWrap=null;
     const loader = new GLTFLoader();
@@ -55,6 +56,59 @@
       bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
       misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
     };
+
+    // Preview-only geometric thickening (boots/shoes + specific items)
+    const BOOT_INFLATE = (function(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } })();
+    function inflateScene(root, amount){
+      try {
+        if (!root || !amount || !isFinite(amount) || amount<=0) return;
+        const THREE = window.THREE;
+        root.traverse(o=>{
+          try {
+            if (!o || !o.isMesh || !o.geometry) return;
+            const g0 = o.geometry; const g = g0.clone(); o.geometry = g;
+            if (!g.attributes || !g.attributes.position) return;
+            if (!g.attributes.normal) { try { g.computeVertexNormals(); } catch {} }
+            const pos=g.attributes.position, nor=g.attributes.normal; if(!pos||!nor) return;
+            const pa=pos.array, na=nor.array; const len=Math.min(pa.length, na.length);
+            for (let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; }
+            pos.needsUpdate=true; try { g.computeBoundingBox(); g.computeBoundingSphere(); } catch {}
+          } catch {}
+        });
+      } catch {}
+    }
+    function isBootish(id, slot){ try { return (slot==='boots'||slot==='feet'||/shoe|bottes/i.test(String(id||''))); } catch { return false; } }
+
+    // Match Shop behavior: shrink basemesh slightly without affecting accessories.
+    const BASEMESH_SCALE = (function(){
+      try { const v = parseFloat(localStorage.getItem('baseMeshScale') || '0.92'); return (isFinite(v) && v > 0) ? v : 0.92; }
+      catch { return 0.92; }
+    })();
+    function isBasemeshUrl(u){
+      try {
+        const s = String(u||'');
+        // Treat student model as basemesh-derived for consistent scaling
+        return /(basemeshpr|studentpr)\.glb$/i.test(s);
+      } catch { return false; }
+    }
+
+    // Option: hide meshes that look like built-in accessories on character models
+    function shouldHideBuiltIns(){ try { return !!JSON.parse(localStorage.getItem('hideBuiltInAcc')||'false'); } catch { return false; } }
+    function setHideBuiltIns(v){ try { localStorage.setItem('hideBuiltInAcc', JSON.stringify(!!v)); } catch {} }
+    function stripBuiltInAccessories(root){
+      try {
+        if (!root) return;
+        const patStr = (function(){ try { return String(localStorage.getItem('accessoryNameFilter')||''); } catch { return ''; } })();
+        const userRe = (function(){ try { return patStr? new RegExp(patStr, 'i') : null; } catch { return null; } })();
+        const re = userRe || /(hat|helmet|cap|hair|mask|glasses|goggles|scarf|tie|skirt|dress|belt|bag|backpack|shoe|boot|bottes|sock|glove|bracelet|necklace|earring)/i;
+        root.traverse(o=>{
+          try {
+            const nm = String(o.name||'');
+            if (o.isMesh && re.test(nm)) { o.visible = false; }
+          } catch {}
+        });
+      } catch {}
+    }
 
     function init(){
       const w = wrap.clientWidth, h = wrap.clientHeight;
@@ -86,7 +140,10 @@
       }catch{}
     }
 
-    async function loadGLB(url){ return await new Promise(res=>{ try{ loader.load(url,g=>res(g?.scene||null),undefined,()=>res(null)); }catch{ res(null); } }); }
+    function toAbsoluteAsset(url){
+      try { if (!url) return url; if (url.startsWith('http')) return url; if (url.startsWith('/')) return url; if (url.startsWith('assets/')) return '/' + url; return url; } catch { return url; }
+    }
+    async function loadGLB(url){ const u = toAbsoluteAsset(url); return await new Promise(res=>{ try{ loader.load(u, g=>res(g?.scene||null), undefined, (e)=>{ try{ console.warn('[anchor] load failed', u, e); }catch{} res(null); }); }catch{ res(null); } }); }
 
     async function loadBase(url){
       try{
@@ -94,14 +151,29 @@
         if(baseGroup){ scene.remove(baseGroup); baseGroup=null; }
         if(accWrap){ scene.remove(accWrap); accWrap=null; }
       }catch{}
-      const sceneObj = await loadGLB(url); if(!sceneObj) return false; baseGroup = sceneObj; scene.add(baseGroup); fitCameraTo(baseGroup); return true;
+      const sceneObj = await loadGLB(url); if(!sceneObj) { try{ console.warn('[anchor] base load failed', url); }catch{} return false; }
+      baseGroup = sceneObj;
+      try { if (isBasemeshUrl(url)) { const k = BASEMESH_SCALE; baseGroup.scale.set(k,k,k); } } catch {}
+      try { if (shouldHideBuiltIns()) stripBuiltInAccessories(baseGroup); } catch {}
+      scene.add(baseGroup);
+      fitCameraTo(baseGroup);
+      return true;
     }
 
     async function loadAccessory(url){
       if(!baseGroup) return false;
       if(accWrap){ try{ if (tctl && tctl.object===accWrap) tctl.detach(); scene.remove(accWrap);}catch{} accWrap=null; }
-      const obj=await loadGLB(url); if(!obj) return false; const wrap = new THREE.Group();
+      const obj=await loadGLB(url); if(!obj) { try{ console.warn('[anchor] accessory load failed', url); }catch{} return false; } const wrap = new THREE.Group();
       try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
+      try {
+        const opt = itemSel && itemSel.options && itemSel.options[itemSel.selectedIndex];
+        const id = opt && opt.dataset && opt.dataset.id;
+        const slot = slotSel && (slotSel.value||'');
+        let infl = 0;
+        if (String(id||'').toLowerCase()==='cos-bottesgreen') infl = Math.max(infl, BOOT_INFLATE*1.5);
+        if (isBootish(id, slot)) infl = Math.max(infl, BOOT_INFLATE);
+        if (infl>0) inflateScene(obj, infl);
+      } catch {}
       wrap.add(obj); accWrap = wrap; scene.add(wrap); tctl.attach(wrap); return true;
     }
 
@@ -116,21 +188,56 @@
       const key = (scopeItem && scopeItem.checked && itemId) ? itemId : slot;
       const a={ position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1, (+scaleF.value||1)||1,(+scaleF.value||1)||1] };
       const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
-      ov[key]=a; localStorage.setItem('anchorOverrides', JSON.stringify(ov));
+      ov[key]=a; const json=JSON.stringify(ov);
+      localStorage.setItem('anchorOverrides', json);
+      try { localStorage.setItem('anchorOverrides_last', json); } catch {}
     }
 
     copyBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const itemOpt=itemSel.options[itemSel.selectedIndex]; const itemId=itemOpt?.dataset?.id; const key=(scopeItem&&scopeItem.checked&&itemId)?itemId:slot; const data={ [key]: { position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ] } }; const t=JSON.stringify(data, null, 2); navigator.clipboard?.writeText(t).catch(()=>{}); });
     saveBtn?.addEventListener('click', ()=>{ applyFields(); saveAnchor(); });
+    // Download current overrides to a JSON file
+    try { document.getElementById('downloadBtn')?.addEventListener('click', ()=>{
+      try { const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; const blob = new Blob([JSON.stringify(ov, null, 2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='anchors.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); } catch {}
+    }); } catch {}
+    // Load overrides from a JSON file
+    try { document.getElementById('uploadFile')?.addEventListener('change', (e)=>{
+      try { const f=e.target.files&&e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ try{ const data=JSON.parse(String(fr.result||'{}')||'{}')||{}; const cur=(function(){ try{return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};}catch{return{};} })(); const merged=Object.assign({}, cur, data); const json=JSON.stringify(merged); localStorage.setItem('anchorOverrides', json); localStorage.setItem('anchorOverrides_last', json); toast('Loaded anchors from file.'); }catch(err){ alert('Invalid JSON'); } }; fr.readAsText(f); } catch {}
+    }); } catch {}
+    try { document.getElementById('camReset')?.addEventListener('click', ()=>{ try { if (baseGroup) fitCameraTo(baseGroup); } catch {} }); } catch {}
     resetBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); });
 
     posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
 
     async function populate(){
-      try{ const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[]; const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model'); const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model'); models.forEach(m=>{ const o=document.createElement('option'); o.value=m.model; o.textContent=m.name; modelSel.appendChild(o); }); acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.model; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); }); const uniqSlots=[...new Set(acc.map(a=>a.slot))]; uniqSlots.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; slotSel.appendChild(o); }); if(models[0]){ await loadBase(models[0].model);} if(acc[0]){ slotSel.value=acc[0].slot; await loadAccessory(acc[0].model); const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); } }catch{}
+      try{
+        const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[];
+        const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model');
+        const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model');
+        models.forEach(m=>{ const o=document.createElement('option'); o.value=toAbsoluteAsset(m.model); o.textContent=m.name; modelSel.appendChild(o); });
+        acc.forEach(a=>{ const o=document.createElement('option'); o.value=toAbsoluteAsset(a.model); o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); });
+        const uniqSlots=[...new Set(acc.map(a=>a.slot))]; uniqSlots.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; slotSel.appendChild(o); });
+        if(models[0]){ await loadBase(models[0].model);} if(acc[0]){ slotSel.value=acc[0].slot; await loadAccessory(acc[0].model); const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); }
+      }catch(e){ try{ console.warn('[anchor] populate failed', e); }catch{} }
     }
 
-    modelSel.onchange=async()=>{ await loadBase(modelSel.value); if(accWrap) { applyFields(); } };
-    itemSel.onchange=async()=>{ const opt=itemSel.options[itemSel.selectedIndex]; slotSel.value=opt?.dataset?.slot||'misc'; await loadAccessory(itemSel.value); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })(); const itemId=opt?.dataset?.id; const a = ov[itemId] || ov[slotSel.value] || SLOT_ANCHORS_DEFAULT[slotSel.value] || SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round((a.rotation[0]||0)*180/Math.PI); rotY.value=Math.round((a.rotation[1]||0)*180/Math.PI); rotZ.value=Math.round((a.rotation[2]||0)*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); };
+    modelSel.onchange=async()=>{ const v = toAbsoluteAsset(modelSel.value); await loadBase(v); if(accWrap) { applyFields(); } };
+    itemSel.onchange=async()=>{ const opt=itemSel.options[itemSel.selectedIndex]; slotSel.value=opt?.dataset?.slot||'misc'; const v = toAbsoluteAsset(itemSel.value); await loadAccessory(v); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })(); const itemId=opt?.dataset?.id; const a = ov[itemId] || ov[slotSel.value] || SLOT_ANCHORS_DEFAULT[slotSel.value] || SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round((a.rotation[0]||0)*180/Math.PI); rotY.value=Math.round((a.rotation[1]||0)*180/Math.PI); rotZ.value=Math.round((a.rotation[2]||0)*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); };
+
+    try {
+      if (hideBuiltInChk) {
+        hideBuiltInChk.checked = shouldHideBuiltIns();
+        hideBuiltInChk.addEventListener('change', async ()=>{
+          setHideBuiltIns(hideBuiltInChk.checked);
+          try {
+            if (baseGroup) {
+              // Re-apply visibility on current model
+              baseGroup.traverse(o=>{ try { o.visible = true; } catch {} });
+              if (hideBuiltInChk.checked) stripBuiltInAccessories(baseGroup);
+            }
+          } catch {}
+        });
+      }
+    } catch {}
 
     init(); populate();
   </script>
@@ -152,6 +259,10 @@
         <select id="itemSel" class="border p-1 w-full"></select>
       </div>
       <div class="mb-2">
+        <label class="inline-flex items-center gap-2"><input id="hideBuiltIn" type="checkbox" class="border"> Hide built-in accessories</label>
+        <div class="text-xs text-gray-500">Tip: uncheck if the model includes only the base body.</div>
+      </div>
+      <div class="mb-2">
 <div class="font-semibold">Slot</div>
 <select id="slotSel" class="border p-1 w-full"></select>
 </div>
@@ -169,10 +280,16 @@
         <label>RotZ° <input id="rotZ" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
         <label>Scale <input id="scaleF" type="number" step="0.01" class="border px-1 py-0.5 w-full"></label>
       </div>
-      <div class="flex gap-2">
-        <button id="saveBtn" class="btn btn-primary">Save (local)</button> <button id="copyBtn" class="btn btn-ghost">Copy JSON</button> <button id="resetBtn" class="btn btn-amber">Reset Defaults</button> <button id="camReset" class="btn btn-ghost">Reset Camera</button>
+      <div class="flex flex-wrap gap-2">
+        <button id="saveBtn" class="btn btn-primary">Save (local)</button>
+        <button id="copyBtn" class="btn btn-ghost">Copy JSON</button>
+        <button id="downloadBtn" class="btn btn-ghost">Download JSON</button>
+        <label class="btn btn-ghost" for="uploadFile">Load JSON</label>
+        <input id="uploadFile" type="file" accept="application/json" class="hidden" />
+        <button id="resetBtn" class="btn btn-amber">Reset Defaults</button>
+        <button id="camReset" class="btn btn-ghost">Reset Camera</button>
       </div>
-      <div class="text-xs text-gray-600 mt-2">Saved anchors are written to localStorage under <code>anchorOverrides</code>. Shop uses the same key.</div>
+      <div class="text-xs text-gray-600 mt-2">Saved anchors are written to localStorage under <code>anchorOverrides</code> (and backed up to <code>anchorOverrides_last</code>). Shop uses the same key.</div>
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>

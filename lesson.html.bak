@@ -1,11 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 
-      // Preview-only thickening to prevent poke-through (boots, tops, bags)
-      function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch { return 0.0; } }
-      function __inflateScene(root, amount){
-        try { if(!root||!amount||!isFinite(amount)||amount<=0) return; const THREE=(window.__THREE||window.THREE); root.traverse(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} }catch{} }); } catch {} }
-      function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch { return false; } }
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
@@ -298,7 +293,6 @@
                   const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
                   // Flat lighting: ambient-only for manga-style look
                   const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
-                  try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch {}
                   const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                   renderer.setSize(w, h, false); renderer.setPixelRatio(1);
                   wrap.innerHTML=''; wrap.appendChild(renderer.domElement);
@@ -388,7 +382,7 @@
                   const loaded = new Map(loadAll.filter(([id,g])=>g&&g.scene));
                   console.log('[lesson-lv] items loaded', loaded.size);
                   function getAnchor(slot,id){ try{ const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch { return anchors[slot]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
-                  for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
+                  for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:((target*baseH)/objH); if(!(s>0&&s<10)) s=target; wrapG.scale.set(s,s,s);}catch{} try{ wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
                   // Reframe to include accessories (hats etc.)
                   try { const whole = new THREE.Box3().setFromObject(rootG); const size2 = new THREE.Vector3(); whole.getSize(size2); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=1.40; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size2.y*0.06,dist); if (controls) { controls.target.set(0, size2.y*0.54, 0); controls.update(); } } catch {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
@@ -1225,7 +1219,6 @@
                     const scene = new THREE.Scene();
                     const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
                     const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
-                    try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch {}
                     const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                     renderer.setSize(w,h,false); renderer.setPixelRatio(1);
                     wrap.innerHTML=''; wrap.style.display='block';
@@ -1249,7 +1242,7 @@
                     } catch {}
                     // Attach items
                     const anchors = window.SLOT_ANCHORS || {};
-                    async function addOne(slot, id){ const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return; const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch{ res(null);} }); if(!gltf2||!gltf2.scene) return; const obj = gltf2.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); let a = ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG);} 
+                    async function addOne(slot, id){ const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return; const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch{ res(null);} }); if(!gltf2||!gltf2.scene) return; const obj = gltf2.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); let a = ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG);} 
                     const slots = Object.keys(eq||{}).filter(s=>s!=='model');
                     for (const slot of slots){ const raw = eq[slot]; const ids = Array.isArray(raw) ? raw : [raw]; for (const id of ids){ await addOne(slot, id); } }
                   })();
@@ -1267,9 +1260,6 @@
   } catch {}
 })();
 </script>
-
-
-
 
 
 

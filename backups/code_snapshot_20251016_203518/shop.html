@@ -19,10 +19,89 @@
     }
   </script>
   <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+    import * as THREE from 'three';
     import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
     import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
     window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls;
+  </script>
+  <script type="module">
+    import { Line2 } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/Line2.js';
+    import { LineMaterial } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/LineMaterial.js';
+    import { LineSegmentsGeometry } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/LineSegmentsGeometry.js';
+    window.__Line2 = Line2; window.__LineMaterial = LineMaterial; window.__LineSegmentsGeometry = LineSegmentsGeometry;
+  </script>
+  <script type="module">
+    import { EffectComposer } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/RenderPass.js';
+    import { OutlinePass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/OutlinePass.js';
+    import { SMAAPass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/SMAAPass.js';
+    window.__EffectComposer = EffectComposer; window.__RenderPass = RenderPass; window.__OutlinePass = OutlinePass; window.__SMAAPass = SMAAPass;
+  </script>
+  
+  <script>
+    // Cleanup any stray text nodes accidentally inserted (defensive)
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const rm = [];
+        document.body.childNodes.forEach(n => {
+          if (n && n.nodeType === 3) {
+            const t = (n.textContent||'').trim();
+            if (/^<\s*function\s+toonifyGroup|applyAnimeToMV\(|toonifyGroup\(/i.test(t)) rm.push(n);
+          }
+        });
+        rm.forEach(n => { try { n.remove(); } catch {} });
+        const mvWrap = document.getElementById('mvWrap');
+        if (mvWrap) {
+          const rm2 = [];
+          mvWrap.childNodes.forEach(n => {
+            if (n && n.nodeType === 3 && /<script>/.test(n.textContent||'')) rm2.push(n);
+          });
+          rm2.forEach(n => { try { n.remove(); } catch {} });
+        }
+      } catch {}
+    });
+  </script>
+  <script>
+    // Flatten shading to manga-style: use unlit materials for non-skinned meshes
+function applyFlatPbrToThree(root){
+  try {
+    const THREE = (window.__THREE || window.THREE || null);
+    if (!THREE || !root) return;
+    root.traverse(o => {
+      try {
+        if (!o || !o.isMesh) return;
+        const mat = o.material; if (!mat) return;
+        const hasMap = !!mat.map;
+        const isSkinned = !!o.isSkinnedMesh || !!o.skeleton;
+        if (!isSkinned && THREE && THREE.MeshBasicMaterial) {
+          const opts = {};
+          try { if (hasMap) opts.map = mat.map; } catch {}
+          try { if (mat.color) opts.color = mat.color; } catch {}
+          const basic = new THREE.MeshBasicMaterial(opts);
+          try { if (mat.transparent) basic.transparent = true; } catch {}
+          try { if (typeof mat.opacity === "number") basic.opacity = mat.opacity; } catch {}
+          try { if (typeof mat.alphaTest === "number") basic.alphaTest = mat.alphaTest; } catch {}
+          try { if (typeof mat.side !== "undefined") basic.side = mat.side; } catch {}
+          try { if (o.isSkinnedMesh || o.skeleton) basic.skinning = true; } catch {}
+          o.material = basic;
+        } else {
+          try { if ("metalness" in mat) mat.metalness = 0; } catch {}
+          try { if ("roughness" in mat) mat.roughness = 1; } catch {}
+          try { if ("envMap" in mat) mat.envMap = null; } catch {}
+          try { mat.needsUpdate = true; } catch {}
+        }
+      } catch {}
+    });
+  } catch {}
+}
+            // Apply to <model-viewer> base once ready
+    function applyAnimeToMV(mv){
+      try {
+        try { mv.environmentImage = null; mv.exposure = 1.0; } catch {}
+        const scene = (mv && mv.model && mv.model.scene) || mv.scene || null;
+        if (scene) applyFlatPbrToThree(scene);
+      } catch {}
+    }
   </script>
 </head>
 <body class="anime-bg min-h-screen p-5">
@@ -32,7 +111,7 @@
         <a href="#" id="backBtn" class="btn btn-ghost text-sm">Back</a>
         <h1 class="site-title text-2xl font-bold accent-underline">Shop</h1>
       </div>
-      <div class="text-sm">Coins: <strong id="coins">0</strong></div>
+      <div class="text-sm flex items-center gap-3">Coins: <strong id="coins">0</strong></div>
     </header>
 
     <section class="manga-bubble p-3">
@@ -48,7 +127,7 @@
         <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
             <div id="mvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;">
-              <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+              <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none" reveal="interaction" loading="lazy"></model-viewer>
             </div>
             <div id="tvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
@@ -76,6 +155,20 @@
   <script>
     const $ = (s) => document.querySelector(s);
     const catalogEl = $('#catalog');
+    // Ensure model-viewer scene is flattened when ready
+    try {
+      document.addEventListener('DOMContentLoaded', () => {
+        try {
+          const mv = document.getElementById('mvShop');
+          if (mv && !mv.__flatWire) {
+            mv.__flatWire = true;
+            mv.addEventListener('scene-graph-ready', () => applyAnimeToMV(mv), { once: false });
+            mv.addEventListener('load', () => applyAnimeToMV(mv), { once: false });
+          }
+        } catch {}
+      });
+    } catch {}
+
     const coinsEl = $('#coins');
     const tutorLink = $('#tutorLink');
     const catList = $('#catList');
@@ -90,6 +183,7 @@
     }
 
     // Anchor Debug toggle + Log wiring
+
     (function(){
       const anchorToggle = document.getElementById('anchorDebugToggle');
       if (anchorToggle && !anchorToggle.__wired) {
@@ -207,7 +301,25 @@
       try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
     }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
-    function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
+    function computeBounds(root){
+      try {
+        const THREE = getThree(); if(!THREE||!root) return null;
+        const box = new THREE.Box3(); let has=false;
+        root.updateWorldMatrix?.(true,true);
+        root.traverse?.(o=>{
+          try{
+            if (!o || !o.isMesh) return;
+            if (o.userData && (o.userData.__flatOutline || o.userData.__flatOutlineSrc)) return; // ignore outline clones
+            if (o.geometry) {
+              if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox();
+              const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone();
+              if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } }
+            }
+          } catch(_){ }
+        });
+        return has?box:null;
+      } catch (e) { return null; }
+    }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
     async function attachAccessoriesToBase(mv, equip, itemsMap){
       try {
@@ -324,8 +436,9 @@
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
         camera.position.set(0, 0.35, 1.0);
-        const amb = new THREE.AmbientLight(0xffffff, 0.4); scene.add(amb);
-        const dir = new THREE.DirectionalLight(0xffffff, 1.0); dir.position.set(1,1,1); scene.add(dir);
+        // Flat lighting: ambient-only to remove per-pixel shading/contrast
+        // Flat, bright lighting: ambient-only (no directional shading)
+        const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
         renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false, powerPreference:'low-power' });
         renderer.setSize(w, h, false);
         renderer.setPixelRatio(1);
@@ -344,7 +457,34 @@
         try { renderer.domElement.style.display = 'block'; } catch {}
         attachGroup = new THREE.Group(); scene.add(attachGroup);
         try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.1,0); } } catch(_){ }
-        function tick(){ try { if(controls) controls.update(); renderer.render(scene, camera); } catch (_) {} requestAnimationFrame(tick); }
+        let composer=null, outlinePass=null;
+        try {
+          if (window.__EffectComposer && window.__RenderPass) {
+            const __sz=(function(){ try{ const el=document.getElementById('tvWrap'); return [el.clientWidth||renderer.domElement.width||360, el.clientHeight||renderer.domElement.height||420]; } catch { return [360,420]; } })(); const w=__sz[0], h=__sz[1]; composer = new window.__EffectComposer(renderer);
+            composer.addPass(new window.__RenderPass(scene, camera));
+            if (window.__OutlinePass) {
+              outlinePass = new window.__OutlinePass(new (THREE.Vector2)(w, h), scene, camera);
+              try { outlinePass.visibleEdgeColor.set(0x000000); outlinePass.hiddenEdgeColor.set(0x000000); } catch {}
+              // Approximate 0.1mm line in screen space
+              try {
+                const mm = parseFloat(localStorage.getItem('outlineMM') || '0.1');
+                const dpi = 96 * (window.devicePixelRatio || 1);
+                const px = Math.max(1, Math.round(dpi * (mm / 25.4)));
+                outlinePass.edgeThickness = px; // use px-equivalent
+                outlinePass.edgeStrength = Number(localStorage.getItem('outlineStrength') || 8.0);
+              } catch {}
+              composer.addPass(outlinePass);
+              window.__OutlinePassActive = true;
+            }
+            if (window.__SMAAPass) {
+              const smaa = new window.__SMAAPass(w*renderer.getPixelRatio(), h*renderer.getPixelRatio());
+              composer.addPass(smaa);
+            }
+          }
+        } catch {}
+        function updateOutlineTargets(){ try{ if(!outlinePass) return; const targets=[]; scene.traverse(o=>{ if(o&&o.isMesh) targets.push(o); }); outlinePass.selectedObjects = targets; } catch {} }
+        updateOutlineTargets();
+        function tick(){ try { if(controls) controls.update(); if (composer) composer.render(); else renderer.render(scene, camera); } catch (_) {} requestAnimationFrame(tick); }
         requestAnimationFrame(tick);
         initialized = true; return true;
       }
@@ -355,6 +495,8 @@
           const w = wrap.clientWidth||0, h = wrap.clientHeight||0;
           if (w && h) {
             renderer.setSize(w, h, false);
+            if (typeof composer?.setSize === 'function') { try { composer.setSize(w, h, false); } catch {} }
+            try { if (outlinePass && outlinePass.resolution) outlinePass.resolution.set(w, h); } catch {}
             camera.aspect = w/h; camera.updateProjectionMatrix();
           }
         } catch {}
@@ -371,7 +513,7 @@
         if (!init()) return false;
         if (baseGroup && _tvBaseUrl === url) {
           try {
-            const box = new THREE.Box3().setFromObject(baseGroup);
+            const box = (function(){ const b=computeBounds(baseGroup); return b||new THREE.Box3().setFromObject(baseGroup); })();
             const center = box.getCenter(new THREE.Vector3());
             baseGroup.position.sub(center);
             // Fit to both width and height with margin
@@ -381,16 +523,17 @@
             const distV = (size.y*0.5)/Math.tan(vFov/2);
             const distH = (size.x*0.5)/Math.tan(hFov/2);
             const baseDist = Math.max(distV, distH);
-            const VIEW_SCALE = (window.TV_VIEW_SCALE||2.34); // ~10% closer than before
+            const VIEW_SCALE = (window.TV_VIEW_SCALE||1.40); // +25% closer than previous
             const dist = baseDist * VIEW_SCALE;
             camera.near = Math.max(0.01, dist*0.05);
             camera.far  = Math.max(camera.near+1, dist*20);
             camera.updateProjectionMatrix();
-            const CAMERA_Y = (window.TV_CAMERA_Y||0.06);   // fraction of model height
+            const CAMERA_Y = (window.TV_CAMERA_Y||0.08);   // fraction of model height
             camera.position.set(0, size.y*CAMERA_Y, dist);
             if (window.__OrbitControls && controls) {
-              const TARGET_Y = (window.TV_TARGET_Y||0.54); // drop character a bit more
-              controls.target.set(0, size.y*TARGET_Y, 0);
+              const TARGET_Y = (window.TV_TARGET_Y ?? 0.48);
+              const TARGET_OFFSET = (window.TV_TARGET_OFFSET ?? -0.5); // shift by half body height upward (negative lowers aim)
+              controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0);
               controls.minDistance = baseDist*0.4;
               controls.maxDistance = baseDist*6.0;
               controls.enablePan = true;
@@ -404,6 +547,8 @@
         const gltf = await new Promise(res=>{ try{ loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
         if (!gltf || !gltf.scene) return false;
         baseGroup = gltf.scene; scene.add(baseGroup);
+        try { updateOutlineTargets(); } catch {}
+          try { applyFlatPbrToThree(baseGroup); } catch {}
         try {
           if (!attachGroup) attachGroup = new THREE.Group();
           // Keep attachments in world space (scene), matching Anchor Tool coordinates
@@ -413,7 +558,7 @@
           }
         } catch{}
         try {
-          const box = new THREE.Box3().setFromObject(baseGroup);
+          const box = (function(){ const b=computeBounds(baseGroup); return b||new THREE.Box3().setFromObject(baseGroup); })();
           const center = box.getCenter(new THREE.Vector3());
           baseGroup.position.sub(center);
           // Fit to both width and height with margin
@@ -423,16 +568,17 @@
           const distV = (size.y*0.5)/Math.tan(vFov/2);
           const distH = (size.x*0.5)/Math.tan(hFov/2);
           const baseDist = Math.max(distV, distH);
-          const VIEW_SCALE = (window.TV_VIEW_SCALE||2.34); // ~10% closer than before
+          const VIEW_SCALE = (window.TV_VIEW_SCALE||1.40); // +25% closer than previous
           const dist = baseDist * VIEW_SCALE;
           camera.near = Math.max(0.01, dist*0.05);
           camera.far  = Math.max(camera.near+1, dist*20);
           camera.updateProjectionMatrix();
-          const CAMERA_Y = (window.TV_CAMERA_Y||0.06);   // fraction of model height
+          const CAMERA_Y = (window.TV_CAMERA_Y||0.08);   // fraction of model height
           camera.position.set(0, size.y*CAMERA_Y, dist);
           if (window.__OrbitControls && controls) {
-            const TARGET_Y = (window.TV_TARGET_Y||0.54); // drop character a bit more
-            controls.target.set(0, size.y*TARGET_Y, 0);
+            const TARGET_Y = (window.TV_TARGET_Y ?? 0.48);
+            const TARGET_OFFSET = (window.TV_TARGET_OFFSET ?? -0.5); // shift by half body height upward (negative lowers aim)
+            controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0);
             controls.minDistance = baseDist*0.4;
             controls.maxDistance = baseDist*6.0;
             controls.enablePan = true;
@@ -440,7 +586,8 @@
           }
         } catch {}
         _tvBaseUrl = url;
-        return true;
+         try { updateOutlineTargets(); } catch {}
+         return true;
       }
       async function attachAll(equip, itemsMap, anchors){
         const THREE = getThree(); if (!THREE || !initialized) return false;
@@ -460,12 +607,13 @@
           const wrap = new THREE.Group();
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
+          try { applyFlatPbrToThree(src); } catch {}
           const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
           try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
           try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
           try {
-            const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
-            const boxObj  = new (window.__THREE||window.THREE).Box3().setFromObject(src);
+            const boxBase = (function(){ const b=computeBounds(baseGroup); return b||new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup); })();
+            const boxObj  = (function(){ const b=computeBounds(src); return b||new (window.__THREE||window.THREE).Box3().setFromObject(src); })();
             const baseH = Math.max(1e-6, boxBase.max.y - boxBase.min.y);
             const objH  = Math.max(1e-6, boxObj.max.y - boxObj.min.y);
             let target = (slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25);
@@ -549,6 +697,8 @@
         try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
         if (modelItem && modelItem.model && mv) {
           // Use Three.js fallback viewer (preferred)
+    // Global helper: load anchor overrides saved by Anchor Tool
+    function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch (e) { return {}; } }
           // Ensure TV wrapper is visible before measuring size
           try {
             const tvWrap0 = document.getElementById('tvWrap'); if (tvWrap0) tvWrap0.style.display='inline-block';
@@ -566,34 +716,24 @@
               })();
             });
           }
-          await ensureThreeReady(2000);
-          const tvOk = TV && TV.init && TV.init();
-          if (tvOk) {
-            try {
-              window.__useTV = true;
-              const tvWrap = document.getElementById('tvWrap');
-              const mvWrap = document.getElementById('mvWrap');
-              await TV.loadBase(modelItem.model);
-              try { if (TV.resize) TV.resize(); } catch {}
-              const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
-              const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
-              await TV.attachAll(equip, itemsMap, anchors);
-            } catch (_){ }
-          } else {
-            mv.src = modelItem.model;
-            try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
-            (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
-          }
-          // 3D only
-          try { mv.pause(); } catch (e) {}
-          // Nudge animation to show change
-          try { mv.classList.remove('animate-pulse'); void mv.offsetWidth; mv.classList.add('animate-pulse'); setTimeout(()=>mv.classList.remove('animate-pulse'), 300); } catch (e) {}
-        } else { const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='none'; }
-      } catch (e) {}
-      // Attach clothing via plugin (scene-graph) when NOT using TV
-      try {
-        if (!window.__useTV) {
-          function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } }
+           await ensureThreeReady(2000);
+           const tvOk = TV && TV.init && TV.init();
+           if (tvOk) {
+             try {
+               window.__useTV = true;
+               const tvWrap = document.getElementById('tvWrap');
+               const mvWrap = document.getElementById('mvWrap');
+               await TV.loadBase(modelItem.model);
+               try { if (TV.resize) TV.resize(); } catch {}
+               const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+               const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+               await TV.attachAll(equip, itemsMap, anchors);
+             } catch (_){ }
+           } else {
+             mv.src = modelItem.model;
+             try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
+             (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
+           }
           const overrides = loadAnchorOverrides();
           if (!window.__ofp || typeof window.__ofp.attachAll !== 'function' || typeof window.__ofp.setOverrides !== 'function') {
             if (window.OutfitPreview) {
@@ -890,6 +1030,21 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

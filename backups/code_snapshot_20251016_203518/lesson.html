@@ -1,11 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 
-      // Preview-only thickening to prevent poke-through (boots, tops, bags)
-      function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch { return 0.0; } }
-      function __inflateScene(root, amount){
-        try { if(!root||!amount||!isFinite(amount)||amount<=0) return; const THREE=(window.__THREE||window.THREE); root.traverse(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} }catch{} }); } catch {} }
-      function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch { return false; } }
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
@@ -298,7 +293,6 @@
                   const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
                   // Flat lighting: ambient-only for manga-style look
                   const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
-                  try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch {}
                   const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                   renderer.setSize(w, h, false); renderer.setPixelRatio(1);
                   wrap.innerHTML=''; wrap.appendChild(renderer.domElement);
@@ -1225,7 +1219,6 @@
                     const scene = new THREE.Scene();
                     const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
                     const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
-                    try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch {}
                     const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                     renderer.setSize(w,h,false); renderer.setPixelRatio(1);
                     wrap.innerHTML=''; wrap.style.display='block';
@@ -1267,7 +1260,6 @@
   } catch {}
 })();
 </script>
-
 
 
 
