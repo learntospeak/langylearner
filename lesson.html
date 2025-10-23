@@ -425,15 +425,24 @@
                   for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
                   // Reframe to include accessories (hats etc.) and keep full model inside canvas
                   try {
-                    const whole = new THREE.Box3().setFromObject(rootG); const size2 = new THREE.Vector3(); whole.getSize(size2);
+                    const whole = new THREE.Box3().setFromObject(rootG);
+                    const center2 = whole.getCenter(new (window.__THREE||window.THREE).Vector3());
+                    const size2 = new (window.__THREE||window.THREE).Vector3();
+                    whole.getSize(size2);
                     const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
                     const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2);
                     const baseDist=Math.max(distV,distH);
-                    const VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                    let VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                    // Extra zoom-out when hats are equipped (very tall headwear)
+                    const hasHat = (function(){ try { const v=(eq||{}).hat; return (Array.isArray(v)?v.length>0:!!v); } catch { return false; } })();
+                    if (hasHat) {
+                      const hatMul = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatZoomOut')||'1.25'); return (isFinite(v)&&v>0)?v:1.25; } catch { return 1.25; } })();
+                      VIEW_SCALE *= hatMul;
+                    }
                     const dist=baseDist*VIEW_SCALE;
                     camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
-                    camera.position.set(0,size2.y*0.10,dist);
-                    if (controls) { controls.target.set(0, size2.y*0.54, 0); controls.update(); }
+                    camera.position.set(center2.x, center2.y, dist);
+                    if (controls) { controls.target.set(center2.x, center2.y, center2.z||0); controls.update(); }
                   } catch {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
               })();
