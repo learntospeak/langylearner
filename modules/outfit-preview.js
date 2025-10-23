@@ -72,6 +72,28 @@
 
   function create(opts){
     const state = { mv: opts.mv, equipped:{}, items:[], cache:new Map(), attached:[], overrides: (opts.overrides||{}) };
+    function snapFeetAnchor(a, slot, root){
+      try {
+        const enabled = (function(){ try { return JSON.parse(localStorage.getItem('feetSnapEnabled')||'true'); } catch { return true; } })();
+        if (!enabled || !a || (slot!=='boots' && slot!=='feet')) return a;
+        const defaults = (window.SLOT_ANCHORS || window.SLOT_ANCHORS_DEFAULT || {});
+        const yDef = (function(){
+          try {
+            if (a && a.position && typeof a.position[1] === 'number') return a.position[1];
+            const b=(defaults.boots&&defaults.boots.position&&defaults.boots.position[1]);
+            const f=(defaults.feet&&defaults.feet.position&&defaults.feet.position[1]);
+            return (typeof b==='number')?b:((typeof f==='number')?f:-0.18);
+          } catch { return -0.18; }
+        })();
+        const padUp = (function(){ try { return parseFloat(localStorage.getItem('feetSnapPadUp')||'0.04'); } catch { return 0.04; } })();
+        const padDn = (function(){ try { return parseFloat(localStorage.getItem('feetSnapPadDown')||'0.06'); } catch { return 0.06; } })();
+        const footTop = yDef + padUp;    // relative to centered origin, same frame as anchors
+        const footBot = yDef - padDn;
+        const y0 = (a.position?.[1] ?? 0);
+        const y = Math.min(Math.max(y0, footBot), footTop);
+        return { position:[a.position?.[0]||0, y, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+      } catch { return a; }
+    }
     async function attachAll(){
       const mv = state.mv; await ensureLoaded(mv); const root = getRoot(mv); if(!root) return false;
       try { if (!root.__centered) { const THREE=(window.__THREE||window.THREE); const box = new THREE.Box3().setFromObject(root); const c = box.getCenter(new THREE.Vector3()); root.position.sub(c); root.__centered = true; } } catch {}
@@ -106,7 +128,8 @@
           const obj = srcScene.clone(true);
           try {
             const BOOT_INFLATE = readBootInflate();
-            let infl = 0; if (String(it.id||'').toLowerCase()==='cos-bottesgreen') infl = Math.max(infl, BOOT_INFLATE*1.5);
+            let infl = 0; const idlc = String(it.id||'').toLowerCase();
+            if (idlc==='cos-bottesgreen' || idlc==='cos-bottes') infl = Math.max(infl, BOOT_INFLATE*2.2);
             if (isBootish(it.id, slot)) infl = Math.max(infl, BOOT_INFLATE);
             if (infl>0) inflateScene(obj, infl);
           } catch {}
@@ -122,6 +145,7 @@
         const defaults = (window.SLOT_ANCHORS || window.SLOT_ANCHORS_DEFAULT || {});
         const base = defaults[slot] || defaults.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
         let a = ovItem || ovSlot || base;
+        a = snapFeetAnchor(a, slot, root);
         // Heuristic tweak: if boots lacking per-item override and id suggests generic shoes, nudge down slightly
         if (!ovItem && slot==='boots') {
           try { if (/(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}

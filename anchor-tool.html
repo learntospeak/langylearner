@@ -44,13 +44,13 @@
       torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
       body:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
       legs:{position:[0,-0.06,0],rotation:[0,0,0],scale:[1,1,1]},
-      feet:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+      feet:{position:[0,-0.35,0],rotation:[0,0,0],scale:[1,1,1]},
       hat:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
       hair:{position:[0,0.12,0],rotation:[0,0,0],scale:[1,1,1]},
       mask:{position:[0,0.08,0.06],rotation:[0,0,0],scale:[1,1,1]},
       top:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
       outfit:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
-      boots:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+      boots:{position:[0,-0.355,0],rotation:[0,0,0],scale:[1,1,1]},
       skirt:{position:[0,-0.02,0],rotation:[0,0,0],scale:[1,1,1]},
       belt:{position:[0,-0.01,0.01],rotation:[0,0,0],scale:[1,1,1]},
       bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
@@ -170,7 +170,8 @@
         const id = opt && opt.dataset && opt.dataset.id;
         const slot = slotSel && (slotSel.value||'');
         let infl = 0;
-        if (String(id||'').toLowerCase()==='cos-bottesgreen') infl = Math.max(infl, BOOT_INFLATE*1.5);
+        const idlc = String(id||'').toLowerCase();
+        if (idlc==='cos-bottesgreen' || idlc==='cos-bottes') infl = Math.max(infl, BOOT_INFLATE*2.2);
         if (isBootish(id, slot)) infl = Math.max(infl, BOOT_INFLATE);
         if (infl>0) inflateScene(obj, infl);
       } catch {}
@@ -190,6 +191,11 @@
       const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
       ov[key]=a; const json=JSON.stringify(ov);
       localStorage.setItem('anchorOverrides', json);
+      // Lock this key so page-level seeders won't overwrite it
+      try {
+        const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch(e){ return {}; } })();
+        locks[key] = true; localStorage.setItem('anchorLocks', JSON.stringify(locks));
+      } catch {}
       try { localStorage.setItem('anchorOverrides_last', json); } catch {}
     }
 
