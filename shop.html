@@ -235,6 +235,8 @@
     // Inflate helpers to thicken meshes (reduce skin poke-through)
     function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
     function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
+    function readHairInflate(){ try { const v=parseFloat(localStorage.getItem('hairInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
+    function readMaskInflate(){ try { const v=parseFloat(localStorage.getItem('maskInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readOutfitInflate(){ try { const v=parseFloat(localStorage.getItem('outfitInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readLegInflate(){ try { const v=parseFloat(localStorage.getItem('legInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
     function readSkirtInflate(){ try { const v=parseFloat(localStorage.getItem('skirtInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
@@ -243,6 +245,8 @@
     function readChemiseInflateMin(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } }
     function isBootish(id, slot){ try { return slot==='boots' || slot==='feet' || /shoe|bottes/i.test(String(id||'')); } catch { return false; } }
     function isTopish(id, slot){ try { return (slot==='top'||slot==='torso'||slot==='body'||/shirt|chemise|plastron|torso|chest|top/i.test(String(id||''))); } catch { return false; } }
+    function isHairish(id, slot){ try { return (slot==='hair'||/\bhair(?!pin)/i.test(String(id||''))); } catch { return false; } }
+    function isMaskish(id, slot){ try { return (slot==='mask'||/mask/i.test(String(id||''))); } catch { return false; } }
     function isOutfitish(id, slot){ try { return (slot==='outfit'||/outfit|suit|armor/i.test(String(id||''))); } catch { return false; } }
     function isLegish(id, slot){ try { return (slot==='legs'||/pants|trouser|legging|legwear|thigh|knee/i.test(String(id||''))); } catch { return false; } }
     function isSkirtish(id, slot){ try { return (slot==='skirt'||/skirt|dress|armorskirt/i.test(String(id||''))); } catch { return false; } }
@@ -361,6 +365,8 @@
               const BI=readBootInflate();
               const TI=readTopInflate();
               const OI=readOutfitInflate();
+              const HI=readHairInflate();
+              const MI=readMaskInflate();
               const LI=readLegInflate();
               const SI=readSkirtInflate();
               const AI=readArmInflate();
@@ -369,6 +375,8 @@
               if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
               if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
               if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
+              if (isHairish(it.id, slot)) infl=Math.max(infl, HI);
+              if (isMaskish(it.id, slot)) infl=Math.max(infl, MI);
               if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
               if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
               if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
@@ -628,6 +636,8 @@
           try {
             const BI=readBootInflate();
             const TI=readTopInflate();
+            const HI=readHairInflate();
+            const MI=readMaskInflate();
             const OI=readOutfitInflate();
             const LI=readLegInflate();
             const SI=readSkirtInflate();
@@ -637,6 +647,8 @@
             if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
             if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
             if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
+            if (isHairish(it.id, slot)) infl=Math.max(infl, HI);
+            if (isMaskish(it.id, slot)) infl=Math.max(infl, MI);
             if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
             if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
             if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
@@ -1179,3 +1191,25 @@
 
 
 
+              // Hair: stronger default multiplier to avoid skull poke-through
+              if (isHairish(it.id, slot)) {
+                const hmul = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
+                const hmin = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMin')||'0.016'); return (isFinite(v)&&v>=0)?v:0.016; } catch { return 0.016; } })();
+                infl = Math.max(infl, Math.max(HI*hmul, hmin));
+              }
+              // Ninja mask: extra
+              if (/^cos-ninjassuitmask$/i.test(String(it.id||''))) {
+                const mmul = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                const mmin = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+                infl = Math.max(infl, Math.max(MI*mmul, mmin));
+              }
+            if (isHairish(it.id, slot)) {
+              const hmul = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
+              const hmin = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMin')||'0.016'); return (isFinite(v)&&v>=0)?v:0.016; } catch { return 0.016; } })();
+              infl = Math.max(infl, Math.max(HI*hmul, hmin));
+            }
+            if (/^cos-ninjassuitmask$/i.test(String(it.id||''))) {
+              const mmul = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+              const mmin = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+              infl = Math.max(infl, Math.max(MI*mmul, mmin));
+            }
