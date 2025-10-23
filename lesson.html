@@ -441,8 +441,16 @@
                     }
                     const dist=baseDist*VIEW_SCALE;
                     camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
+                    // Keep camera Y at center, nudge target upward to push character lower in frame
                     camera.position.set(center2.x, center2.y, dist);
-                    if (controls) { controls.target.set(center2.x, center2.y, center2.z||0); controls.update(); }
+                    if (controls) {
+                      const baseBias = (function(){ try { const v=parseFloat(localStorage.getItem('lessonTargetYOffset')||'0.08'); return (isFinite(v)?v:0.08); } catch { return 0.08; } })();
+                      const hatBias  = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatYOffset')||'0.12'); return (isFinite(v)?v:0.12); } catch { return 0.12; } })();
+                      const bias = baseBias + (hasHat ? hatBias : 0);
+                      const ty = center2.y + (size2.y * bias);
+                      controls.target.set(center2.x, ty, center2.z||0);
+                      controls.update();
+                    }
                   } catch {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
               })();
