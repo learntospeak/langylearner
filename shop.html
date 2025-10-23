@@ -1147,18 +1147,29 @@
             if (buy && buy.error) { alert(buy.error); return; }
             _wallet.owned = buy?.owned || _wallet.owned || {};
           }
+          // Immediate local preview: if equipping a model, clear all other slots now
+          if (slot === 'model') {
+            _wallet.equipped = { model: id };
+            renderPreview();
+          }
           const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
           if (res && res.error) {
             const err = String(res.error||'');
             if (/401|unauthor/i.test(err)) {
               // Guest mode fallback: apply locally only
-              if (it && it.slot) { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+              if (it && it.slot) {
+                if (slot === 'model') { _wallet.equipped = { model: id }; }
+                else { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+              }
             } else {
               alert(res.error); return;
             }
           } else {
             // Optimistic UI update when server accepted
-            if (it && it.slot) { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+            if (it && it.slot) {
+              if (slot === 'model') { _wallet.equipped = { model: id }; }
+              else { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+            }
           }
           renderPreview();
           renderItems();
