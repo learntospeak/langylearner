@@ -1,12 +1,13 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-
+<head>
+    <script>
       // Preview-only thickening to prevent poke-through (boots, tops, bags)
       function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch { return 0.0; } }
       function __inflateScene(root, amount){
         try { if(!root||!amount||!isFinite(amount)||amount<=0) return; const THREE=(window.__THREE||window.THREE); root.traverse(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} }catch{} }); } catch {} }
       function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch { return false; } }
-<head>
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#111111">
@@ -55,18 +56,38 @@
         torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
         body:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
         legs:{position:[0,-0.06,0],rotation:[0,0,0],scale:[1,1,1]},
-        feet:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+        feet:{position:[0,-0.35,0],rotation:[0,0,0],scale:[1,1,1]},
         hat:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
         hair:{position:[0,0.12,0],rotation:[0,0,0],scale:[1,1,1]},
         mask:{position:[0,0.08,0.06],rotation:[0,0,0],scale:[1,1,1]},
         top:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
         outfit:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
-        boots:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+        boots:{position:[0,-0.355,0],rotation:[0,0,0],scale:[1,1,1]},
         skirt:{position:[0,-0.02,0],rotation:[0,0,0],scale:[1,1,1]},
         belt:{position:[0,-0.01,0.01],rotation:[0,0,0],scale:[1,1,1]},
         bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
         misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
       };
+      // Seed default item overrides so lessons match shop preview
+      (function seedDefaultItemAnchors(){
+        try {
+          const key = 'cos-armorshoe';
+          const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+          const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })();
+          let changed = false;
+          if (!locks[key]  && !ov[key])  { ov[key]  = { position:[0, -0.39, 0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          if (!locks.boots && !ov.boots) { ov.boots = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          if (!locks.feet  && !ov.feet)  { ov.feet  = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          // Per-item nudges consistent with shop (larger raise)
+          const targetY = -0.30, targetZ = 0.06;
+          ['cos-bottesgreen','cos-bottes'].forEach(k=>{
+            if (!locks[k] && !ov[k]) { ov[k] = { position:[0, targetY, targetZ], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          });
+          // Ninjashoe higher placement if not locked and missing
+          (function(){ const id='cos-ninjashoe'; const y=-0.26, z=0.06; if (!locks[id] && !ov[id]) { ov[id] = { position:[0,y,z], rotation:[0,0,0], scale:[1,1,1] }; changed = true; } })();
+          if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
+        } catch {}
+      })();
     </script>
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
@@ -281,7 +302,7 @@
         <div id="lesson-wrap">
             <div id="jp-text" class="space-y-3"></div>
             <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;display:none;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
-            <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:180px;height:220px;z-index:50;"></div>
+            <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:200px;height:260px;z-index:50;"></div>
             <script>
               (async function(){
                 try {
@@ -380,7 +401,20 @@
                     } catch {} });
                   } catch {}
                   const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base);
-                  try { const box = new THREE.Box3().setFromObject(base); const c = box.getCenter(new THREE.Vector3()); base.position.sub(c); const size=new THREE.Vector3(); box.getSize(size); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=1.40; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size.y*0.08,dist); if (controls) { const TARGET_Y=0.48; const TARGET_OFFSET=-0.5; controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0); controls.update(); } } catch {}
+                  try {
+                    const box = new THREE.Box3().setFromObject(base);
+                    const c = box.getCenter(new THREE.Vector3());
+                    base.position.sub(c);
+                    const size=new THREE.Vector3(); box.getSize(size);
+                    const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+                    const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2);
+                    const baseDist=Math.max(distV,distH);
+                    const VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                    const dist=baseDist*VIEW_SCALE;
+                    camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
+                    camera.position.set(0,size.y*0.10,dist);
+                    if (controls) { const TARGET_Y=0.54; controls.target.set(0, size.y*TARGET_Y, 0); controls.update(); }
+                  } catch {}
                   const anchors = window.SLOT_ANCHORS || {};
                   const slots = Object.keys(eq||{}).filter(s=>s!=='model');
                   const wanted = []; slots.forEach(s=>{ const v=eq[s]; if(Array.isArray(v)) v.forEach(id=>wanted.push(id)); else if (v) wanted.push(v); });
@@ -389,8 +423,18 @@
                   console.log('[lesson-lv] items loaded', loaded.size);
                   function getAnchor(slot,id){ try{ const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch { return anchors[slot]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
                   for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
-                  // Reframe to include accessories (hats etc.)
-                  try { const whole = new THREE.Box3().setFromObject(rootG); const size2 = new THREE.Vector3(); whole.getSize(size2); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=1.40; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size2.y*0.06,dist); if (controls) { controls.target.set(0, size2.y*0.54, 0); controls.update(); } } catch {}
+                  // Reframe to include accessories (hats etc.) and keep full model inside canvas
+                  try {
+                    const whole = new THREE.Box3().setFromObject(rootG); const size2 = new THREE.Vector3(); whole.getSize(size2);
+                    const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+                    const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2);
+                    const baseDist=Math.max(distV,distH);
+                    const VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                    const dist=baseDist*VIEW_SCALE;
+                    camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
+                    camera.position.set(0,size2.y*0.10,dist);
+                    if (controls) { controls.target.set(0, size2.y*0.54, 0); controls.update(); }
+                  } catch {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
               })();
             </script>
