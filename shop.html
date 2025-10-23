@@ -237,6 +237,7 @@
     function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
     function readHairInflate(){ try { const v=parseFloat(localStorage.getItem('hairInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readMaskInflate(){ try { const v=parseFloat(localStorage.getItem('maskInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
+    function shouldThickenHair(){ try { return !!JSON.parse(localStorage.getItem('hairThickenEnabled')||'false'); } catch { return false; } }
     function readOutfitInflate(){ try { const v=parseFloat(localStorage.getItem('outfitInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readLegInflate(){ try { const v=parseFloat(localStorage.getItem('legInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
     function readSkirtInflate(){ try { const v=parseFloat(localStorage.getItem('skirtInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
@@ -375,7 +376,7 @@
               if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
               if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
               if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
-              if (isHairish(it.id, slot)) infl=Math.max(infl, HI);
+              if (isHairish(it.id, slot) && shouldThickenHair()) infl=Math.max(infl, HI);
               if (isMaskish(it.id, slot)) infl=Math.max(infl, MI);
               if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
               if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
@@ -666,7 +667,7 @@
             if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
             if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
             if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
-            if (isHairish(it.id, slot)) infl=Math.max(infl, HI);
+            if (isHairish(it.id, slot) && shouldThickenHair()) infl=Math.max(infl, HI);
             if (isMaskish(it.id, slot)) infl=Math.max(infl, MI);
             if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
             if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
@@ -1230,8 +1231,8 @@
 
 
 
-              // Hair: stronger default multiplier to avoid skull poke-through
-              if (isHairish(it.id, slot)) {
+              // Hair thickening is disabled by default; enable via localStorage hairThickenEnabled=true
+              if (isHairish(it.id, slot) && shouldThickenHair()) {
                 const hmul = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
                 const hmin = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMin')||'0.016'); return (isFinite(v)&&v>=0)?v:0.016; } catch { return 0.016; } })();
                 infl = Math.max(infl, Math.max(HI*hmul, hmin));
@@ -1242,7 +1243,7 @@
                 const mmin = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
                 infl = Math.max(infl, Math.max(MI*mmul, mmin));
               }
-            if (isHairish(it.id, slot)) {
+            if (isHairish(it.id, slot) && shouldThickenHair()) {
               const hmul = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
               const hmin = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMin')||'0.016'); return (isFinite(v)&&v>=0)?v:0.016; } catch { return 0.016; } })();
               infl = Math.max(infl, Math.max(HI*hmul, hmin));
