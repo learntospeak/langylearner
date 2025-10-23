@@ -323,9 +323,15 @@
           try {
             const THREE = getThree(); if (!THREE || !window.__GLTFLoader) return null;
             const loader = new window.__GLTFLoader();
+            const seq = Date.now();
             return await new Promise((resolve) => {
               try {
-                loader.load(url, (gltf)=>{ try { console.log('[attach] three loaded', url); resolve(gltf && gltf.scene ? gltf.scene : null); } catch { resolve(null); } }, undefined, (err)=>{ console.warn('[attach] three load error', url, err); resolve(null); });
+                loader.load(url, (gltf)=>{ try { 
+                  // If baseGroup was replaced since we started, skip attaching stale objects
+                  if (!baseGroup) return resolve(null);
+                  console.log('[attach] three loaded', url);
+                  resolve(gltf && gltf.scene ? gltf.scene : null); 
+                } catch { resolve(null); } }, undefined, (err)=>{ console.warn('[attach] three load error', url, err); resolve(null); });
               } catch { resolve(null); }
             });
           } catch { return null; }
@@ -512,6 +518,8 @@
     // ---------- Lightweight Three.js viewer fallback ----------
     const TV = (function(){
       let initialized = false, scene=null, camera=null, renderer=null, baseGroup=null, attachGroup=null, controls=null;
+      let _tvLoadSeq = 0; // guard against async race when switching models quickly
+      let _tvBaseUrlWanted = null;
       function init(){
         if (initialized) return true;
         const THREE = getThree(); if (!THREE) return false;
@@ -565,6 +573,8 @@
       let _tvBaseUrl = null; async function loadBase(url){
         const THREE = getThree(); if (!THREE) return false;
         if (!init()) return false;
+        _tvBaseUrlWanted = url;
+        const mySeq = (++_tvLoadSeq);
         if (baseGroup && _tvBaseUrl === url) {
           try {
             const box = new THREE.Box3().setFromObject(baseGroup);
@@ -598,6 +608,8 @@
         clear();
         const loader = new window.__GLTFLoader();
         const gltf = await new Promise(res=>{ try{ loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+        // Drop stale loads if a newer request was issued
+        if (mySeq !== _tvLoadSeq || _tvBaseUrlWanted !== url) { try { /* ignore stale */ } catch {} return false; }
         if (!gltf || !gltf.scene) return false;
         baseGroup = gltf.scene; scene.add(baseGroup);
         try {
