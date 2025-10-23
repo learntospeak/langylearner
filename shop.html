@@ -1089,6 +1089,8 @@
           if (want.model && serverEq.model !== want.model) {
             const r = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId: want.model }) });
             if (r && r.error) throw new Error(r.error);
+            // Update local categories to reflect model change (compatibility and upgrades visibility)
+            try { _wallet.equipped = { model: want.model }; _cats = categoriesFrom(_items); renderCats(_cats); } catch {}
           }
           // Unequip removed slots
           const allSlots = new Set([...Object.keys(serverEq||{}), ...Object.keys(want||{})]); allSlots.delete('model');
@@ -1100,7 +1102,7 @@
           for (const [slot,id] of Object.entries(want)){ if (slot==='model') continue; if (!id) continue; const r = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) }); if (r && r.error) throw new Error(r.error); }
           const wall = await api('/api/wallet'); const safe = (wall && !wall.error) ? wall : null; if (safe) _wallet = safe;
           try { localStorage.setItem('equippedSnapshot', JSON.stringify(want)); } catch {}
-          renderPreview(); renderItems(); if (status) status.textContent = 'Applied ?'; try { let png=null; if (window.__useTV && window.TV && TV.snapshot) png = TV.snapshot(); const mv=document.getElementById('mvShop'); if(!png && mv && mv.toBlob){ const blob=await mv.toBlob({ mimeType:'image/png' }); png = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); }); } if (png) localStorage.setItem('equippedPreviewPNG', png); } catch {}
+          renderPreview(); try { _cats = categoriesFrom(_items); renderCats(_cats); } catch {} renderItems(); if (status) status.textContent = 'Applied ?'; try { let png=null; if (window.__useTV && window.TV && TV.snapshot) png = TV.snapshot(); const mv=document.getElementById('mvShop'); if(!png && mv && mv.toBlob){ const blob=await mv.toBlob({ mimeType:'image/png' }); png = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); }); } if (png) localStorage.setItem('equippedPreviewPNG', png); } catch {}
           if (navigateAfter) { try{ location.href = 'lesson.html?lesson=greetings-001'; }catch{} }
         } catch (e) { if (status) status.textContent = 'Apply failed'; alert('Apply failed: ' + (e&&e.message?e.message:String(e))); }
         finally { if (btn) btn.disabled = false; if (btnNav) btnNav.disabled = false; setTimeout(()=>{ try{ if (status) status.textContent=''; }catch{} }, 1200); }
@@ -1151,6 +1153,7 @@
           if (slot === 'model') {
             _wallet.equipped = { model: id };
             renderPreview();
+            try { _cats = categoriesFrom(_items); renderCats(_cats); } catch {}
           }
           const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
           if (res && res.error) {
@@ -1172,6 +1175,8 @@
             }
           }
           renderPreview();
+          // Rebuild categories after model change to ensure upgrades show correctly
+          try { if (slot === 'model') { _cats = categoriesFrom(_items); renderCats(_cats); } } catch {}
           renderItems();
           // Avoid full reload to prevent flicker
         } catch (err) { console.error('Equip failed', err); }
