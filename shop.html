@@ -424,7 +424,7 @@
               try {
                 const force = (function(){ try { return !!JSON.parse(localStorage.getItem('greenOutfitLiftForce')||'false'); } catch { return false; } })();
                 if (!__hasItemOv || force) {
-                  const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.06'); return (isFinite(v)?v:0.06); } catch { return 0.06; } })();
+                  const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.075'); return (isFinite(v)?v:0.075); } catch { return 0.075; } })();
                   a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
                 }
               } catch {}
@@ -690,7 +690,7 @@
             try {
               const force = (function(){ try { return !!JSON.parse(localStorage.getItem('greenOutfitLiftForce')||'false'); } catch { return false; } })();
               if (!__hasItemOv || force) {
-                const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.06'); return (isFinite(v)?v:0.06); } catch { return 0.06; } })();
+                const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.075'); return (isFinite(v)?v:0.075); } catch { return 0.075; } })();
                 a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
               }
             } catch {}
