@@ -445,7 +445,7 @@
                     camera.position.set(center2.x, center2.y, dist);
                     if (controls) {
                       const baseBias = (function(){ try { const v=parseFloat(localStorage.getItem('lessonTargetYOffset')||'0.08'); return (isFinite(v)?v:0.08); } catch { return 0.08; } })();
-                      const hatBias  = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatYOffset')||'0.12'); return (isFinite(v)?v:0.12); } catch { return 0.12; } })();
+                      const hatBias  = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatYOffset')||'0.3'); return (isFinite(v)?v:0.3); } catch { return 0.3; } })();
                       const bias = baseBias + (hasHat ? hatBias : 0);
                       const ty = center2.y + (size2.y * bias);
                       controls.target.set(center2.x, ty, center2.z||0);
