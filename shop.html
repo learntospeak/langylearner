@@ -1231,25 +1231,3 @@
 
 
 
-              // Hair thickening is disabled by default; enable via localStorage hairThickenEnabled=true
-              if (isHairish(it.id, slot) && shouldThickenHair()) {
-                const hmul = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
-                const hmin = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMin')||'0.016'); return (isFinite(v)&&v>=0)?v:0.016; } catch { return 0.016; } })();
-                infl = Math.max(infl, Math.max(HI*hmul, hmin));
-              }
-              // Ninja mask: extra
-              if (/^cos-ninjassuitmask$/i.test(String(it.id||''))) {
-                const mmul = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
-                const mmin = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-                infl = Math.max(infl, Math.max(MI*mmul, mmin));
-              }
-            if (isHairish(it.id, slot) && shouldThickenHair()) {
-              const hmul = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
-              const hmin = (function(){ try { const v=parseFloat(localStorage.getItem('hairInflateMin')||'0.016'); return (isFinite(v)&&v>=0)?v:0.016; } catch { return 0.016; } })();
-              infl = Math.max(infl, Math.max(HI*hmul, hmin));
-            }
-            if (/^cos-ninjassuitmask$/i.test(String(it.id||''))) {
-              const mmul = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
-              const mmin = (function(){ try { const v=parseFloat(localStorage.getItem('ninjaMaskInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-              infl = Math.max(infl, Math.max(MI*mmul, mmin));
-            }
