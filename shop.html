@@ -189,6 +189,19 @@
     const accPool = document.createElement('div'); accPool.id = 'accPool';
     accPool.style.position = 'absolute'; accPool.style.left = '-9999px'; accPool.style.top = '0'; accPool.style.width = '1px'; accPool.style.height = '1px'; accPool.style.overflow = 'hidden';
     document.body.appendChild(accPool);
+    // ---- Anchor sync helpers (server <-> localStorage) ----
+    async function fetchServerAnchors(){
+      try {
+        const res = await fetch('/api/anchors', { cache:'no-store' });
+        if (!res.ok) return false; const data = await res.json();
+        const cur = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+        const merged = Object.assign({}, cur, data.anchors||{});
+        localStorage.setItem('anchorOverrides', JSON.stringify(merged));
+        if (data.locks && typeof data.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })(), data.locks)));
+        return true;
+      } catch { return false; }
+    }
+    let __syncTimer=null; async function pushServerAnchorsSoon(){ try { if(__syncTimer) return; __syncTimer=setTimeout(async()=>{ __syncTimer=null; try { const anchors=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); const locks=(function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })(); await fetch('/api/anchors', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ anchors, locks, merge:true }) }); } catch {} }, 1500); } catch {} }
     const accCache = new Map(); // id -> { mv, ready:Promise }
     async function accessoryViewerFor(id, src){
       let rec = accCache.get(id);
@@ -836,6 +849,7 @@
         }
       } catch (e) {}
       coinsEl.textContent = String(_wallet.coins||0);
+      try { await fetchServerAnchors(); } catch {}
       renderPreview();
       _cats = categoriesFrom(_items);
       renderCats(_cats);
@@ -1011,6 +1025,7 @@
                   const s = Number(scale?.value||1) || 1;
                   ov3[slot3] = { position:[Number(posX?.value)||0, Number(posY?.value)||0.05, Number(posZ?.value)||0], rotation:[rx,ry,rz], scale:[s,s,s] };
                   localStorage.setItem('anchorOverrides', JSON.stringify(ov3));
+                  try { pushServerAnchorsSoon(); } catch {}
                   if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov3); await window.__ofp.attachAll(); }
                   try {
                     if (window.__useTV && TV && TV.attachAll) {
@@ -1029,6 +1044,7 @@
                   const slot4 = sel.value; if(!slot4) return;
                   const ov4 = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
                   delete ov4[slot4]; localStorage.setItem('anchorOverrides', JSON.stringify(ov4));
+                  try { pushServerAnchorsSoon(); } catch {}
                   if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov4); await window.__ofp.attachAll(); }
                   try {
                     if (window.__useTV && TV && TV.attachAll) {

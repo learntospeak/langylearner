@@ -528,7 +528,7 @@ app.post('/api/wallet/sync', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Equip failed', details: String(e) }); }
 });
 
-  app.post('/api/shop/unequip', async (req, res) => {
+app.post('/api/shop/unequip', async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   try {
     const { itemId, slot } = req.body || {};
@@ -703,6 +703,39 @@ app.post('/api/tts', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'TTS request failed', details: String(e) });
   }
+});
+
+// ---- Anchor overrides sync (per-user) ----
+app.get('/api/anchors', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    const wallet = rec.wallet || (rec.wallet = { coins:0, owned:{}, equipped:{} });
+    const anchors = wallet.anchors || {};
+    const locks = wallet.anchorLocks || {};
+    res.json({ anchors, locks });
+  } catch (e) { res.status(500).json({ error: 'Anchor load failed', details: String(e) }); }
+});
+
+app.post('/api/anchors', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const { anchors, locks, merge } = req.body || {};
+    if (!anchors || typeof anchors !== 'object') return res.status(400).json({ error: 'Missing anchors object' });
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    rec.wallet = rec.wallet || { coins:0, owned:{}, equipped:{} };
+    if (merge) {
+      rec.wallet.anchors = Object.assign({}, rec.wallet.anchors||{}, anchors);
+      if (locks && typeof locks === 'object') rec.wallet.anchorLocks = Object.assign({}, rec.wallet.anchorLocks||{}, locks);
+    } else {
+      rec.wallet.anchors = anchors;
+      if (locks && typeof locks === 'object') rec.wallet.anchorLocks = locks; else delete rec.wallet.anchorLocks;
+    }
+    await writeDb(db);
+    res.json({ ok:true, anchors: rec.wallet.anchors||{}, locks: rec.wallet.anchorLocks||{} });
+  } catch (e) { res.status(500).json({ error: 'Anchor save failed', details: String(e) }); }
 });
 
 // Asset diagnostics (dev)

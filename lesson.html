@@ -1264,6 +1264,8 @@
       console.log('[lesson] effective equipped', eq);
       const items=(cat&&cat.items)||[];
       console.log('[lesson] catalog items', items.length);
+      // Pull anchors from server if available (merge into localStorage)
+      try { const r=await fetch('/api/anchors',{cache:'no-store'}); if(r.ok){ const d=await r.json(); const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); localStorage.setItem('anchorOverrides', JSON.stringify(Object.assign({}, cur, d.anchors||{}))); if (d.locks&&typeof d.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })(), d.locks))); } } catch {}
       const it = items.find(x=> x.id === eq.model && x.model) || items.find(x=> x.id==='model-basemesh' && x.model);
       const mv = document.getElementById('mvLesson'); if (!mv) return;
       if (it && it.model){

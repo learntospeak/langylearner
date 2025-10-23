@@ -182,7 +182,7 @@
 
     function applyFields(){ if(!accWrap) return; const rx=(+rotX.value||0)*Math.PI/180, ry=(+rotY.value||0)*Math.PI/180, rz=(+rotZ.value||0)*Math.PI/180, s=(+scaleF.value||1)||1; try{ accWrap.position.set(+posX.value||0,+posY.value||0,+posZ.value||0); accWrap.rotation.order='XYZ'; accWrap.rotation.set(rx,ry,rz); accWrap.scale.set(s,s,s);}catch{} }
 
-    function saveAnchor(){
+    async function saveAnchor(){
       const slot=slotSel.value||'misc';
       const itemOpt = itemSel.options[itemSel.selectedIndex];
       const itemId = itemOpt && itemOpt.dataset && itemOpt.dataset.id;
@@ -191,6 +191,7 @@
       const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
       ov[key]=a; const json=JSON.stringify(ov);
       localStorage.setItem('anchorOverrides', json);
+      try { await fetch('/api/anchors', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ anchors: ov, merge:true, locks:(function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })() }) }); } catch {}
       // Lock this key so page-level seeders won't overwrite it
       try {
         const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch(e){ return {}; } })();
@@ -210,7 +211,7 @@
       try { const f=e.target.files&&e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ try{ const data=JSON.parse(String(fr.result||'{}')||'{}')||{}; const cur=(function(){ try{return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};}catch{return{};} })(); const merged=Object.assign({}, cur, data); const json=JSON.stringify(merged); localStorage.setItem('anchorOverrides', json); localStorage.setItem('anchorOverrides_last', json); toast('Loaded anchors from file.'); }catch(err){ alert('Invalid JSON'); } }; fr.readAsText(f); } catch {}
     }); } catch {}
     try { document.getElementById('camReset')?.addEventListener('click', ()=>{ try { if (baseGroup) fitCameraTo(baseGroup); } catch {} }); } catch {}
-    resetBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); });
+    resetBtn?.addEventListener('click', async()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); try{ const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); delete cur[slot]; localStorage.setItem('anchorOverrides', JSON.stringify(cur)); await fetch('/api/anchors', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ anchors: cur, merge:false }) }); } catch {} });
 
     posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
 
