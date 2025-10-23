@@ -236,12 +236,14 @@
     function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
     function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
     function readLegInflate(){ try { const v=parseFloat(localStorage.getItem('legInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
+    function readSkirtInflate(){ try { const v=parseFloat(localStorage.getItem('skirtInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readArmInflate(){ try { const v=parseFloat(localStorage.getItem('armInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readChemiseInflateMul(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMul')||'2.5'); return (isFinite(v)&&v>0)?v:2.5; } catch { return 2.5; } }
     function readChemiseInflateMin(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } }
     function isBootish(id, slot){ try { return slot==='boots' || slot==='feet' || /shoe|bottes/i.test(String(id||'')); } catch { return false; } }
     function isTopish(id, slot){ try { return (slot==='top'||slot==='torso'||slot==='body'||/shirt|chemise|plastron|torso|chest|top/i.test(String(id||''))); } catch { return false; } }
     function isLegish(id, slot){ try { return (slot==='legs'||/pants|trouser|legging|legwear|thigh|knee/i.test(String(id||''))); } catch { return false; } }
+    function isSkirtish(id, slot){ try { return (slot==='skirt'||/skirt|dress|armorskirt/i.test(String(id||''))); } catch { return false; } }
     function isArmish(id, slot){ try { return (slot==='arms'||slot==='hands'||/amorarm|arm\b|bracer|gauntlet/i.test(String(id||''))); } catch { return false; } }
     function inflateScene(root, amount){
       try {
@@ -357,12 +359,14 @@
               const BI=readBootInflate();
               const TI=readTopInflate();
               const LI=readLegInflate();
+              const SI=readSkirtInflate();
               const AI=readArmInflate();
               let infl=0;
               if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
               if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
               if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
               if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
+              if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
               if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
               // Extra thickness for specific tops
               if (/^cos-(amorplastron|shirt)$/i.test(String(it.id||''))) infl=Math.max(infl, TI*1.6);
@@ -376,6 +380,12 @@
                 const mul = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMul')||'1.8'); return (isFinite(v)&&v>0)?v:1.8; } catch { return 1.8; } })();
                 const min = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMin')||'0.018'); return (isFinite(v)&&v>=0)?v:0.018; } catch { return 0.018; } })();
                 infl = Math.max(infl, Math.max(LI*mul, min));
+              }
+              // Extra bump for skirts (cover overlap with tops)
+              if (/^cos-(skirt|armorskirt)$/i.test(String(it.id||''))) {
+                const kmul = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
+                const kmin = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+                infl = Math.max(infl, Math.max(SI*kmul, kmin));
               }
               // Stronger bump for arm guard
               if (/^cos-amorarm$/i.test(String(it.id||''))) {
@@ -599,12 +609,14 @@
             const BI=readBootInflate();
             const TI=readTopInflate();
             const LI=readLegInflate();
+            const SI=readSkirtInflate();
             const AI=readArmInflate();
             let infl=0;
             if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
             if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
             if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
             if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
+            if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
             if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
             // Extra thickness for specific tops
             if (/^cos-(amorplastron|shirt)$/i.test(String(it.id||''))) infl=Math.max(infl, TI*1.6);
@@ -618,6 +630,12 @@
               const mul = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMul')||'1.8'); return (isFinite(v)&&v>0)?v:1.8; } catch { return 1.8; } })();
               const min = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMin')||'0.018'); return (isFinite(v)&&v>=0)?v:0.018; } catch { return 0.018; } })();
               infl = Math.max(infl, Math.max(LI*mul, min));
+            }
+            // Extra bump for skirts
+            if (/^cos-(skirt|armorskirt)$/i.test(String(it.id||''))) {
+              const kmul = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
+              const kmin = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+              infl = Math.max(infl, Math.max(SI*kmul, kmin));
             }
             // Stronger bump for arm guard
             if (/^cos-amorarm$/i.test(String(it.id||''))) {
