@@ -145,7 +145,7 @@
       torso: { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       body:  { position:[0, 0.00, 0], rotation:[0,0,0], scale:[1,1,1] },
       legs:  { position:[0, -0.06, 0], rotation:[0,0,0], scale:[1,1,1] },
-      feet:  { position:[0, -0.18, 0], rotation:[0,0,0], scale:[1,1,1] },
+      feet:  { position:[0, -0.35, 0], rotation:[0,0,0], scale:[1,1,1] },
       arms:  { position:[0.02, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       hands: { position:[0.04, -0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       // Clothing synonyms
@@ -154,12 +154,37 @@
       mask:  { position:[0, 0.08, 0.06], rotation:[0,0,0], scale:[1,1,1] },
       top:   { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       outfit:{ position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] },
-      boots: { position:[0, -0.18, 0], rotation:[0,0,0], scale:[1,1,1] },
+      boots: { position:[0, -0.355, 0], rotation:[0,0,0], scale:[1,1,1] },
       skirt: { position:[0, -0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
       belt:  { position:[0, -0.01, 0.01], rotation:[0,0,0], scale:[1,1,1] },
       bag:   { position:[-0.05, 0.02, -0.03], rotation:[0,0,0], scale:[1,1,1] },
       misc:  { position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] }
     };
+    // Seed a sane per-item default for armor shoes to sit slightly forward
+    (function seedDefaultItemAnchors(){
+      try {
+        const key = 'cos-armorshoe';
+        const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+        const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })();
+        if (!locks[key] && !ov[key]) { ov[key] = { position:[0, -0.39, 0.06], rotation:[0,0,0], scale:[1,1,1] }; localStorage.setItem('anchorOverrides', JSON.stringify(ov)); }
+        // Apply same forward offset to all boots by default (slot-level)
+        // and to feet slot for any items categorized there.
+        let changed = false;
+        if (!locks.boots && !ov.boots) { ov.boots = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+        if (!locks.feet  && !ov.feet)  { ov.feet  = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+        // Per-item nudges: raise further so feet don't poke through
+        // Larger margin per request
+        const targetY = -0.30;  // ~9cm above boots baseline (-0.39)
+        const targetZ = 0.06;
+        const candidates = ['cos-ninjashoe', 'cos-bottesgreen', 'cos-bottes'];
+        for (const k of candidates){
+          if (!locks[k] && !ov[k]) { ov[k] = { position:[0, targetY, targetZ], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+        }
+        // Ninjashoe needs a separate higher placement (only if not locked and missing)
+        (function(){ try { const id='cos-ninjashoe'; const y=-0.26, z=0.06; if (!locks[id] && !ov[id]) { ov[id] = { position:[0,y,z], rotation:[0,0,0], scale:[1,1,1] }; changed=true; } } catch{} })();
+        if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
+      } catch {}
+    })();
     // Accessory pool (offscreen model-viewers) to load GLBs for scene-graph cloning
     const accPool = document.createElement('div'); accPool.id = 'accPool';
     accPool.style.position = 'absolute'; accPool.style.left = '-9999px'; accPool.style.top = '0'; accPool.style.width = '1px'; accPool.style.height = '1px'; accPool.style.overflow = 'hidden';
@@ -207,6 +232,45 @@
       try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
     }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
+    // Inflate helpers to thicken meshes (reduce skin poke-through)
+    function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
+    function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
+    function readChemiseInflateMul(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMul')||'2.5'); return (isFinite(v)&&v>0)?v:2.5; } catch { return 2.5; } }
+    function readChemiseInflateMin(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } }
+    function isBootish(id, slot){ try { return slot==='boots' || slot==='feet' || /shoe|bottes/i.test(String(id||'')); } catch { return false; } }
+    function isTopish(id, slot){ try { return (slot==='top'||slot==='torso'||slot==='body'||/shirt|chemise|plastron|torso|chest|top/i.test(String(id||''))); } catch { return false; } }
+    function inflateScene(root, amount){
+      try {
+        const THREE = getThree(); if(!THREE || !root || !amount || !isFinite(amount) || amount<=0) return;
+        root.traverse?.(o=>{ try { if (!o || !o.isMesh || !o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if (!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length, na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} } catch {} });
+      } catch {}
+    }
+    // Keep boots/feet near the expected foot plane. Baseline is the chosen
+    // anchor's own Y (item/slot/default), falling back to the map if missing.
+    function snapFeetAnchor(a, slot, anchors){
+      try {
+        const enabled = (function(){ try { return JSON.parse(localStorage.getItem('feetSnapEnabled')||'true'); } catch { return true; } })();
+        if (!enabled || !a || (slot!=='boots' && slot!=='feet')) return a;
+        const pads = {
+          up:  (function(){ try { return parseFloat(localStorage.getItem('feetSnapPadUp')||'0.04'); } catch { return 0.04; } })(),
+          dn:  (function(){ try { return parseFloat(localStorage.getItem('feetSnapPadDown')||'0.06'); } catch { return 0.06; } })(),
+        };
+        // Prefer the Y of the already-chosen anchor 'a'; this matches
+        // Anchor Tool results when per-item/slot overrides are present.
+        const yDef = (function(){
+          try {
+            if (a && a.position && typeof a.position[1] === 'number') return a.position[1];
+            const m=anchors||{}; const b=(m.boots&&m.boots.position&&m.boots.position[1]); const f=(m.feet&&m.feet.position&&m.feet.position[1]);
+            return (typeof b==='number')?b:((typeof f==='number')?f:-0.18);
+          } catch { return -0.18; }
+        })();
+        const footTop = yDef + pads.up;    // a bit above the expected foot line
+        const footBot = yDef - pads.dn;    // allow small below-floor tolerance
+        const y0 = (a.position?.[1] ?? 0);
+        const y = Math.min(Math.max(y0, footBot), footTop);
+        return { position:[a.position?.[0]||0, y, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+      } catch { return a; }
+    }
     function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
     async function attachAccessoriesToBase(mv, equip, itemsMap){
@@ -226,6 +290,18 @@
           if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root or add() missing'); }catch(_){} return false; }
         }
         clearAttachments(mv);
+        // Compute base center (without attachments) to match Anchor Tool's centered coordinates
+        let baseCenter = null;
+        try {
+          const THREE = getThree() || window.THREE;
+          const box0 = computeBounds(root);
+          if (THREE && box0 && typeof box0.getCenter === 'function') {
+            baseCenter = box0.getCenter(new (THREE||window.THREE).Vector3());
+          }
+        } catch {}
+        // Read Anchor Tool's base scale to compensate positions (tool scales base by this; shop base is unscaled)
+        const __baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } })();
+        const __invBaseScale = (function(){ try { return (isFinite(__baseScale) && __baseScale>0) ? (1/__baseScale) : 1; } catch { return 1; } })();
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
         try { console.log('[attach] slots', slots); } catch(_){ }
         const added = [];
@@ -272,9 +348,37 @@
               } catch (e) { obj = null; }
             }
             if (!obj) { console.warn('[attach] nothing cloneable for', it.id); continue; }
+            // Thicken boots and tops if needed (reduce poke-through)
+            try {
+              const BI=readBootInflate();
+              const TI=readTopInflate();
+              let infl=0;
+              if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
+              if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
+              if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
+              // Extra thickness for specific tops
+              if (/^cos-(amorplastron|shirt)$/i.test(String(it.id||''))) infl=Math.max(infl, TI*1.6);
+              if (/^cos-chemise$/i.test(String(it.id||''))) {
+                const mul = readChemiseInflateMul();
+                const min = readChemiseInflateMin();
+                infl = Math.max(infl, Math.max(TI*mul, min));
+              }
+              if (infl>0) inflateScene(obj, infl);
+            } catch {}
             const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
             const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
             let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+            a = snapFeetAnchor(a, slot, anchors);
+            const __hasItemOv = !!__ov[it.id];
+            const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
+            // Apply bag lift unless there is a per-item override,
+            // or always if 'bagLiftForce' is set to true in localStorage.
+            if ((slot==='bag') && (!__hasItemOv || __forceLift)) {
+              try {
+                const lift = (function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })();
+                a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+lift, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+              } catch {}
+            }
             try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
             // Wrap and center like the Anchor Tool
             const THREE = getThree();
@@ -299,8 +403,22 @@
               }
               try { wrap.scale.set(s,s,s); } catch {}
             } catch {}
-            // Apply anchor position/rotation on wrapper (base is already centered in TV)
-            try { wrap.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } catch{}
+            // Apply anchor position/rotation on wrapper. Anchor Tool uses a centered + scaled base,
+            // but model-viewer keeps original base transforms; compensate with baseCenter and base scale.
+            try {
+              const bx = (baseCenter && isFinite(baseCenter.x)) ? baseCenter.x : 0;
+              const by = (baseCenter && isFinite(baseCenter.y)) ? baseCenter.y : 0;
+              const bz = (baseCenter && isFinite(baseCenter.z)) ? baseCenter.z : 0;
+              // Compensate for Anchor Tool's smaller base by expanding offsets from center
+              const sx = __invBaseScale, sy = __invBaseScale, sz = __invBaseScale;
+              const ax = (a.position?.[0]||0) * sx;
+              const ay = (a.position?.[1]||0.05) * sy;
+              const az = (a.position?.[2]||0) * sz;
+              const px = ax + bx;
+              const py = ay + by;
+              const pz = az + bz;
+              wrap.position.set(px, py, pz);
+            } catch{}
             try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch{}
             try { console.log('[attach] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
             added.push(wrap);
@@ -457,10 +575,35 @@
           const gltf = await new Promise(res=>{ try{ loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
           if (!gltf || !gltf.scene) continue;
           const src = gltf.scene.clone(true);
+          try {
+            const BI=readBootInflate();
+            const TI=readTopInflate();
+            let infl=0;
+            if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
+            if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
+            if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
+            // Extra thickness for specific tops
+            if (/^cos-(amorplastron|shirt)$/i.test(String(it.id||''))) infl=Math.max(infl, TI*1.6);
+            if (/^cos-chemise$/i.test(String(it.id||''))) {
+              const mul = readChemiseInflateMul();
+              const min = readChemiseInflateMin();
+              infl = Math.max(infl, Math.max(TI*mul, min));
+            }
+            if (infl>0) inflateScene(src, infl);
+          } catch {}
           const wrap = new THREE.Group();
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
           const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+          a = snapFeetAnchor(a, slot, anchors);
+          const __hasItemOv = !!__ov[it.id];
+          const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
+          if ((slot==='bag') && (!__hasItemOv || __forceLift)) {
+            try {
+              const lift = (function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })();
+              a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+lift, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+            } catch {}
+          }
           try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
           try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
           try {
@@ -473,7 +616,14 @@
             const s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto)&&sAuto>0&&sAuto<10 ? sAuto : target);
             wrap.scale.set(s,s,s);
           } catch { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; wrap.scale.set(def,def,def); }
-          try { wrap.position.set(a.position[0]||0, a.position[1]||0.05, a.position[2]||0); } catch {}
+          try {
+            const baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } })();
+            const inv = (baseScale>0)?(1/baseScale):1;
+            const px = (a.position[0]||0)*inv;
+            const py = (a.position[1]||0.05)*inv;
+            const pz = (a.position[2]||0)*inv;
+            wrap.position.set(px, py, pz);
+          } catch {}
           try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
           attachGroup.add(wrap);
           }
@@ -855,9 +1005,18 @@
             _wallet.owned = buy?.owned || _wallet.owned || {};
           }
           const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
-          if (res && res.error) { alert(res.error); return; }
-          // Optimistic UI update
-          if (it && it.slot) { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+          if (res && res.error) {
+            const err = String(res.error||'');
+            if (/401|unauthor/i.test(err)) {
+              // Guest mode fallback: apply locally only
+              if (it && it.slot) { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+            } else {
+              alert(res.error); return;
+            }
+          } else {
+            // Optimistic UI update when server accepted
+            if (it && it.slot) { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+          }
           renderPreview();
           renderItems();
           // Avoid full reload to prevent flicker
@@ -875,9 +1034,18 @@
             if (_wallet.equipped[slot].length===1) _wallet.equipped[slot] = _wallet.equipped[slot][0];
           } else {
             const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
-            if (res && res.error) { alert(res.error); return; }
-            // Optimistic UI update
-            if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
+            if (res && res.error) {
+              const err = String(res.error||'');
+              if (/401|unauthor/i.test(err)) {
+                // Guest mode fallback: remove locally only
+                if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
+              } else {
+                alert(res.error); return;
+              }
+            } else {
+              // Optimistic UI update on success
+              if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
+            }
           }
           renderPreview();
           renderItems();
