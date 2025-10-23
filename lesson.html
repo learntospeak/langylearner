@@ -51,6 +51,8 @@
     <script src="./modules/outfit-preview.js"></script>
     <script>
       // Default slot anchors (shared with Shop) so accessories position correctly on lesson page
+      // Proactively update SW while lessons are open (helps mobile PWAs)
+      (function(){ try{ if('serviceWorker' in navigator){ setTimeout(()=>{ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); }, 2000); document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); } }); } }catch{} })();
       window.SLOT_ANCHORS = window.SLOT_ANCHORS || {
         head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
         torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},

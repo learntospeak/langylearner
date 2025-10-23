@@ -207,10 +207,24 @@
     guardNav('shopBtn');
   });
 
-  // Service worker for offline shell
+  // Service worker for offline shell with auto-update/reload
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=6').catch(console.error);
+      navigator.serviceWorker.register('./sw.js?v=6').then((reg)=>{
+        const ping = ()=> reg.update().catch(()=>{});
+        document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') ping(); });
+        navigator.serviceWorker.addEventListener('controllerchange', ()=>{ try{ location.reload(); }catch{} });
+        try {
+          reg.addEventListener('updatefound', ()=>{
+            const worker = reg.installing;
+            worker?.addEventListener('statechange', ()=>{
+              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                try { location.reload(); } catch {}
+              }
+            });
+          });
+        } catch {}
+      }).catch(console.error);
     });
   }
 </script>
