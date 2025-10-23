@@ -235,6 +235,7 @@
     // Inflate helpers to thicken meshes (reduce skin poke-through)
     function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
     function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
+    function readOutfitInflate(){ try { const v=parseFloat(localStorage.getItem('outfitInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readLegInflate(){ try { const v=parseFloat(localStorage.getItem('legInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
     function readSkirtInflate(){ try { const v=parseFloat(localStorage.getItem('skirtInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
     function readArmInflate(){ try { const v=parseFloat(localStorage.getItem('armInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
@@ -242,6 +243,7 @@
     function readChemiseInflateMin(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } }
     function isBootish(id, slot){ try { return slot==='boots' || slot==='feet' || /shoe|bottes/i.test(String(id||'')); } catch { return false; } }
     function isTopish(id, slot){ try { return (slot==='top'||slot==='torso'||slot==='body'||/shirt|chemise|plastron|torso|chest|top/i.test(String(id||''))); } catch { return false; } }
+    function isOutfitish(id, slot){ try { return (slot==='outfit'||/outfit|suit|armor/i.test(String(id||''))); } catch { return false; } }
     function isLegish(id, slot){ try { return (slot==='legs'||/pants|trouser|legging|legwear|thigh|knee/i.test(String(id||''))); } catch { return false; } }
     function isSkirtish(id, slot){ try { return (slot==='skirt'||/skirt|dress|armorskirt/i.test(String(id||''))); } catch { return false; } }
     function isArmish(id, slot){ try { return (slot==='arms'||slot==='hands'||/amorarm|arm\b|bracer|gauntlet/i.test(String(id||''))); } catch { return false; } }
@@ -358,6 +360,7 @@
             try {
               const BI=readBootInflate();
               const TI=readTopInflate();
+              const OI=readOutfitInflate();
               const LI=readLegInflate();
               const SI=readSkirtInflate();
               const AI=readArmInflate();
@@ -365,6 +368,7 @@
               if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
               if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
               if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
+              if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
               if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
               if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
               if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
@@ -374,6 +378,12 @@
                 const mul = readChemiseInflateMul();
                 const min = readChemiseInflateMin();
                 infl = Math.max(infl, Math.max(TI*mul, min));
+              }
+              // Outfit-specific bump for green outfit
+              if (/^cos-greenoutfit$/i.test(String(it.id||''))) {
+                const mul = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMul')||'2.0'); return (isFinite(v)&&v>0)?v:2.0; } catch { return 2.0; } })();
+                const min = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+                infl = Math.max(infl, Math.max(OI*mul, min));
               }
               // Extra bump for pants
               if (/^cos-pants$/i.test(String(it.id||''))) {
@@ -407,6 +417,16 @@
               try {
                 const lift = (function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })();
                 a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+lift, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+              } catch {}
+            }
+            // Green outfit: raise slightly if requested (for overlap with tops)
+            if ((slot==='outfit') && /^cos-greenoutfit$/i.test(String(it.id||''))) {
+              try {
+                const force = (function(){ try { return !!JSON.parse(localStorage.getItem('greenOutfitLiftForce')||'false'); } catch { return false; } })();
+                if (!__hasItemOv || force) {
+                  const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.06'); return (isFinite(v)?v:0.06); } catch { return 0.06; } })();
+                  a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+                }
               } catch {}
             }
             try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
@@ -608,6 +628,7 @@
           try {
             const BI=readBootInflate();
             const TI=readTopInflate();
+            const OI=readOutfitInflate();
             const LI=readLegInflate();
             const SI=readSkirtInflate();
             const AI=readArmInflate();
@@ -615,6 +636,7 @@
             if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
             if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
             if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
+            if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
             if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
             if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
             if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
@@ -624,6 +646,11 @@
               const mul = readChemiseInflateMul();
               const min = readChemiseInflateMin();
               infl = Math.max(infl, Math.max(TI*mul, min));
+            }
+            if (/^cos-greenoutfit$/i.test(String(it.id||''))) {
+              const mul = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMul')||'2.0'); return (isFinite(v)&&v>0)?v:2.0; } catch { return 2.0; } })();
+              const min = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+              infl = Math.max(infl, Math.max(OI*mul, min));
             }
             // Extra bump for pants
             if (/^cos-pants$/i.test(String(it.id||''))) {
@@ -656,6 +683,16 @@
             try {
               const lift = (function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })();
               a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+lift, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+            } catch {}
+          }
+          // Green outfit lift
+          if ((slot==='outfit') && /^cos-greenoutfit$/i.test(String(it.id||''))) {
+            try {
+              const force = (function(){ try { return !!JSON.parse(localStorage.getItem('greenOutfitLiftForce')||'false'); } catch { return false; } })();
+              if (!__hasItemOv || force) {
+                const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.06'); return (isFinite(v)?v:0.06); } catch { return 0.06; } })();
+                a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+              }
             } catch {}
           }
           try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
