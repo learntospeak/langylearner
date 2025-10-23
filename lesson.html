@@ -302,7 +302,7 @@
         <div id="lesson-wrap">
             <div id="jp-text" class="space-y-3"></div>
             <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;display:none;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
-            <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:200px;height:260px;z-index:50;"></div>
+            <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:200px;height:260px;z-index:50;opacity:0;transition:opacity 150ms ease-out;"></div>
             <script>
               (async function(){
                 try {
@@ -333,7 +333,7 @@
                   let eq = (wRes && wRes.equipped) || {}; try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (Object.keys(snap).length) eq = snap; } } catch {}
                   const items = (catRes && catRes.items) || []; const idToItem = new Map(items.map(i=>[i.id,i]));
                   const modelItem = idToItem.get(eq.model) || items.find(i=>i.id==='model-basemesh'); if (!modelItem) return;
-                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); return; }
+                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); try{ (document.getElementById('lvWrap')||{}).style.opacity='1'; }catch{} return; }
                   // Flatten shading: convert non-skinned meshes to unlit materials; soften skinned meshes
                   try {
                     const OUTLINE_SCALE = (function(){ try { return Math.max(1.0, parseFloat(localStorage.getItem('outlineScale'))||1.02); } catch { return 1.02; } })();
@@ -436,7 +436,7 @@
                     // Extra zoom-out when hats are equipped (very tall headwear)
                     const hasHat = (function(){ try { const v=(eq||{}).hat; return (Array.isArray(v)?v.length>0:!!v); } catch { return false; } })();
                     if (hasHat) {
-                      const hatMul = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatZoomOut')||'1.25'); return (isFinite(v)&&v>0)?v:1.25; } catch { return 1.25; } })();
+                      const hatMul = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatZoomOut')||'1.4'); return (isFinite(v)&&v>0)?v:1.4; } catch { return 1.4; } })();
                       VIEW_SCALE *= hatMul;
                     }
                     const dist=baseDist*VIEW_SCALE;
@@ -452,6 +452,7 @@
                       controls.update();
                     }
                   } catch {}
+                  try { (document.getElementById('lvWrap')||{}).style.opacity='1'; } catch {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
               })();
             </script>
