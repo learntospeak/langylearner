@@ -361,6 +361,11 @@ async function loadClothingItems(){
   const files = await listGlbFilesRecursive(ITEMS_DIR);
   const items = [];
   const seen = new Set();
+  // Exclude problematic items from catalog
+  const EXCLUDE_IDS = new Set([
+    'cos-armorlegs', // misaligned legwear; remove from UI
+    'cos-armorlegsx'
+  ]);
   for (const p of files) {
     const nameBaseRaw = path.basename(p, path.extname(p));
     // Canonicalize to collapse duplicates like foo, foo_001, foo-1, foo (1)
@@ -376,6 +381,7 @@ async function loadClothingItems(){
     seen.add(canon);
     const slot = slotFromFilename(nameBaseRaw);
     const id = `cos-${canon}`;
+    if (EXCLUDE_IDS.has(id)) continue;
     const name = labelize(nameBaseRaw);
     const rel = path.relative(__dirname, p).replace(/\\/g,'/');
     // For now, clothing items are compatible with the Basemesh character only.

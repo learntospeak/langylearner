@@ -790,6 +790,7 @@
       function snapshot(){ try { return renderer && renderer.domElement ? renderer.domElement.toDataURL('image/png') : null; } catch { return null; } }
       return { init, loadBase, attachAll, getNodeNames, resize, snapshot };
     })();
+    function isHiddenItem(it){ try { const id=String((it&&it.id)||''); return id==='cos-armorlegs' || id==='cos-armorlegsx'; } catch { return false; } }
     function categoriesFrom(items){
       const cats = [];
       const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
@@ -798,10 +799,10 @@
       // Characters category
       if ((items||[]).some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
       // Dynamic clothing categories by slot
-      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it)).map(it=>it.slot)));
+      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it) && !isHiddenItem(it)).map(it=>it.slot)));
       const names = { outfit:'Outfits', hat:'Hats', hair:'Hair', mask:'Masks', top:'Tops', legs:'Legwear', boots:'Boots', skirt:'Skirts', belt:'Belts', bag:'Bags', misc:'Accessories' };
       const labelFor = (s)=> names[s] || (s.charAt(0).toUpperCase()+s.slice(1));
-      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s && compat(it) }));
+      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s && compat(it) && !isHiddenItem(it) }));
       return cats;
     }
     function renderCats(cats){
@@ -1077,7 +1078,7 @@
       const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
       const cat = cats.find(c=>c.id===SELECTED) || cats[0];
-      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat);
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat).filter(it=>!isHiddenItem(it));
       catalogEl.innerHTML='';
       list.forEach(it=>{
         const wrap = document.createElement('div');
