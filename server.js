@@ -757,6 +757,18 @@ app.use(express.static(path.join(__dirname), { redirect: false }));
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
 // Startup safety checks + backup scheduler
+const os = require('os');
+function getLanAddresses(){
+  try {
+    const ifaces = os.networkInterfaces();
+    const addrs = [];
+    Object.values(ifaces||{}).forEach(list=>{
+      (list||[]).forEach(n=>{ if(!n.internal && n.family==='IPv4') addrs.push(n.address); });
+    });
+    return addrs;
+  } catch { return []; }
+}
+
 ;(async function startup(){
   try {
     // Ensure DB exists (do not auto-create in production)
@@ -778,8 +790,13 @@ app.get('/api/ping', (req, res) => res.json({ ok: true }));
   } catch {}
 })();
 
-app.listen(PORT, () => {
-  console.log(`[server] http://localhost:${PORT}  (OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'})`);
+app.listen(PORT, '0.0.0.0', () => {
+  const lans = getLanAddresses();
+  console.log(`[server] http://localhost:${PORT}`);
+  if (lans.length) {
+    console.log(`[server] LAN: ${lans.map(ip=>`http://${ip}:${PORT}`).join('  ')}`);
+  }
+  console.log(`[server] OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'}`);
 });
 
 
