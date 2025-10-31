@@ -316,6 +316,7 @@
         if (!root || !hex) return false;
         let changed=false;
         const traverse = root.traverse ? (fn)=>root.traverse(fn) : (fn)=>{ (function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} })(root); };
+        // First pass: try strict hat_tint material/mesh names
         traverse((o)=>{
           try {
             if (!o || !o.isMesh) return;
@@ -330,6 +331,38 @@
             }
           } catch (e) {}
         });
+        if (!changed) {
+          // Fallback: limit to attachments tagged as slot 'hat'
+          try {
+            const targets = [];
+            const markIfHat = (g)=>{
+              try {
+                const n = String(g?.name||'').toLowerCase();
+                const slot = (g&&g.userData&&g.userData.__slot)||null;
+                if (slot==='hat' || /(^|[^a-z0-9])slot[:\-]?hat([^a-z0-9]|$)/.test(n)) targets.push(g);
+              } catch {}
+            };
+            // Collect candidate wrapper groups
+            root.traverse?.(o=>{ try { if (o && !o.isMesh) markIfHat(o); } catch{} });
+            for (const g of targets){
+              try {
+                g.traverse?.(o=>{
+                  try {
+                    if (!o || !o.isMesh) return;
+                    const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
+                    for (let i=0;i<arr.length;i++){
+                      const m=arr[i];
+                      try{ m.color&&m.color.set&&m.color.set(hex); }catch(e){}
+                      try{ if (m.map) m.map=null; }catch(e){}
+                      try{ if (m.needsUpdate!==undefined) m.needsUpdate=true; }catch(e){}
+                      changed = true;
+                    }
+                  } catch {}
+                });
+              } catch {}
+            }
+          } catch {}
+        }
         return changed;
       } catch (e) { return false; }
     }
@@ -342,6 +375,7 @@
           const mv=document.getElementById('mvShop'); const root=getBaseRoot(mv);
           if (root) ok = applyHatColorToRoot(root, hex) || ok;
         } catch (e) {}
+        try { const ag = (window.__TVAttachGroup||null); if (ag) ok = applyHatColorToRoot(ag, hex) || ok; } catch (e) {}
         try { console.log('[hatColor] applied', hex, ok); } catch (e) {}
         return ok;
       } catch (e) { return false; }
@@ -948,7 +982,9 @@
             try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
             // Wrap and center like the Anchor Tool
             const THREE = getThree();
-            const wrap = new (THREE?.Group||function(){})();
+          const wrap = new (THREE?.Group||function(){})();
+          try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
+          try { if (!wrap.name) wrap.name = `slot-hatwrap`; if (slot && !/slot-/.test(wrap.name)) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
             try { const boxObj = new (THREE||window.THREE).Box3().setFromObject(obj); const cObj = boxObj.getCenter(new (THREE||window.THREE).Vector3()); obj.position.sub(cObj); } catch {}
             try { wrap.add(obj); } catch {}
             // Attach first so world matrices are valid
@@ -1008,6 +1044,7 @@
         const wrap = document.getElementById('tvWrap'); if(!wrap) return false;
         const w = Math.max(1, wrap.clientWidth||0) || 200, h = Math.max(1, wrap.clientHeight||0) || 220;
         scene = new THREE.Scene();
+        try { window.__TVScene = scene; } catch {}
         camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
         camera.position.set(0, 0.35, 1.0);
         const amb = new THREE.AmbientLight(0xffffff, 0.4); scene.add(amb);
@@ -1029,6 +1066,7 @@
         wrap.appendChild(renderer.domElement);
         try { renderer.domElement.style.display = 'block'; } catch {}
         attachGroup = new THREE.Group(); scene.add(attachGroup);
+        try { window.__TVAttachGroup = attachGroup; } catch {}
         try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.1,0); } } catch(_){ }
         function tick(){ try { if(controls) controls.update(); renderer.render(scene, camera); } catch (_) {} requestAnimationFrame(tick); }
         requestAnimationFrame(tick);
@@ -1133,12 +1171,13 @@
         _tvBaseUrl = url;
         // Re-apply saved eye color for new base
         try { const hex=getSavedEyeHex(); if (hex) applyEyeColor(hex); } catch {}
+        try { const hex=getSavedHatHex(); if (hex && attachGroup) applyHatColorToRoot(attachGroup, hex); } catch {}
         return true;
       }
       function applyEyeColor(hex){ try { if (!baseGroup || !hex) return false; return applyEyeColorToRoot(baseGroup, hex); } catch { return false; } }
       async function attachAll(equip, itemsMap, anchors){
         const THREE = getThree(); if (!THREE || !initialized) return false;
-        if (!attachGroup) { attachGroup = new THREE.Group(); }
+        if (!attachGroup) { attachGroup = new THREE.Group(); try { window.__TVAttachGroup = attachGroup; } catch {} }
         try { if (attachGroup.parent !== scene) { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); scene.add(attachGroup); } } catch {}
         while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
@@ -1203,6 +1242,8 @@
             if (infl>0) inflateScene(src, infl);
           } catch {}
           const wrap = new THREE.Group();
+          try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
+          try { if (!wrap.name) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
           const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
