@@ -1,0 +1,68 @@
+{
+  "users": {
+    "Hello": {
+      "username": "Hello",
+      "email": "hello@cleverfoxprint.com.au",
+      "password": "scrypt$ea8550d94e2cc511fee6b7e9d9076b13$02902c35cff6509bb7c645511f21486e8e731adbba4dfbb0d42d522c06736ff1",
+      "progress": {},
+      "createdAt": 1760305585197,
+      "isAdmin": true,
+      "wallet": {
+        "coins": 1999500,
+        "owned": {
+          "model-allinone": true,
+          "model-basemesh": true,
+          "upgrade-tutor-basic": true,
+          "cos-bottes": true,
+          "cos-bottesgreen": true,
+          "cos-ninjassuitshoe": true,
+          "cos-shoe": true,
+          "cos-bag": true,
+          "model-ninja": true,
+          "model-knight": true,
+          "model-archer": true,
+          "model-merchant": true,
+          "cos-armorskirt": true,
+          "cos-hairone": true,
+          "cos-hairt": true,
+          "cos-hairtail": true,
+          "cos-hairtailknight": true,
+          "cos-hairvariant": true,
+          "cos-armorhelmet": true,
+          "cos-hat": true,
+          "model-student": true,
+          "cos-armorshoe": true,
+          "cos-amorarm": true,
+          "cos-ceinture": true,
+          "cos-greenoutfitbelt": true,
+          "cos-amorplastron": true,
+          "cos-chemise": true,
+          "cos-shirt": true,
+          "upgrade-hint-plus": true,
+          "cos-skirt": true,
+          "cos-armorceinturethighs": true,
+          "cos-armorknees": true,
+          "cos-armorlegs": true,
+          "cos-armorthigh": true,
+          "cos-ninjassuitthigh": true,
+          "cos-pants": true,
+          "cos-greenoutfit": true
+        },
+        "equipped": {
+          "model": "model-basemesh",
+          "boots": "cos-shoe",
+          "hat": "cos-hat",
+          "belt": "cos-ceinture",
+          "outfit": "cos-greenoutfit"
+        }
+      }
+    },
+    "hello1": {
+      "username": "hello1",
+      "email": "",
+      "password": "scrypt$3907fdfc11497a754f800227fb19649d$5bc9b70283a1356965027d85bf49b340258c8083578359fe0fdeb9e8f3c09490",
+      "progress": {},
+      "createdAt": 1760314501157
+    }
+  }
+}

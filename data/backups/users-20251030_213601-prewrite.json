@@ -53,12 +53,7 @@
           "cos-ninjassuitmask": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "belt": "cos-greenoutfitbelt",
-          "hat": "cos-hat",
-          "boots": "cos-shoe",
-          "bag": "cos-bag",
-          "skirt": "cos-armorskirt"
+          "model": "model-basemesh"
         },
         "anchors": {
           "cos-armorshoe": {

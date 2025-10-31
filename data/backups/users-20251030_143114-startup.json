@@ -53,12 +53,7 @@
           "cos-ninjassuitmask": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "belt": "cos-greenoutfitbelt",
-          "hat": "cos-hat",
-          "boots": "cos-shoe",
-          "bag": "cos-bag",
-          "skirt": "cos-armorskirt"
+          "model": "model-basemesh"
         },
         "anchors": {
           "cos-armorshoe": {
@@ -182,9 +177,9 @@
           },
           "cos-amorplastron": {
             "position": [
-              0.004,
-              -0.133,
-              0.028
+              0,
+              0.505,
+              0.033
             ],
             "rotation": [
               0,
@@ -505,9 +500,9 @@
           },
           "top": {
             "position": [
-              0.03,
-              0.649,
-              0.059
+              0,
+              0.452,
+              0.025
             ],
             "rotation": [
               0,
@@ -515,9 +510,9 @@
               0
             ],
             "scale": [
-              1,
-              1,
-              1
+              1.12,
+              1.12,
+              1.12
             ]
           },
           "skirt": {
@@ -741,10 +736,7 @@
           "cos-hairtailknight": true,
           "cos-hairvariant": true,
           "cos-ninjassuitmask": true,
-          "cos-amorarm": true,
-          "cos-armorceinturethighs": true,
-          "cos-amorplastron": true,
-          "top": true
+          "cos-amorarm": true
         }
       }
     },

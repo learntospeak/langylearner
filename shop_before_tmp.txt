@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -55,10 +55,6 @@
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
             <div id="eyeColorRow" class="flex items-center justify-center gap-2 mt-2">
               <label for="eyeColorPick" class="text-xs font-medium">Eye Color</label>
-              <div id="hatColorRow" class="flex items-center justify-center gap-2 mt-1">
-                <label for="hatColorPick" class="text-xs font-medium">Hat Color</label>
-                <input id="hatColorPick" type="color" value="#8a4b20" class="w-8 h-8 p-0 border rounded" />
-              </div>
               <input id="eyeColorPick" type="color" value="#31a2ff" class="w-8 h-8 p-0 border rounded" />
               <select id="eyeMatSel" class="text-xs border rounded px-1 py-0.5">
                 <option value="">Auto</option>
@@ -95,7 +91,11 @@
     const catTitle = $('#catTitle');
     const backBtn = document.getElementById('backBtn');
     if (backBtn) {
-      backBtn.addEventListener('click', (e) => { e.preventDefault(); try { const last=(function(){ try { return localStorage.getItem('lastLessonHref'); } catch { return null; } })(); const href = last || 'lesson.html?lesson=greetings-001'; location.href = href; } catch (_) { location.href = 'lesson.html?lesson=greetings-001'; } });
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        try { if (history.length > 1) history.back(); else location.href = 'lesson.html'; }
+        catch (e) { location.href = 'lesson.html'; }
+      });
     }
 
     // Anchor Debug toggle + Log wiring
@@ -309,43 +309,6 @@
     function computeBounds(root){ try { const THREE = getThree(); if(!THREE||!root) return null; const box = new THREE.Box3(); let has=false; root.updateWorldMatrix?.(true,true); root.traverse?.(o=>{ try{ if (o.isMesh && o.geometry){ if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone(); if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } } } }catch(_){}}); return has?box:null; } catch (e) { return null; } }
     function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
     // Eye color: persistence + application helpers
-    function getSavedHatHex(){ try { const v=String(localStorage.getItem("hatColorHex")||"").trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
-    function setSavedHatHex(hex){ try { if (typeof hex==='string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) localStorage.setItem("hatColorHex", hex.startsWith('#')?hex:'#'+hex); } catch (e) {} }
-    function applyHatColorToRoot(root, hex){
-      try {
-        if (!root || !hex) return false;
-        let changed=false;
-        const traverse = root.traverse ? (fn)=>root.traverse(fn) : (fn)=>{ (function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} })(root); };
-        traverse((o)=>{
-          try {
-            if (!o || !o.isMesh) return;
-            const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
-            const on = String(o.name||'').toLowerCase();
-            for (let i=0;i<arr.length;i++){
-              const m = arr[i];
-              try {
-                const nm = String((m&&m.name)||'').toLowerCase();
-                if (/\bhat_tint\b/.test(nm) || /\bhat_tint\b/.test(on)) { try{ m.color&&m.color.set&&m.color.set(hex); }catch(e){} try{ if (m.map) m.map=null;}catch(e){} try{ if(m.needsUpdate!==undefined) m.needsUpdate=true;}catch(e){} changed=true; }
-              } catch (e) {}
-            }
-          } catch (e) {}
-        });
-        return changed;
-      } catch (e) { return false; }
-    }
-    async function applyHatColorFromStorage(){
-      try {
-        const hex = getSavedHatHex(); if (!hex) return false;
-        let ok=false;
-        try { if (window.TV && TV.applyHatColor) ok = TV.applyHatColor(hex) || ok; } catch (e) {}
-        try {
-          const mv=document.getElementById('mvShop'); const root=getBaseRoot(mv);
-          if (root) ok = applyHatColorToRoot(root, hex) || ok;
-        } catch (e) {}
-        try { console.log('[hatColor] applied', hex, ok); } catch (e) {}
-        return ok;
-      } catch (e) { return false; }
-    }
     function getSavedEyeHex(){ try { const v=String(localStorage.getItem('eyeColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v) ? (v.startsWith('#')?v:("#"+v)) : null; } catch { return null; } }
     function setSavedEyeHex(hex){ try { if (typeof hex==='string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) localStorage.setItem('eyeColorHex', hex.startsWith('#')?hex:("#"+hex)); } catch {} }
     function getEyeMatFilter(){ try { const v=String(localStorage.getItem('eyeMatFilter')||'').trim(); return v||''; } catch { return ''; } }
@@ -681,26 +644,27 @@
     function applyEyeColorToRoot(root, hex){
       try {
         if (!root || !hex) return false;
-        // Strict: only tint materials explicitly named "iris_tint" (or meshes carrying that name)
-        const picks = [];
-        root.traverse?.(o=>{
+        const parts = findEyeParts(root);
+        let changed=false;
+        const target = parts.iris.length ? parts.iris : (parts.other.length ? parts.other : parts.sclera); // prefer iris; fallback if needed
+        try { console.log('[eyeColor] target iris pairs:', (target||[]).map(r=>((r.mesh&&r.mesh.name)||'?')+' • '+((r.mat&&r.mat.name)||'?'))); } catch {}
+        target.forEach(rec=>{
           try {
-            if (!o || !o.isMesh) return;
-            const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
-            const on = String(o.name||'').toLowerCase();
-            arr.forEach(m=>{ try { const mn=String(m?.name||'').toLowerCase(); if (/iris_tint/.test(mn) || /iris_tint/.test(on)) picks.push({mesh:o, mat:m}); } catch {} });
+            const mesh = rec.mesh; let m = rec.mat;
+            // If this material is shared by other meshes (e.g., eyebrows/lashes), clone and reassign it here
+            m = ensureUniqueMaterial(mesh, m);
+            let ok = false;
+            // Prefer texture tint; only affect iris-like pixels
+            ok = tintMaterialTexture(m, hex, 'iris');
+            // Do not use material.color fallback to avoid bleeding into shared parts
+            // Avoid emissive/global color changes that would affect non-iris parts sharing the material
+            if (ok && m.needsUpdate!==undefined) m.needsUpdate=true; changed = changed || ok;
           } catch {}
         });
-        if (picks.length){
-          let changed=false;
-          picks.forEach(rec=>{ try { const m=ensureUniqueMaterial(rec.mesh, rec.mat); if (m && m.color && m.color.set){ m.color.set(hex); try{ if (m.map) m.map=null; }catch{} if (m.needsUpdate!==undefined) m.needsUpdate=true; changed=true; } } catch {} });
-          try { console.log('[eyeColor] tinted iris_tint materials:', picks.map(r=>(r.mat&&r.mat.name)||'?')); } catch {}
-          return changed;
-        }
-        try { console.warn('[eyeColor] no iris_tint material found â€” skipping tint'); } catch {}
-        return false;
+        return changed;
       } catch { return false; }
-    }async function applyEyeColorFromStorage(){
+    }
+    async function applyEyeColorFromStorage(){
       try {
         const hex = getSavedEyeHex(); if (!hex) return false;
         let ok=false; let count=0;
@@ -1274,8 +1238,7 @@
       function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
       try { window.addEventListener('resize', ()=>resize()); } catch {}
       function snapshot(){ try { return renderer && renderer.domElement ? renderer.domElement.toDataURL('image/png') : null; } catch { return null; } }
-      function applyHatColor(hex){ try { if (!baseGroup || !hex) return false; let ok=false; try{ ok=applyHatColorToRoot(baseGroup, hex)||ok; }catch(e){} try{ if(attachGroup) ok=applyHatColorToRoot(attachGroup, hex)||ok; }catch(e){} return ok; } catch(e){ return false; } }
-      return { init, loadBase, attachAll, getNodeNames, resize, snapshot, applyEyeColor, applyHatColor };
+      return { init, loadBase, attachAll, getNodeNames, resize, snapshot, applyEyeColor };
     })();
     function isHiddenItem(it){ try { const id=String((it&&it.id)||''); return id==='cos-armorlegs' || id==='cos-armorlegsx'; } catch { return false; } }
     function categoriesFrom(items){
@@ -1370,7 +1333,6 @@
           await TV.loadBase(modelItem.model);
           try { if (TV.resize) TV.resize(); } catch {}
           try { await applyEyeColorFromStorage(); } catch {}
-          try { await applyHatColorFromStorage(); } catch {}
           try { buildEyeMaterialPicker(); } catch {}
           const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
           const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
@@ -1381,7 +1343,7 @@
         try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
         (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
         try {
-          const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} };
+          const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} };
           mv.addEventListener('load', once, { once:true });
           mv.addEventListener('scene-graph-ready', once, { once:true });
           mv.addEventListener('load', ()=>{ try { buildEyeMaterialPicker(); } catch {} }, { once:true });
@@ -1435,9 +1397,8 @@
           });
           const sum = document.getElementById('equipSummary');
           if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
-          // Ensure colors reapplies after any preview rebuild
+          // Ensure eye color reapplies after any preview rebuild
           try { await applyEyeColorFromStorage(); } catch {}
-          try { await applyHatColorFromStorage(); } catch {}
           try { buildEyeMaterialPicker(); } catch {}
         } catch (e) {}
       // No fallback preview
@@ -1741,17 +1702,11 @@
         }
       } catch {}
       try {
-        const hat = document.getElementById('hatColorPick');
-        if (hat && !hat.__wired){
-          hat.__wired = true;
-          try { const savedH = getSavedHatHex(); if (savedH) hat.value = savedH; } catch {}
-          hat.addEventListener('input', ()=>{ try { const v=String(hat.value||'').trim(); setSavedHatHex(v); applyHatColorFromStorage(); } catch {} });
-        }
-      } catch {}
-      try {
         const btn = document.getElementById('eyeApplyBtn');
         const pick = document.getElementById('eyeColorPick');
         const sel = document.getElementById('eyeMatSel');
+        const blend = document.getElementById('eyeBlendSel');
+        const fillSel = document.getElementById('eyeFillSel');
         if (btn && !btn.__wired) {
           btn.__wired = true;
           btn.addEventListener('click', async ()=>{
@@ -1759,8 +1714,9 @@
               const v = String((pick && pick.value) || '').trim();
               if (v) setSavedEyeHex(v);
               try { if (sel) setEyeMatFilter(sel.value||''); } catch {}
-              
-              btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Applyingâ€¦';
+              try { if (blend) setEyeOverlayMode(blend.value||'flat'); } catch {}
+              try { if (fillSel) setEyeFillMode(fillSel.value||'natural'); } catch {}
+              btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Applying…';
               try {
                 let ok = await applyEyeColorFromStorage();
                 // Fallback: if nothing applied (e.g., scene not ready), rebuild preview then re-apply
@@ -1781,22 +1737,29 @@
           sel.addEventListener('change', ()=>{ try { setEyeMatFilter(sel.value||''); applyEyeColorFromStorage(); } catch {} });
         }
       } catch {}
-      
+      try {
+        const blend = document.getElementById('eyeBlendSel');
+        if (blend && !blend.__wired){
+          blend.__wired=true;
+          try { blend.value = getEyeOverlayMode(); } catch {}
+          blend.addEventListener('change', ()=>{ try { setEyeOverlayMode(blend.value); applyEyeColorFromStorage(); } catch {} });
+        }
+      } catch {}
+      try {
+        const fillSel = document.getElementById('eyeFillSel');
+        if (fillSel && !fillSel.__wired){
+          fillSel.__wired=true;
+          try { fillSel.value = getEyeFillMode(); } catch {}
+          fillSel.addEventListener('change', ()=>{ try { setEyeFillMode(fillSel.value); applyEyeColorFromStorage(); } catch {} });
+        }
+      } catch {}
       try { applyEyeColorFromStorage(); } catch {}
-      try { applyHatColorFromStorage(); } catch {}
     })();
 
     loadAll();
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 

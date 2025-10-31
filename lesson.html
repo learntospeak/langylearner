@@ -3,10 +3,10 @@
 <head>
     <script>
       // Preview-only thickening to prevent poke-through (boots, tops, bags)
-      function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch { return 0.0; } }
+      function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch (e) { return 0.0; } }
       function __inflateScene(root, amount){
-        try { if(!root||!amount||!isFinite(amount)||amount<=0) return; const THREE=(window.__THREE||window.THREE); root.traverse(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} }catch{} }); } catch {} }
-      function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch { return false; } }
+        try { if(!root||!amount||!isFinite(amount)||amount<=0) return; const THREE=(window.__THREE||window.THREE); root.traverse(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch (e) {} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch (e) {} }catch (e) {} }); } catch (e) {} }
+      function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch (e) { return false; } }
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
@@ -50,9 +50,19 @@
     </script>
     <script src="./modules/outfit-preview.js"></script>
     <script>
+      // Remember the current lesson URL so Shop's Back button can return reliably
+      (function(){
+        try {
+          window.addEventListener('DOMContentLoaded', function(){
+            try { localStorage.setItem('lastLessonHref', location.pathname + location.search); } catch (e) {}
+          });
+        } catch (e) {}
+      })();
+    </script>
+    <script>
       // Default slot anchors (shared with Shop) so accessories position correctly on lesson page
       // Proactively update SW while lessons are open (helps mobile PWAs)
-      (function(){ try{ if('serviceWorker' in navigator){ setTimeout(()=>{ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); }, 2000); document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); } }); } }catch{} })();
+      (function(){ try{ if('serviceWorker' in navigator){ setTimeout(()=>{ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); }, 2000); document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); } }); } }catch (e) {} })();
       window.SLOT_ANCHORS = window.SLOT_ANCHORS || {
         head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
         torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
@@ -74,8 +84,8 @@
       (function seedDefaultItemAnchors(){
         try {
           const key = 'cos-armorshoe';
-          const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
-          const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })();
+          const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
+          const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch (e) { return {}; } })();
           let changed = false;
           if (!locks[key]  && !ov[key])  { ov[key]  = { position:[0, -0.39, 0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
           if (!locks.boots && !ov.boots) { ov.boots = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
@@ -88,7 +98,7 @@
           // Ninjashoe higher placement if not locked and missing
           (function(){ const id='cos-ninjashoe'; const y=-0.26, z=0.06; if (!locks[id] && !ov[id]) { ov[id] = { position:[0,y,z], rotation:[0,0,0], scale:[1,1,1] }; changed = true; } })();
           if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
-        } catch {}
+        } catch (e) {}
       })();
     </script>
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
@@ -279,10 +289,10 @@
                       if (j && j.user && j.user.username) shop.classList.remove('hidden');
                       else shop.classList.add('hidden');
                     }
-                  } catch {}
+                  } catch (e) {}
                 })
-                .catch(() => { try { el.textContent = 'Player: Guest'; } catch {} });
-            } catch {}
+                .catch(() => { try { el.textContent = 'Player: Guest'; } catch (e) {} });
+            } catch (e) {}
           })();
           // Removed: old 2D mascot updater
           </script>
@@ -293,7 +303,7 @@
             if (j && j.owned && j.owned['upgrade-tutor-basic']) {
               const a = document.getElementById('tutorNav'); if (a) a.classList.remove('hidden');
             }
-          } catch {} })();
+          } catch (e) {} })();
         </script>
 
 
@@ -311,7 +321,7 @@
                   const wrap = document.getElementById('lvWrap'); const mv = document.getElementById('mvLesson');
                   if (!wrap) return; if (mv) mv.style.display='none';
                   // Wait for module scripts to define THREE + GLTFLoader
-                  const waitReady = async(ms=5000)=>{ const t0=Date.now(); await new Promise(r=>{ (function poll(){ if (window.__THREE&&window.__GLTFLoader){ return r(); } if (Date.now()-t0>ms) return r(); try{ requestAnimationFrame(poll); }catch{ setTimeout(poll,16);} })(); }); };
+                  const waitReady = async(ms=5000)=>{ const t0=Date.now(); await new Promise(r=>{ (function poll(){ if (window.__THREE&&window.__GLTFLoader){ return r(); } if (Date.now()-t0>ms) return r(); try{ requestAnimationFrame(poll); }catch (e) { setTimeout(poll,16);} })(); }); };
                   await waitReady();
                   const THREE = window.__THREE||window.THREE; const GLTFLoader = window.__GLTFLoader;
                   if (!THREE || !GLTFLoader) { console.warn('[lesson-lv] missing THREE/GLTFLoader'); return; }
@@ -321,45 +331,107 @@
                   const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
                   // Flat lighting: ambient-only for manga-style look
                   const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
-                  try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch {}
+                  try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch (e) {}
                   const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                   renderer.setSize(w, h, false); renderer.setPixelRatio(1);
                   wrap.innerHTML=''; wrap.appendChild(renderer.domElement);
-                  let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch{}
-                  function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                  let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch (e) {}
+                  function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch (e) {} requestAnimationFrame(tick);} requestAnimationFrame(tick);
                   const loader = new GLTFLoader();
+                  function getSavedEyeHex(){ try { const v=String(localStorage.getItem('eyeColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+                  function getSavedHatHex(){ try { const v=String(localStorage.getItem('hatColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+                  function applyHatTint(root){
+                    try {
+                      var hex = getSavedHatHex();
+                      if (!hex || !root) return false;
+                      var changed=false;
+                      var traverse = (root.traverse) ? function(fn){ root.traverse(fn); } : function(fn){ function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} } walk(root); };
+                      traverse(function(o){
+                        try {
+                          if (!o || !o.isMesh) return;
+                          var arr = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+                          var on = String((o && o.name) || '').toLowerCase();
+                          for (var i=0;i<arr.length;i++){
+                            var m = arr[i];
+                            try {
+                              var nm = String((m && m.name) || '').toLowerCase();
+                              if (/\bhat_tint\b/.test(nm) || /\bhat_tint\b/.test(on)){
+                                try { if (m.color && m.color.set) m.color.set(hex); } catch(e){}
+                                try { if (m.map) m.map = null; } catch(e){}
+                                try { if (m.needsUpdate!==undefined) m.needsUpdate = true; } catch(e){}
+                                changed = true;
+                              }
+                            } catch(e){}
+                          }
+                        } catch(e){}
+                      });
+                      try { console.log('[lesson] hat tint applied?', changed); } catch(e){}
+                      return changed;
+                    } catch(e) { return false; }
+                  }
+                  function applyIrisTint(root){
+                    try {
+                      var hex = getSavedEyeHex();
+                      if (!hex || !root) return false;
+                      var changed = false;
+                      var traverse = (root.traverse) ? function(fn){ root.traverse(fn); } : function(fn){
+                        function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} }
+                        walk(root);
+                      };
+                      traverse(function(o){
+                        try {
+                          if (!o || !o.isMesh) return;
+                          var arr = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+                          for (var i=0;i<arr.length;i++){
+                            var m = arr[i];
+                            try {
+                              var nm = String((m && m.name) || '').toLowerCase();
+                              if (/\biris_tint\b/.test(nm)){
+                                try { if (m.color && m.color.set) m.color.set(hex); } catch(e){}
+                                try { if (m.map) m.map = null; } catch(e){}
+                                try { if (m.needsUpdate!==undefined) m.needsUpdate = true; } catch(e){}
+                                changed = true;
+                              }
+                            } catch(e){}
+                          }
+                        } catch(e){}
+                      });
+                      try { console.log('[lesson] iris tint applied?', changed); } catch(e){}
+                      return changed;
+                    } catch(e) { return false; }
+                  }
                   const [wRes, catRes] = await Promise.all([
                     fetch('/api/wallet', { cache:'no-store' }).then(r=>r.json()).catch(()=>({})),
                     fetch('/api/shop/catalog').then(r=>r.json()).catch(()=>({ items:[] }))
                   ]);
-                  let eq = (wRes && wRes.equipped) || {}; try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (Object.keys(snap).length) eq = snap; } } catch {}
+                  let eq = (wRes && wRes.equipped) || {}; try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (Object.keys(snap).length) eq = snap; } } catch (e) {}
                   const items = (catRes && catRes.items) || []; const idToItem = new Map(items.map(i=>[i.id,i]));
                   const modelItem = idToItem.get(eq.model) || items.find(i=>i.id==='model-basemesh'); if (!modelItem) return;
-                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); try{ (document.getElementById('lvWrap')||{}).style.opacity='1'; }catch{} return; }
+                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch (e) { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); try{ (document.getElementById('lvWrap')||{}).style.opacity='1'; }catch (e) {} return; }
                   // Flatten shading: convert non-skinned meshes to unlit materials; soften skinned meshes
                   try {
-                    const OUTLINE_SCALE = (function(){ try { return Math.max(1.0, parseFloat(localStorage.getItem('outlineScale'))||1.02); } catch { return 1.02; } })();
-                    const OUTLINE_COLOR = (function(){ try { return new (window.__THREE||window.THREE).Color(String(localStorage.getItem('outlineColor')||'#000000')); } catch { return null; } })();
+                    const OUTLINE_SCALE = (function(){ try { return Math.max(1.0, parseFloat(localStorage.getItem('outlineScale'))||1.02); } catch (e) { return 1.02; } })();
+                    const OUTLINE_COLOR = (function(){ try { return new (window.__THREE||window.THREE).Color(String(localStorage.getItem('outlineColor')||'#000000')); } catch (e) { return null; } })();
                     rootG.traverse(o => { try {
                       if (!(o && o.isMesh && o.material)) return;
                       const isSkinned = !!o.isSkinnedMesh || !!o.skeleton;
                       if (!isSkinned && THREE && THREE.MeshBasicMaterial) {
                         const m = o.material; const opts = {};
-                        try { if (m.map) opts.map = m.map; } catch {}
-                        try { if (m.color) opts.color = m.color; } catch {}
+                        try { if (m.map) opts.map = m.map; } catch (e) {}
+                        try { if (m.color) opts.color = m.color; } catch (e) {}
                         const basic = new THREE.MeshBasicMaterial(opts);
-                        try { if (m.transparent) basic.transparent = true; } catch {}
-                        try { if (typeof m.opacity === 'number') basic.opacity = m.opacity; } catch {}
-                        try { if (typeof m.alphaTest === 'number') basic.alphaTest = m.alphaTest; } catch {}
-                        try { if (typeof m.side !== 'undefined') basic.side = m.side; } catch {}
-                        try { basic.needsUpdate = true; } catch {}
+                        try { if (m.transparent) basic.transparent = true; } catch (e) {}
+                        try { if (typeof m.opacity === 'number') basic.opacity = m.opacity; } catch (e) {}
+                        try { if (typeof m.alphaTest === 'number') basic.alphaTest = m.alphaTest; } catch (e) {}
+                        try { if (typeof m.side !== 'undefined') basic.side = m.side; } catch (e) {}
+                        try { basic.needsUpdate = true; } catch (e) {}
                         o.material = basic;
                       } else {
                         const m = o.material;
-                        try { if ('metalness' in m) m.metalness = 0; } catch {}
-                        try { if ('roughness' in m) m.roughness = 1; } catch {}
-                        try { if ('envMap' in m) m.envMap = null; } catch {}
-                        try { m.needsUpdate = true; } catch {}
+                        try { if ('metalness' in m) m.metalness = 0; } catch (e) {}
+                        try { if ('roughness' in m) m.roughness = 1; } catch (e) {}
+                        try { if ('envMap' in m) m.envMap = null; } catch (e) {}
+                        try { m.needsUpdate = true; } catch (e) {}
                       }
                       // Add thin black outline per mesh: sibling for skinned, child for others
                       if (THREE) {
@@ -373,15 +445,15 @@
                                 const basic = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR || 0x000000, side: THREE.BackSide });
                                 basic.skinning = true;
                                 const outline = new THREE.SkinnedMesh(o.geometry, basic);
-                                try { outline.bind(o.skeleton, o.bindMatrix); } catch {}
-                                try { outline.position.copy(o.position); outline.quaternion.copy(o.quaternion); outline.scale.copy(o.scale); } catch {}
-                                try { outline.scale.multiplyScalar(OUTLINE_SCALE); } catch {}
+                                try { outline.bind(o.skeleton, o.bindMatrix); } catch (e) {}
+                                try { outline.position.copy(o.position); outline.quaternion.copy(o.quaternion); outline.scale.copy(o.scale); } catch (e) {}
+                                try { outline.scale.multiplyScalar(OUTLINE_SCALE); } catch (e) {}
                                 outline.userData = outline.userData || {};
                                 outline.userData.__flatOutline = true;
                                 outline.userData.__flatOutlineSrc = srcId;
-                                try { outline.renderOrder = (o.renderOrder||0) - 1; } catch {}
+                                try { outline.renderOrder = (o.renderOrder||0) - 1; } catch (e) {}
                                 parent.add(outline);
-                              } catch {}
+                              } catch (e) {}
                             }
                           }
                         } else if (THREE && THREE.MeshBasicMaterial) {
@@ -394,15 +466,17 @@
                               outline.userData = outline.userData || {};
                               outline.userData.__flatOutline = true;
                               outline.userData.__flatOutlineSrc = srcId;
-                              try { outline.renderOrder = (o.renderOrder||0) - 1; } catch {}
+                              try { outline.renderOrder = (o.renderOrder||0) - 1; } catch (e) {}
                               o.add(outline);
-                            } catch {}
+                            } catch (e) {}
                           }
                         }
                       }
-                    } catch {} });
-                  } catch {}
+                    } catch (e) {} });
+                  } catch (e) {}
                   const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base);
+                  try { applyIrisTint(rootG); } catch (e) {}
+                  try { applyHatTint(rootG); } catch (e) {}
                   try {
                     const box = new THREE.Box3().setFromObject(base);
                     const c = box.getCenter(new THREE.Vector3());
@@ -411,20 +485,20 @@
                     const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
                     const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2);
                     const baseDist=Math.max(distV,distH);
-                    const VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                    const VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch (e) { return 2.2; } })();
                     const dist=baseDist*VIEW_SCALE;
                     camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
                     camera.position.set(0,size.y*0.10,dist);
                     if (controls) { const TARGET_Y=0.54; controls.target.set(0, size.y*TARGET_Y, 0); controls.update(); }
-                  } catch {}
+                  } catch (e) {}
                   const anchors = window.SLOT_ANCHORS || {};
                   const slots = Object.keys(eq||{}).filter(s=>s!=='model');
                   const wanted = []; slots.forEach(s=>{ const v=eq[s]; if(Array.isArray(v)) v.forEach(id=>wanted.push(id)); else if (v) wanted.push(v); });
-                  const loadAll = await Promise.all(wanted.map(id=> new Promise(res=>{ const it=idToItem.get(id); if(!it||!it.model) return res([id,null]); try{ loader.load(it.model,g=>res([id,g]),undefined,()=>res([id,null])); } catch { res([id,null]); } })));
+                  const loadAll = await Promise.all(wanted.map(id=> new Promise(res=>{ const it=idToItem.get(id); if(!it||!it.model) return res([id,null]); try{ loader.load(it.model,g=>res([id,g]),undefined,()=>res([id,null])); } catch (e) { res([id,null]); } })));
                   const loaded = new Map(loadAll.filter(([id,g])=>g&&g.scene));
                   console.log('[lesson-lv] items loaded', loaded.size);
-                  function getAnchor(slot,id){ try{ const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch { return anchors[slot]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
-                  for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
+                  function getAnchor(slot,id){ try{ const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch (e) { return anchors[slot]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
+                  for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch (e) {} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch (e) {} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch (e) { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch (e) {} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch (e) {} scene.add(wrapG); try { applyIrisTint(wrapG); } catch (e) {} try { applyHatTint(wrapG); } catch (e) {} } }
                   // Reframe to include accessories (hats etc.) and keep full model inside canvas
                   try {
                     const whole = new THREE.Box3().setFromObject(rootG);
@@ -434,11 +508,11 @@
                     const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
                     const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2);
                     const baseDist=Math.max(distV,distH);
-                    let VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+                    let VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch (e) { return 2.2; } })();
                     // Extra zoom-out when hats are equipped (very tall headwear)
-                    const hasHat = (function(){ try { const v=(eq||{}).hat; return (Array.isArray(v)?v.length>0:!!v); } catch { return false; } })();
+                    const hasHat = (function(){ try { const v=(eq||{}).hat; return (Array.isArray(v)?v.length>0:!!v); } catch (e) { return false; } })();
                     if (hasHat) {
-                      const hatMul = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatZoomOut')||'1.4'); return (isFinite(v)&&v>0)?v:1.4; } catch { return 1.4; } })();
+                      const hatMul = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatZoomOut')||'1.4'); return (isFinite(v)&&v>0)?v:1.4; } catch (e) { return 1.4; } })();
                       VIEW_SCALE *= hatMul;
                     }
                     const dist=baseDist*VIEW_SCALE;
@@ -446,15 +520,15 @@
                     // Keep camera Y at center, nudge target upward to push character lower in frame
                     camera.position.set(center2.x, center2.y, dist);
                     if (controls) {
-                      const baseBias = (function(){ try { const v=parseFloat(localStorage.getItem('lessonTargetYOffset')||'0.08'); return (isFinite(v)?v:0.08); } catch { return 0.08; } })();
-                      const hatBias  = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatYOffset')||'0.3'); return (isFinite(v)?v:0.3); } catch { return 0.3; } })();
+                      const baseBias = (function(){ try { const v=parseFloat(localStorage.getItem('lessonTargetYOffset')||'0.08'); return (isFinite(v)?v:0.08); } catch (e) { return 0.08; } })();
+                      const hatBias  = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatYOffset')||'0.3'); return (isFinite(v)?v:0.3); } catch (e) { return 0.3; } })();
                       const bias = baseBias + (hasHat ? hatBias : 0);
                       const ty = center2.y + (size2.y * bias);
                       controls.target.set(center2.x, ty, center2.z||0);
                       controls.update();
                     }
-                  } catch {}
-                  try { (document.getElementById('lvWrap')||{}).style.opacity='1'; } catch {}
+                  } catch (e) {}
+                  try { (document.getElementById('lvWrap')||{}).style.opacity='1'; } catch (e) {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
               })();
             </script>
@@ -872,7 +946,7 @@
           el.textContent = cleaned || (el.classList.contains('text-gray-300') ? '\u00A0' : '');
         }
       });
-    } catch {}
+    } catch (e) {}
   })();
   </script>
 
@@ -1126,7 +1200,7 @@
   try {
     const help = by('#slice-instructions');
     if (help) help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
-  } catch {}
+  } catch (e) {}
   function currentPhraseFromPage(){
     try {
       const cached = window.__kanaSliceSource;
@@ -1140,7 +1214,7 @@
           return { phrase, romaji, english, stages };
           }
       }
-    } catch {}
+    } catch (e) {}
     try {
       const list = document.querySelector('#jp-text');
       const jpEl = list?.querySelector('.jp');
@@ -1149,7 +1223,7 @@
       const english = (enEl?.textContent || '').trim() || 'Hello';
       const romaji = (window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa';
       return { phrase, romaji, english, stages: [] };
-    } catch {
+    } catch (e) {
       return { phrase:'?????', romaji:'konnichiwa', english:'Hello' , stages: [] };
     }
   }
@@ -1229,8 +1303,8 @@
   btnOpenFooter?.addEventListener('click', launchSlice);
   btnClose?.addEventListener('click', () => overlay.classList.add('hidden'));
   // Settings dropdown toggle
-  function closeMenu(){ try{ menu?.classList.add('hidden'); btnGear?.setAttribute('aria-expanded','false'); } catch{} }
-  function openMenu(){ try{ menu?.classList.remove('hidden'); btnGear?.setAttribute('aria-expanded','true'); } catch{} }
+  function closeMenu(){ try{ menu?.classList.add('hidden'); btnGear?.setAttribute('aria-expanded','false'); } catch (e) {} }
+  function openMenu(){ try{ menu?.classList.remove('hidden'); btnGear?.setAttribute('aria-expanded','true'); } catch (e) {} }
   btnGear?.addEventListener('click', (e)=>{ e.stopPropagation(); if (!menu) return; if (menu.classList.contains('hidden')) openMenu(); else closeMenu(); });
   btnMenuClose?.addEventListener('click', (e)=>{ e.stopPropagation(); closeMenu(); });
   // Dismiss on outside click or Esc
@@ -1259,22 +1333,22 @@
     ]).then(async ([w, cat]) => {
       let eq = (w && w.equipped) || {};
       const usedWallet = !!(w && w.equipped && Object.keys(w.equipped).length);
-      try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (snap && Object.keys(snap).length) { eq = snap; console.log('[lesson] using snapshot fallback', eq); } } } catch {}
+      try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (snap && Object.keys(snap).length) { eq = snap; console.log('[lesson] using snapshot fallback', eq); } } } catch (e) {}
       console.log('[lesson] wallet equipped', (w&&w.equipped)||{});
       console.log('[lesson] effective equipped', eq);
       const items=(cat&&cat.items)||[];
       console.log('[lesson] catalog items', items.length);
       // Pull anchors from server if available (merge into localStorage)
-      try { const r=await fetch('/api/anchors',{cache:'no-store'}); if(r.ok){ const d=await r.json(); const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); localStorage.setItem('anchorOverrides', JSON.stringify(Object.assign({}, cur, d.anchors||{}))); if (d.locks&&typeof d.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })(), d.locks))); } } catch {}
+      try { const r=await fetch('/api/anchors',{cache:'no-store'}); if(r.ok){ const d=await r.json(); const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })(); localStorage.setItem('anchorOverrides', JSON.stringify(Object.assign({}, cur, d.anchors||{}))); if (d.locks&&typeof d.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch (e) { return {}; } })(), d.locks))); } } catch (e) {}
       const it = items.find(x=> x.id === eq.model && x.model) || items.find(x=> x.id==='model-basemesh' && x.model);
       const mv = document.getElementById('mvLesson'); if (!mv) return;
       if (it && it.model){
         mv.src = it.model;
-        const setRate=()=>{ try{ mv.animationPlayRate=0.3 }catch{}; try{ mv.animationPlaybackRate=0.3 }catch{}; mv.pause(); };
+        const setRate=()=>{ try{ mv.animationPlayRate=0.3 }catch (e) {}; try{ mv.animationPlaybackRate=0.3 }catch (e) {}; mv.pause(); };
         if(!mv.dataset.rateBound){ mv.addEventListener('load', setRate, {once:true}); mv.dataset.rateBound='1'; }
         const doAttach = async ()=>{
           try {
-            const overrides = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+            const overrides = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
             if (window.OutfitPreview) {
               const ofp = window.OutfitPreview.create({ mv, overrides });
               ofp.update(eq, items);
@@ -1291,17 +1365,17 @@
                     const scene = new THREE.Scene();
                     const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
                     const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
-                    try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch {}
+                    try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch (e) {}
                     const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                     renderer.setSize(w,h,false); renderer.setPixelRatio(1);
                     wrap.innerHTML=''; wrap.style.display='block';
                     const mvEl = document.getElementById('mvLesson'); if (mvEl) mvEl.style.display='none';
                     wrap.appendChild(renderer.domElement);
-                    let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch{}
-                    function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                    let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch (e) {}
+                    function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch (e) {} requestAnimationFrame(tick);} requestAnimationFrame(tick);
                     // Load base
                     const loader = new window.__GLTFLoader();
-                    const gltf = await new Promise(res=>{ try{ loader.load(it.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+                    const gltf = await new Promise(res=>{ try{ loader.load(it.model, g=>res(g), undefined, ()=>res(null)); } catch (e) { res(null); } });
                     if (!gltf || !gltf.scene) return;
                     const base = gltf.scene; scene.add(base);
                     try {
@@ -1312,10 +1386,10 @@
                       camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
                       camera.position.set(0,size.y*0.08,dist);
                       if (controls) { const TARGET_Y=0.48; const TARGET_OFFSET=-0.5; controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0); controls.update(); }
-                    } catch {}
+                    } catch (e) {}
                     // Attach items
                     const anchors = window.SLOT_ANCHORS || {};
-                    async function addOne(slot, id){ const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return; const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch{ res(null);} }); if(!gltf2||!gltf2.scene) return; const obj = gltf2.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); let a = ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG);} 
+                    async function addOne(slot, id){ const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return; const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch (e) { res(null);} }); if(!gltf2||!gltf2.scene) return; const obj = gltf2.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch (e) {} const wrapG=new THREE.Group(); wrapG.add(obj); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })(); let a = ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch (e) {} try{ (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(base); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); wrapG.position.set(v.x,v.y,v.z); } catch (e) { wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })();}catch (e) {} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch (e) {} scene.add(wrapG);} 
                     const slots = Object.keys(eq||{}).filter(s=>s!=='model');
                     for (const slot of slots){ const raw = eq[slot]; const ids = Array.isArray(raw) ? raw : [raw]; for (const id of ids){ await addOne(slot, id); } }
                   })();
@@ -1330,9 +1404,11 @@
         else { mv.addEventListener('load', ()=>{ doAttach(); }, { once:true }); }
       }
     }).catch(()=>{});
-  } catch {}
+  } catch (e) {}
 })();
 </script>
+
+
 
 
 

@@ -53,12 +53,7 @@
           "cos-ninjassuitmask": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "belt": "cos-greenoutfitbelt",
-          "hat": "cos-hat",
-          "boots": "cos-shoe",
-          "bag": "cos-bag",
-          "skirt": "cos-armorskirt"
+          "model": "model-basemesh"
         },
         "anchors": {
           "cos-armorshoe": {
@@ -182,9 +177,9 @@
           },
           "cos-amorplastron": {
             "position": [
-              0.004,
-              -0.133,
-              0.028
+              0,
+              0.505,
+              0.033
             ],
             "rotation": [
               0,
@@ -200,7 +195,7 @@
           "cos-amorarm": {
             "position": [
               0,
-              -0.109,
+              0.522,
               0.003
             ],
             "rotation": [
@@ -505,9 +500,9 @@
           },
           "top": {
             "position": [
-              0.03,
-              0.649,
-              0.059
+              0,
+              0.452,
+              0.025
             ],
             "rotation": [
               0,
@@ -515,9 +510,9 @@
               0
             ],
             "scale": [
-              1,
-              1,
-              1
+              1.12,
+              1.12,
+              1.12
             ]
           },
           "skirt": {
@@ -706,23 +701,6 @@
               1.07,
               1.07
             ]
-          },
-          "cos-armorceinturethighs": {
-            "position": [
-              -0.012,
-              -0.437,
-              -0.169
-            ],
-            "rotation": [
-              0,
-              0,
-              0
-            ],
-            "scale": [
-              1,
-              1,
-              1
-            ]
           }
         },
         "anchorLocks": {
@@ -741,10 +719,7 @@
           "cos-hairtailknight": true,
           "cos-hairvariant": true,
           "cos-ninjassuitmask": true,
-          "cos-amorarm": true,
-          "cos-armorceinturethighs": true,
-          "cos-amorplastron": true,
-          "top": true
+          "cos-amorarm": true
         }
       }
     },

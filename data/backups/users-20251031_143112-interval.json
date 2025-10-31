@@ -55,10 +55,7 @@
         "equipped": {
           "model": "model-basemesh",
           "belt": "cos-greenoutfitbelt",
-          "hat": "cos-hat",
-          "boots": "cos-shoe",
-          "bag": "cos-bag",
-          "skirt": "cos-armorskirt"
+          "hat": "cos-hat"
         },
         "anchors": {
           "cos-armorshoe": {
