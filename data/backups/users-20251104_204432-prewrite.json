@@ -54,15 +54,19 @@
         },
         "equipped": {
           "model": "model-basemesh",
-          "misc": "cos-amorarm",
+          "hair": "cos-hairtail",
+          "top": "cos-chemise",
+          "skirt": "cos-skirt",
+          "boots": "cos-bottes",
+          "bag": "cos-bag",
           "hat": "cos-hat",
-          "hair": "cos-hairtail"
+          "belt": "cos-greenoutfitbelt"
         },
         "anchors": {
           "cos-armorshoe": {
             "position": [
               0,
-              -0.41500000000000004,
+              -0.353,
               0.06
             ],
             "rotation": [
@@ -180,9 +184,9 @@
           },
           "cos-amorplastron": {
             "position": [
-              0,
-              0.505,
-              0.033
+              0.004,
+              0.495,
+              0.028
             ],
             "rotation": [
               0,
@@ -198,7 +202,7 @@
           "cos-amorarm": {
             "position": [
               0,
-              0.522,
+              0.502,
               0.003
             ],
             "rotation": [
@@ -300,7 +304,7 @@
           "cos-bag": {
             "position": [
               -0.001,
-              0.451,
+              0.48,
               -0.121
             ],
             "rotation": [
@@ -343,9 +347,9 @@
               0
             ],
             "scale": [
-              1,
-              1,
-              1
+              1.17,
+              1.17,
+              1.17
             ]
           },
           "cos-greenoutfit": {
@@ -503,9 +507,9 @@
           },
           "top": {
             "position": [
-              0,
-              0.452,
-              0.025
+              0.03,
+              0.649,
+              0.059
             ],
             "rotation": [
               0,
@@ -513,9 +517,9 @@
               0
             ],
             "scale": [
-              1.12,
-              1.12,
-              1.12
+              1,
+              1,
+              1
             ]
           },
           "skirt": {
@@ -598,9 +602,9 @@
               0
             ],
             "scale": [
-              1,
-              1,
-              1
+              0.92,
+              0.92,
+              0.92
             ]
           },
           "cos-hat": {
@@ -615,9 +619,9 @@
               0
             ],
             "scale": [
-              1.38,
-              1.38,
-              1.38
+              1.24,
+              1.24,
+              1.24
             ]
           },
           "cos-hairt": {
@@ -632,16 +636,16 @@
               0
             ],
             "scale": [
-              1,
-              1,
-              1
+              0.95,
+              0.95,
+              0.95
             ]
           },
           "cos-hairtail": {
             "position": [
-              -0.025,
+              0.005,
               1.168,
-              -0.161
+              -0.089
             ],
             "rotation": [
               0,
@@ -649,9 +653,9 @@
               0
             ],
             "scale": [
-              1.2,
-              1.2,
-              1.2
+              1,
+              1,
+              1
             ]
           },
           "cos-hairtailknight": {
@@ -673,7 +677,7 @@
           },
           "cos-hairvariant": {
             "position": [
-              0,
+              -0.023,
               0.968,
               -0.056
             ],
@@ -683,9 +687,9 @@
               0
             ],
             "scale": [
-              1.09,
-              1.09,
-              1.09
+              1.01,
+              1.01,
+              1.01
             ]
           },
           "cos-ninjassuitmask": {
@@ -703,6 +707,57 @@
               1.07,
               1.07,
               1.07
+            ]
+          },
+          "cos-armorceinturethighs": {
+            "position": [
+              -0.012,
+              0.183,
+              -0.145
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "cos-shirt": {
+            "position": [
+              0.004,
+              0.444,
+              0.04
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.99,
+              0.99,
+              0.99
+            ]
+          },
+          "cos-skirt": {
+            "position": [
+              -0.001,
+              0.141,
+              0.006
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
             ]
           }
         },
@@ -722,7 +777,19 @@
           "cos-hairtailknight": true,
           "cos-hairvariant": true,
           "cos-ninjassuitmask": true,
-          "cos-amorarm": true
+          "cos-amorarm": true,
+          "cos-armorceinturethighs": true,
+          "cos-amorplastron": true,
+          "top": true,
+          "cos-chemise": true,
+          "cos-shirt": true,
+          "cos-armorshoe": true,
+          "cos-armorskirt": true,
+          "cos-armorthigh": true,
+          "cos-bottes": true,
+          "cos-bottesgreen": true,
+          "cos-greenoutfit": true,
+          "cos-skirt": true
         }
       }
     },

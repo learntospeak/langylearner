@@ -152,7 +152,7 @@
         }
         const s = (a.scale && a.scale[0]) ? a.scale[0] : defaultScaleFor(slot);
         try { wrap.scale.set(s,s,s); } catch {}
-        try { (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(root); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v=center.clone().add(p); try { root.worldToLocal(v); } catch {} wrap.position.set(v.x,v.y,v.z); } catch { wrap.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })(); } catch {}
+        try { (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(root); const center=box.getCenter(new THREE.Vector3()); const inv=(function(){ try{ const s=readBaseMeshScale(); return (isFinite(s)&&s>0)?(1/s):1; }catch{return 1;} })(); const p=new (THREE||window.THREE).Vector3((a.position?.[0]||0)*inv,(a.position?.[1]||0.05)*inv,(a.position?.[2]||0)*inv); const v=center.clone().add(p); try { root.worldToLocal(v); } catch {} wrap.position.set(v.x,v.y,v.z); } catch { const inv2=(function(){ try{ const s=readBaseMeshScale(); return (isFinite(s)&&s>0)?(1/s):1; }catch{return 1;} })(); wrap.position.set((a.position?.[0]||0)*inv2, (a.position?.[1]||0.05)*inv2, (a.position?.[2]||0)*inv2); } })(); } catch {}
           try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch {}
           try { console.log('[ofp] used anchor for', slot, it.id, ( ovItem ? 'item' : (ovSlot ? 'slot' : 'default') ), a); } catch {}
           let added = false;
@@ -176,7 +176,7 @@
                   wrap2.add(obj2);
                 } catch {}
                 try { wrap2.scale.set(s,s,s); } catch {}
-                try { (function(){ try { const THREE2=(window.__THREE||window.THREE); const base2=getRoot(mv); const box2=new THREE2.Box3().setFromObject(base2); const center2=box2.getCenter(new THREE2.Vector3()); const p2=new (THREE2||window.THREE).Vector3(a.position?.[0]||0,a.position?.[1]||0.05,a.position?.[2]||0); const v2=center2.clone().add(p2); try { base2.worldToLocal(v2); } catch {} wrap2.position.set(v2.x,v2.y,v2.z); } catch { wrap2.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } })(); } catch {}
+                try { (function(){ try { const THREE2=(window.__THREE||window.THREE); const base2=getRoot(mv); const box2=new THREE2.Box3().setFromObject(base2); const center2=box2.getCenter(new THREE2.Vector3()); const inv=(function(){ try{ const s=readBaseMeshScale(); return (isFinite(s)&&s>0)?(1/s):1; }catch{return 1;} })(); const p2=new (THREE2||window.THREE).Vector3((a.position?.[0]||0)*inv,(a.position?.[1]||0.05)*inv,(a.position?.[2]||0)*inv); const v2=center2.clone().add(p2); try { base2.worldToLocal(v2); } catch {} wrap2.position.set(v2.x,v2.y,v2.z); } catch { const inv2=(function(){ try{ const s=readBaseMeshScale(); return (isFinite(s)&&s>0)?(1/s):1; }catch{return 1;} })(); wrap2.position.set((a.position?.[0]||0)*inv2, (a.position?.[1]||0.05)*inv2, (a.position?.[2]||0)*inv2); } })(); } catch {}
                 try { wrap2.rotation.order='XYZ'; wrap2.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch {}
                 try { root.add(wrap2); added = (wrap2.parent === root); if (added) wrap.__skip = true; wrap2.__ofp = true; if (added) state.attached.push(wrap2); } catch {}
               }

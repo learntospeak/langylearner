@@ -53,18 +53,20 @@
             <div id="tvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
-            <div id="eyeColorRow" class="flex items-center justify-center gap-2 mt-2">
-              <label for="eyeColorPick" class="text-xs font-medium">Eye Color</label>
-              <div id="hatColorRow" class="flex items-center justify-center gap-2 mt-1">
-                <label for="hatColorPick" class="text-xs font-medium">Hat Color</label>
-                <input id="hatColorPick" type="color" value="#8a4b20" class="w-8 h-8 p-0 border rounded" />
+            <div id="colorControls" class="flex flex-col items-center gap-1 mt-2">
+              <div id="eyeColorRow" class="flex items-center justify-center gap-2">
+                <label for="eyeColorPick" class="text-xs font-medium">Eye Color</label>
+                <input id="eyeColorPick" type="color" value="#31a2ff" class="w-8 h-8 p-0 border rounded align-middle" />
+                <select id="eyeMatSel" class="text-xs border rounded px-1 py-0.5">
+                  <option value="">Auto</option>
+                </select>
+                <!-- Removed blend/fill controls to keep focus on iris only -->
+                <button id="eyeApplyBtn" class="btn btn-primary text-xs px-2 py-1">Apply</button>
               </div>
-              <input id="eyeColorPick" type="color" value="#31a2ff" class="w-8 h-8 p-0 border rounded" />
-              <select id="eyeMatSel" class="text-xs border rounded px-1 py-0.5">
-                <option value="">Auto</option>
-              </select>
-              <!-- Removed blend/fill controls to keep focus on iris only -->
-              <button id="eyeApplyBtn" class="btn btn-primary text-xs px-2 py-1">Apply</button>
+              <div id="hatColorRow" class="flex items-center justify-center gap-2">
+                <label for="hatColorPick" class="text-xs font-medium">Hat Color</label>
+                <input id="hatColorPick" type="color" value="#8a4b20" class="w-8 h-8 p-0 border rounded align-middle" />
+              </div>
             </div>
             <!-- Anchor Debug removed -->
             <div class="text-xs text-gray-600 mt-2">Tap a category and equip/buy to preview.</div>
@@ -1590,6 +1592,19 @@
         } catch (e) {}
       } catch (e) {}
     }
+
+    // React to Anchor Tool adjustments in real time (multi-window)
+    try {
+      window.addEventListener('storage', (e)=>{
+        try {
+          if (!e) return;
+          const k = String(e.key||'');
+          if (k==='hairThickenEnabled' || k==='hairInflate' || k==='anchorOverrides' || k==='baseMeshScale') {
+            renderPreview();
+          }
+        } catch {}
+      });
+    } catch {}
       function cardHtml(it, owned, equipped){
         const curModel = (equipped||{}).model || 'model-basemesh';
         const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();

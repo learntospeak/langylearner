@@ -9,6 +9,8 @@
     body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     .panel { border:2px solid #000; border-radius:12px; background:#fff; padding:10px; }
     .canvas-wrap { width: 560px; height: 420px; border:2px solid #000; border-radius:12px; background:#f9fafb; }
+    .toast { position: fixed; right: 16px; bottom: 16px; padding: 10px 12px; background:#111; color:#fff; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); opacity:0; transform: translateY(10px); transition: all .2s ease-out; }
+    .toast.show { opacity: 1; transform: translateY(0); }
   </style>
   <script type="importmap">
     {
@@ -27,6 +29,7 @@
     const wrap = $('#canvas');
     const modelSel = $('#modelSel');
     const itemSel = $('#itemSel');
+    const previewSel = document.getElementById('previewSel');
     const slotSel = $('#slotSel');
     const posX=$('#posX'), posY=$('#posY'), posZ=$('#posZ');
     const rotX=$('#rotX'), rotY=$('#rotY'), rotZ=$('#rotZ');
@@ -35,10 +38,16 @@
     const copyBtn=$('#copyBtn');
     const resetBtn=$('#resetBtn');
     const hideBuiltInChk = $('#hideBuiltIn');
+    const thickToggle = $('#thickToggle');
+    const thickRange  = $('#thickAmt');
+    const thickVal    = $('#thickVal');
 
     let scene, camera, renderer, orbit, tctl, baseGroup=null, accWrap=null;
+    let previewWraps = new Map(); // id -> Group
+    let idToItem = new Map();
     const loader = new GLTFLoader();
 
+    // Default anchors
     const SLOT_ANCHORS_DEFAULT = {
       head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
       torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
@@ -57,58 +66,21 @@
       misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
     };
 
-    // Preview-only geometric thickening (boots/shoes + specific items)
+    // Preview-only geometric thickening
     const BOOT_INFLATE = (function(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } })();
-    function inflateScene(root, amount){
-      try {
-        if (!root || !amount || !isFinite(amount) || amount<=0) return;
-        const THREE = window.THREE;
-        root.traverse(o=>{
-          try {
-            if (!o || !o.isMesh || !o.geometry) return;
-            const g0 = o.geometry; const g = g0.clone(); o.geometry = g;
-            if (!g.attributes || !g.attributes.position) return;
-            if (!g.attributes.normal) { try { g.computeVertexNormals(); } catch {} }
-            const pos=g.attributes.position, nor=g.attributes.normal; if(!pos||!nor) return;
-            const pa=pos.array, na=nor.array; const len=Math.min(pa.length, na.length);
-            for (let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; }
-            pos.needsUpdate=true; try { g.computeBoundingBox(); g.computeBoundingSphere(); } catch {}
-          } catch {}
-        });
-      } catch {}
-    }
+    function inflateScene(root, amount){ try { if(!root||!amount||!isFinite(amount)||amount<=0) return; root.traverse?.(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} }catch{} }); } catch{} }
     function isBootish(id, slot){ try { return (slot==='boots'||slot==='feet'||/shoe|bottes/i.test(String(id||''))); } catch { return false; } }
 
     // Match Shop behavior: shrink basemesh slightly without affecting accessories.
-    const BASEMESH_SCALE = (function(){
-      try { const v = parseFloat(localStorage.getItem('baseMeshScale') || '0.92'); return (isFinite(v) && v > 0) ? v : 0.92; }
-      catch { return 0.92; }
-    })();
-    function isBasemeshUrl(u){
-      try {
-        const s = String(u||'');
-        // Treat student model as basemesh-derived for consistent scaling
-        return /(basemeshpr|studentpr)\.glb$/i.test(s);
-      } catch { return false; }
-    }
+    const BASEMESH_SCALE = (function(){ try { const v = parseFloat(localStorage.getItem('baseMeshScale') || '0.92'); return (isFinite(v) && v > 0) ? v : 0.92; } catch { return 0.92; } })();
+    function isBasemeshUrl(u){ try { const s=String(u||''); return /(basemeshpr|studentpr)\.glb$/i.test(s); } catch { return false; } }
 
     // Option: hide meshes that look like built-in accessories on character models
     function shouldHideBuiltIns(){ try { return !!JSON.parse(localStorage.getItem('hideBuiltInAcc')||'false'); } catch { return false; } }
     function setHideBuiltIns(v){ try { localStorage.setItem('hideBuiltInAcc', JSON.stringify(!!v)); } catch {} }
-    function stripBuiltInAccessories(root){
-      try {
-        if (!root) return;
-        const patStr = (function(){ try { return String(localStorage.getItem('accessoryNameFilter')||''); } catch { return ''; } })();
-        const userRe = (function(){ try { return patStr? new RegExp(patStr, 'i') : null; } catch { return null; } })();
-        const re = userRe || /(hat|helmet|cap|hair|mask|glasses|goggles|scarf|tie|skirt|dress|belt|bag|backpack|shoe|boot|bottes|sock|glove|bracelet|necklace|earring)/i;
-        root.traverse(o=>{
-          try {
-            const nm = String(o.name||'');
-            if (o.isMesh && re.test(nm)) { o.visible = false; }
-          } catch {}
-        });
-      } catch {}
-    }
+    function stripBuiltInAccessories(root){ try { if(!root) return; const patStr=(function(){ try { return String(localStorage.getItem('accessoryNameFilter')||''); } catch { return ''; } })(); const userRe=(function(){ try { return patStr? new RegExp(patStr,'i'):null; } catch { return null; } })(); const re=userRe || /(hat|helmet|cap|hair|mask|glasses|goggles|scarf|tie|skirt|dress|belt|bag|backpack|shoe|boot|bottes|sock|glove|bracelet|necklace|earring)/i; root.traverse(o=>{ try { const nm=String(o.name||''); if(o.isMesh && re.test(nm)) o.visible=false; } catch {} }); } catch {} }
+
+    function toast(msg){ try { const el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), 1500); } catch {} }
 
     function init(){
       const w = wrap.clientWidth, h = wrap.clientHeight;
@@ -128,58 +100,93 @@
       (function tick(){ try{ orbit.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick); })();
     }
 
-    function fitCameraTo(obj){
-      try{
-        const box = new THREE.Box3().setFromObject(obj);
-        const center = box.getCenter(new THREE.Vector3());
-        obj.position.sub(center);
-        const sphere = new THREE.Sphere(); box.getBoundingSphere(sphere);
-        const r = Math.max(0.1, sphere.radius), d = r / Math.tan((camera.fov*Math.PI)/360);
-        camera.position.set(0, r*0.1, d*1.2);
-        orbit.target.set(0,0.05,0); orbit.update();
-      }catch{}
-    }
+    function fitCameraTo(obj){ try{ const box=new THREE.Box3().setFromObject(obj); const center=box.getCenter(new THREE.Vector3()); obj.position.sub(center); const sphere=new THREE.Sphere(); box.getBoundingSphere(sphere); const r=Math.max(0.1, sphere.radius), d=r/Math.tan((camera.fov*Math.PI)/360); camera.position.set(0, r*0.1, d*1.2); orbit.target.set(0,0.05,0); orbit.update(); }catch{} }
 
-    function toAbsoluteAsset(url){
-      try { if (!url) return url; if (url.startsWith('http')) return url; if (url.startsWith('/')) return url; if (url.startsWith('assets/')) return '/' + url; return url; } catch { return url; }
-    }
-    async function loadGLB(url){ const u = toAbsoluteAsset(url); return await new Promise(res=>{ try{ loader.load(u, g=>res(g?.scene||null), undefined, (e)=>{ try{ console.warn('[anchor] load failed', u, e); }catch{} res(null); }); }catch{ res(null); } }); }
+    function toAbsoluteAsset(url){ try { if (!url) return url; if (url.startsWith('http')) return url; if (url.startsWith('/')) return url; if (url.startsWith('assets/')) return '/' + url; return url; } catch { return url; } }
+    async function loadGLB(url){ const u = toAbsoluteAsset(url); return await new Promise(res=>{ try{ loader.load(u, g=>res(g?.scene||null), undefined, ()=>res(null)); }catch{ res(null); } }); }
 
     async function loadBase(url){
-      try{
-        if (tctl && tctl.object) { try { tctl.detach(); } catch {} }
-        if(baseGroup){ scene.remove(baseGroup); baseGroup=null; }
-        if(accWrap){ scene.remove(accWrap); accWrap=null; }
-      }catch{}
+      try{ if (tctl && tctl.object) { try { tctl.detach(); } catch {} } if(baseGroup){ scene.remove(baseGroup); baseGroup=null; } if(accWrap){ scene.remove(accWrap); accWrap=null; } }catch{}
       const sceneObj = await loadGLB(url); if(!sceneObj) { try{ console.warn('[anchor] base load failed', url); }catch{} return false; }
+      // clear previews; caller can repopulate
+      try { for (const [id, w] of previewWraps.entries()){ try{ if (tctl && tctl.object===w) tctl.detach(); }catch{} try{ scene.remove(w); }catch{} previewWraps.delete(id); } } catch {}
       baseGroup = sceneObj;
       try { if (isBasemeshUrl(url)) { const k = BASEMESH_SCALE; baseGroup.scale.set(k,k,k); } } catch {}
       try { if (shouldHideBuiltIns()) stripBuiltInAccessories(baseGroup); } catch {}
-      scene.add(baseGroup);
-      fitCameraTo(baseGroup);
-      return true;
+      scene.add(baseGroup); fitCameraTo(baseGroup); return true;
     }
 
     async function loadAccessory(url){
       if(!baseGroup) return false;
       if(accWrap){ try{ if (tctl && tctl.object===accWrap) tctl.detach(); scene.remove(accWrap);}catch{} accWrap=null; }
-      const obj=await loadGLB(url); if(!obj) { try{ console.warn('[anchor] accessory load failed', url); }catch{} return false; } const wrap = new THREE.Group();
+      const obj=await loadGLB(url); if(!obj) { try{ console.warn('[anchor] accessory load failed', url); }catch{} return false; }
+      const wrap = new THREE.Group();
       try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
       try {
         const opt = itemSel && itemSel.options && itemSel.options[itemSel.selectedIndex];
         const id = opt && opt.dataset && opt.dataset.id;
         const slot = slotSel && (slotSel.value||'');
-        let infl = 0;
-        const idlc = String(id||'').toLowerCase();
+        let infl = 0; const idlc = String(id||'').toLowerCase();
         if (idlc==='cos-bottesgreen' || idlc==='cos-bottes') infl = Math.max(infl, BOOT_INFLATE*2.2);
         if (isBootish(id, slot)) infl = Math.max(infl, BOOT_INFLATE);
+        const enabled = !!(thickToggle && thickToggle.checked);
+        if (enabled) { const v = parseFloat(thickRange?.value || String(BOOT_INFLATE)); if (isFinite(v) && v>0) infl = Math.max(infl, v); }
         if (infl>0) inflateScene(obj, infl);
+        // Match Shop: recenter AFTER inflation
+        try { const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c); } catch {}
       } catch {}
       wrap.add(obj); accWrap = wrap; scene.add(wrap); tctl.attach(wrap); return true;
     }
 
-    function syncFields(){ if(!accWrap) return; try{ posX.value=accWrap.position.x.toFixed(3); posY.value=accWrap.position.y.toFixed(3); posZ.value=accWrap.position.z.toFixed(3); rotX.value=Math.round(accWrap.rotation.x*180/Math.PI); rotY.value=Math.round(accWrap.rotation.y*180/Math.PI); rotZ.value=Math.round(accWrap.rotation.z*180/Math.PI); scaleF.value=accWrap.scale.x.toFixed(3);}catch{} }
+function getAnchor(slot, itemId){ try { const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[itemId] || ov[slot] || SLOT_ANCHORS_DEFAULT[slot] || SLOT_ANCHORS_DEFAULT.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch { return SLOT_ANCHORS_DEFAULT[slot] || SLOT_ANCHORS_DEFAULT.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
 
+function applyShopHeuristics(a, slot, id){
+  try {
+    const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+    const hasItemOv = !!ov[id];
+    let out = { position:[a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
+    if (slot==='bag') {
+      try { const force = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })(); if (!hasItemOv || force) { const lift=(function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })(); out.position[1]+=lift; } } catch {}
+    }
+    if (slot==='hair') {
+      try { const force = (function(){ try { return !!JSON.parse(localStorage.getItem('hairLiftForce')||'false'); } catch { return false; } })(); if (!hasItemOv || force) { const lift=(function(){ try { const v=parseFloat(localStorage.getItem('hairLift')||'0.012'); return (isFinite(v)?v:0.012); } catch { return 0.012; } })(); out.position[1]+=lift; } } catch {}
+    }
+    if ((slot==='mask') || /^cos-ninjassuitmask$/i.test(String(id||''))) {
+      try { const force = (function(){ try { return !!JSON.parse(localStorage.getItem('maskLiftForce')||'false'); } catch { return false; } })(); if (!hasItemOv || force) { const lift=(function(){ try { const v=parseFloat(localStorage.getItem('maskLift')||'0.01'); return (isFinite(v)?v:0.01); } catch { return 0.01; } })(); out.position[1]+=lift; } } catch {}
+    }
+    if ((slot==='outfit') && /^cos-greenoutfit$/i.test(String(id||''))) {
+      try { const force = (function(){ try { return !!JSON.parse(localStorage.getItem('greenOutfitLiftForce')||'false'); } catch { return false; } })(); if (!hasItemOv || force) { const lift=(function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitLift')||'0.02'); return (isFinite(v)?v:0.02); } catch { return 0.02; } })(); out.position[1]+=lift; } } catch {}
+    }
+    if (!hasItemOv && slot==='boots') {
+      try { if (/(shoe|bottes)/i.test(String(id||''))) { out.position[1]-=0.03; } } catch {}
+    }
+    return out;
+  } catch { return a; }
+}
+
+    async function loadPreviewById(id){
+      try {
+        if (!baseGroup) return;
+        const it = idToItem.get(id);
+        if (!it || !it.model) return;
+        try { const old = previewWraps.get(id); if (old) { try{ if (tctl && tctl.object===old) tctl.detach(); }catch{} scene.remove(old); previewWraps.delete(id); } } catch {}
+        const obj = await loadGLB(toAbsoluteAsset(it.model)); if (!obj) return;
+        const wrap = new THREE.Group();
+        try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
+        try { let infl=0; const idlc=String(it.id||'').toLowerCase(); if(idlc==='cos-bottesgreen'||idlc==='cos-bottes') infl=Math.max(infl, BOOT_INFLATE*2.2); if(isBootish(it.id, it.slot)) infl=Math.max(infl, BOOT_INFLATE); const en=!!(thickToggle&&thickToggle.checked); if(en){ const v=parseFloat(thickRange?.value||String(BOOT_INFLATE)); if(isFinite(v)&&v>0) infl=Math.max(infl,v);} if(infl>0) inflateScene(obj,infl); }catch{}
+        // Match Shop: recenter AFTER inflation
+        try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
+        wrap.add(obj);
+        try { const a=getAnchor(it.slot, it.id); a = applyShopHeuristics(a, it.slot, it.id); const s=(a.scale&&a.scale[0])?a.scale[0]:1; try{ wrap.scale.set(s,s,s);}catch{} try{ const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(baseGroup); const center=box.getCenter(new THREE.Vector3()); const p=new (THREE||window.THREE).Vector3(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); const v=center.clone().add(p); wrap.position.set(v.x,v.y,v.z); }catch{ try{ wrap.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} } try{ wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0,a.rotation?.[1]||0,a.rotation?.[2]||0);}catch{} } catch {}
+        scene.add(wrap); previewWraps.set(id, wrap);
+      } catch {}
+    }
+
+    function currentActiveItemId(){ try { const opt=itemSel?.options?.[itemSel.selectedIndex]; return opt?.dataset?.id||null; } catch { return null; } }
+    function getSelectedPreviewIds(){ try { const ids=[]; if (!previewSel) return ids; for (const opt of previewSel.options){ if (opt.selected) ids.push(opt.dataset?.id||opt.value); } const active=currentActiveItemId(); return ids.filter(x=>x && x!==active); } catch { return []; } }
+    async function updatePreviewExtras(reloadAll){ try { const wanted=new Set(getSelectedPreviewIds()); for(const [id,wrap] of previewWraps.entries()){ if (reloadAll || !wanted.has(id)) { try{ if(tctl&&tctl.object===wrap) tctl.detach(); }catch{} try{ scene.remove(wrap);}catch{} previewWraps.delete(id);} } for (const id of wanted){ if (!previewWraps.has(id)) await loadPreviewById(id); } } catch {} }
+
+    function syncFields(){ if(!accWrap) return; try{ posX.value=accWrap.position.x.toFixed(3); posY.value=accWrap.position.y.toFixed(3); posZ.value=accWrap.position.z.toFixed(3); rotX.value=Math.round(accWrap.rotation.x*180/Math.PI); rotY.value=Math.round(accWrap.rotation.y*180/Math.PI); rotZ.value=Math.round(accWrap.rotation.z*180/Math.PI); scaleF.value=accWrap.scale.x.toFixed(3);}catch{} }
     function applyFields(){ if(!accWrap) return; const rx=(+rotX.value||0)*Math.PI/180, ry=(+rotY.value||0)*Math.PI/180, rz=(+rotZ.value||0)*Math.PI/180, s=(+scaleF.value||1)||1; try{ accWrap.position.set(+posX.value||0,+posY.value||0,+posZ.value||0); accWrap.rotation.order='XYZ'; accWrap.rotation.set(rx,ry,rz); accWrap.scale.set(s,s,s);}catch{} }
 
     async function saveAnchor(){
@@ -192,26 +199,52 @@
       ov[key]=a; const json=JSON.stringify(ov);
       localStorage.setItem('anchorOverrides', json);
       try { await fetch('/api/anchors', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ anchors: ov, merge:true, locks:(function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })() }) }); } catch {}
-      // Lock this key so page-level seeders won't overwrite it
-      try {
-        const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch(e){ return {}; } })();
-        locks[key] = true; localStorage.setItem('anchorLocks', JSON.stringify(locks));
-      } catch {}
+      try { const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch(e){ return {}; } })(); locks[key] = true; localStorage.setItem('anchorLocks', JSON.stringify(locks)); } catch {}
       try { localStorage.setItem('anchorOverrides_last', json); } catch {}
     }
 
     copyBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const itemOpt=itemSel.options[itemSel.selectedIndex]; const itemId=itemOpt?.dataset?.id; const key=(scopeItem&&scopeItem.checked&&itemId)?itemId:slot; const data={ [key]: { position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ] } }; const t=JSON.stringify(data, null, 2); navigator.clipboard?.writeText(t).catch(()=>{}); });
-    saveBtn?.addEventListener('click', ()=>{ applyFields(); saveAnchor(); });
+    saveBtn?.addEventListener('click', ()=>{ applyFields(); saveAnchor(); toast('Saved anchor'); });
+
     // Download current overrides to a JSON file
-    try { document.getElementById('downloadBtn')?.addEventListener('click', ()=>{
-      try { const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; const blob = new Blob([JSON.stringify(ov, null, 2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='anchors.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); } catch {}
-    }); } catch {}
+    try { document.getElementById('downloadBtn')?.addEventListener('click', ()=>{ try { const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; const blob = new Blob([JSON.stringify(ov, null, 2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='anchors.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); } catch {} }); } catch {}
     // Load overrides from a JSON file
-    try { document.getElementById('uploadFile')?.addEventListener('change', (e)=>{
-      try { const f=e.target.files&&e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ try{ const data=JSON.parse(String(fr.result||'{}')||'{}')||{}; const cur=(function(){ try{return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};}catch{return{};} })(); const merged=Object.assign({}, cur, data); const json=JSON.stringify(merged); localStorage.setItem('anchorOverrides', json); localStorage.setItem('anchorOverrides_last', json); toast('Loaded anchors from file.'); }catch(err){ alert('Invalid JSON'); } }; fr.readAsText(f); } catch {}
-    }); } catch {}
+    try { document.getElementById('uploadFile')?.addEventListener('change', (e)=>{ try { const f=e.target.files&&e.target.files[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ try{ const data=JSON.parse(String(fr.result||'{}')||'{}')||{}; const cur=(function(){ try{return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};}catch{return{};} })(); const merged=Object.assign({}, cur, data); const json=JSON.stringify(merged); localStorage.setItem('anchorOverrides', json); localStorage.setItem('anchorOverrides_last', json); toast('Loaded anchors from file.'); }catch(err){ alert('Invalid JSON'); } }; fr.readAsText(f); } catch {} }); } catch {}
     try { document.getElementById('camReset')?.addEventListener('click', ()=>{ try { if (baseGroup) fitCameraTo(baseGroup); } catch {} }); } catch {}
-    resetBtn?.addEventListener('click', async()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); try{ const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); delete cur[slot]; localStorage.setItem('anchorOverrides', JSON.stringify(cur)); await fetch('/api/anchors', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ anchors: cur, merge:false }) }); } catch {} });
+    resetBtn?.addEventListener('click', async()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); try{ const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); delete cur[slot]; localStorage.setItem('anchorOverrides', JSON.stringify(cur)); await fetch('/api/anchors', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ anchors: cur, merge:false }) }); } catch {} try{ updatePreviewExtras(true); }catch{} });
+
+    // Thickness UI init and handlers
+    (function initThickness(){
+      try {
+        if (thickToggle) {
+          try { thickToggle.checked = !!JSON.parse(localStorage.getItem('anchorToolInflateEnabled')||'false'); } catch {}
+          // Mirror current toggle state into Shop's hair flag on init
+          try { localStorage.setItem('hairThickenEnabled', JSON.stringify(!!thickToggle.checked)); } catch {}
+          thickToggle.addEventListener('change', ()=>{ 
+            try { localStorage.setItem('anchorToolInflateEnabled', JSON.stringify(!!thickToggle.checked)); } catch {}
+            // Keep Shop hair thickening in sync
+            try { localStorage.setItem('hairThickenEnabled', JSON.stringify(!!thickToggle.checked)); } catch {}
+            try { const v=itemSel?.value; if (v) { const u=toAbsoluteAsset(v); loadAccessory(u).then(()=>applyFields()); } } catch {}
+            updatePreviewExtras(true);
+          });
+        }
+        const fallbackAmt = (function(){ try { const v=parseFloat(localStorage.getItem('anchorToolInflate')||String(BOOT_INFLATE)); return (isFinite(v)&&v>=0)?v:BOOT_INFLATE; } catch { return BOOT_INFLATE; } })();
+        if (thickRange) {
+          try { thickRange.value = String(fallbackAmt); } catch {}
+          // Mirror current slider value into Shop's hair amount on init
+          try { const num = parseFloat(thickRange.value||'0')||0; localStorage.setItem('hairInflate', String(num)); } catch {}
+          thickRange.addEventListener('input', ()=>{ try { if (thickVal) thickVal.textContent = String(thickRange.value||'0'); } catch {} });
+          thickRange.addEventListener('change', ()=>{ 
+            try { const num = parseFloat(thickRange.value||'0')||0; localStorage.setItem('anchorToolInflate', String(num)); } catch {}
+            // Sync Shop hair inflate value
+            try { const num = parseFloat(thickRange.value||'0')||0; localStorage.setItem('hairInflate', String(num)); } catch {}
+            try { const v=itemSel?.value; if (v) { const u=toAbsoluteAsset(v); loadAccessory(u).then(()=>applyFields()); } } catch {}
+            updatePreviewExtras(true);
+          });
+        }
+        if (thickVal) { try { thickVal.textContent = String(thickRange?.value || fallbackAmt); } catch {} }
+      } catch {}
+    })();
 
     posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
 
@@ -220,31 +253,20 @@
         const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[];
         const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model');
         const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model');
+        idToItem = new Map(acc.map(a=>[a.id,a]));
         models.forEach(m=>{ const o=document.createElement('option'); o.value=toAbsoluteAsset(m.model); o.textContent=m.name; modelSel.appendChild(o); });
         acc.forEach(a=>{ const o=document.createElement('option'); o.value=toAbsoluteAsset(a.model); o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); });
+        if (previewSel) { acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.id; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; previewSel.appendChild(o); }); }
         const uniqSlots=[...new Set(acc.map(a=>a.slot))]; uniqSlots.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; slotSel.appendChild(o); });
         if(models[0]){ await loadBase(models[0].model);} if(acc[0]){ slotSel.value=acc[0].slot; await loadAccessory(acc[0].model); const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); }
       }catch(e){ try{ console.warn('[anchor] populate failed', e); }catch{} }
     }
 
-    modelSel.onchange=async()=>{ const v = toAbsoluteAsset(modelSel.value); await loadBase(v); if(accWrap) { applyFields(); } };
-    itemSel.onchange=async()=>{ const opt=itemSel.options[itemSel.selectedIndex]; slotSel.value=opt?.dataset?.slot||'misc'; const v = toAbsoluteAsset(itemSel.value); await loadAccessory(v); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })(); const itemId=opt?.dataset?.id; const a = ov[itemId] || ov[slotSel.value] || SLOT_ANCHORS_DEFAULT[slotSel.value] || SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round((a.rotation[0]||0)*180/Math.PI); rotY.value=Math.round((a.rotation[1]||0)*180/Math.PI); rotZ.value=Math.round((a.rotation[2]||0)*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); };
+    modelSel.onchange=async()=>{ const v = toAbsoluteAsset(modelSel.value); await loadBase(v); if(accWrap) { applyFields(); } await updatePreviewExtras(true); };
+    itemSel.onchange=async()=>{ const opt=itemSel.options[itemSel.selectedIndex]; slotSel.value=opt?.dataset?.slot||'misc'; const v = toAbsoluteAsset(itemSel.value); await loadAccessory(v); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })(); const itemId=opt?.dataset?.id; const a = ov[itemId] || ov[slotSel.value] || SLOT_ANCHORS_DEFAULT[slotSel.value] || SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round((a.rotation[0]||0)*180/Math.PI); rotY.value=Math.round((a.rotation[1]||0)*180/Math.PI); rotZ.value=Math.round((a.rotation[2]||0)*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); await updatePreviewExtras(false); };
+    try { if (previewSel) previewSel.addEventListener('change', ()=>{ updatePreviewExtras(false); }); } catch {}
 
-    try {
-      if (hideBuiltInChk) {
-        hideBuiltInChk.checked = shouldHideBuiltIns();
-        hideBuiltInChk.addEventListener('change', async ()=>{
-          setHideBuiltIns(hideBuiltInChk.checked);
-          try {
-            if (baseGroup) {
-              // Re-apply visibility on current model
-              baseGroup.traverse(o=>{ try { o.visible = true; } catch {} });
-              if (hideBuiltInChk.checked) stripBuiltInAccessories(baseGroup);
-            }
-          } catch {}
-        });
-      }
-    } catch {}
+    try { if (hideBuiltInChk) { hideBuiltInChk.checked = shouldHideBuiltIns(); hideBuiltInChk.addEventListener('change', async ()=>{ setHideBuiltIns(hideBuiltInChk.checked); try { if (baseGroup) { baseGroup.traverse(o=>{ try { o.visible = true; } catch {} }); if (hideBuiltInChk.checked) stripBuiltInAccessories(baseGroup); } } catch {} }); } } catch {}
 
     init(); populate();
   </script>
@@ -256,35 +278,52 @@
       <div id="canvas" class="canvas-wrap"></div>
       <div class="text-xs text-gray-600 mt-1">Tip: drag to rotate, wheel to zoom. Use the colored gizmo to move/rotate/scale the accessory. Then Save.</div>
     </div>
-    <div class="panel grow max-w-[420px]">
+    <div class="panel grow max-w-[460px]">
       <div class="mb-2">
         <div class="font-semibold">Base Model</div>
         <select id="modelSel" class="border p-1 w-full"></select>
       </div>
       <div class="mb-2">
-        <div class="font-semibold">Accessory</div>
+        <div class="font-semibold">Accessory (active)</div>
         <select id="itemSel" class="border p-1 w-full"></select>
+      </div>
+      <div class="mb-2">
+        <div class="font-semibold">Preview With (multi)</div>
+        <select id="previewSel" class="border p-1 w-full" multiple size="6"></select>
+        <div class="text-xs text-gray-500">Hold Ctrl/Cmd or Shift to select multiple items. The active item above remains editable with the gizmo.</div>
       </div>
       <div class="mb-2">
         <label class="inline-flex items-center gap-2"><input id="hideBuiltIn" type="checkbox" class="border"> Hide built-in accessories</label>
         <div class="text-xs text-gray-500">Tip: uncheck if the model includes only the base body.</div>
       </div>
       <div class="mb-2">
-<div class="font-semibold">Slot</div>
-<select id="slotSel" class="border p-1 w-full"></select>
-</div>
-<div class="mb-2">
-<div class="font-semibold">Save Scope</div>
-<label class="mr-3"><input type="radio" name="scope" id="scopeItem" checked> Per item</label>
-<label><input type="radio" name="scope" id="scopeSlot"> Per slot</label>
-</div>
+        <div class="font-semibold">Increase Thickness</div>
+        <label class="inline-flex items-center gap-2 mt-1">
+          <input id="thickToggle" type="checkbox" class="border">
+          Enable (preview-only)
+        </label>
+        <div class="flex items-center gap-2 mt-2">
+          <input id="thickAmt" type="range" min="0" max="0.05" step="0.001" class="w-full">
+          <span class="text-xs text-gray-600">Amt: <span id="thickVal">0.009</span></span>
+        </div>
+        <div class="text-xs text-gray-500">Helps avoid poke-through while fitting. Not saved to anchors.</div>
+      </div>
+      <div class="mb-2">
+        <div class="font-semibold">Slot</div>
+        <select id="slotSel" class="border p-1 w-full"></select>
+      </div>
+      <div class="mb-2">
+        <div class="font-semibold">Save Scope</div>
+        <label class="mr-3"><input type="radio" name="scope" id="scopeItem" checked> Per item</label>
+        <label><input type="radio" name="scope" id="scopeSlot"> Per slot</label>
+      </div>
       <div class="grid grid-cols-3 gap-2 mb-2">
         <label>X <input id="posX" type="number" step="0.005" class="border px-1 py-0.5 w-full"></label>
         <label>Y <input id="posY" type="number" step="0.005" class="border px-1 py-0.5 w-full"></label>
         <label>Z <input id="posZ" type="number" step="0.005" class="border px-1 py-0.5 w-full"></label>
-        <label>RotX° <input id="rotX" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
-        <label>RotY° <input id="rotY" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
-        <label>RotZ° <input id="rotZ" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
+        <label>RotXÂ° <input id="rotX" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
+        <label>RotYÂ° <input id="rotY" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
+        <label>RotZÂ° <input id="rotZ" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
         <label>Scale <input id="scaleF" type="number" step="0.01" class="border px-1 py-0.5 w-full"></label>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -296,10 +335,12 @@
         <button id="resetBtn" class="btn btn-amber">Reset Defaults</button>
         <button id="camReset" class="btn btn-ghost">Reset Camera</button>
       </div>
-      <div class="text-xs text-gray-600 mt-2">Saved anchors are written to localStorage under <code>anchorOverrides</code> (and backed up to <code>anchorOverrides_last</code>). Shop uses the same key.</div>
+      <div class="text-xs text-gray-600 mt-2">Saved anchors are written to localStorage under <code>anchorOverrides</code> (and backed up to <code>anchorOverrides_last</code>). Shop/Lessons use the same key.</div>
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>
+
+
 
