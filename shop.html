@@ -10,7 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="anime-theme.css" />
   <script src="./modules/outfit-preview.js"></script>
-  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <script type="importmap">
     {
       "imports": {
@@ -18,6 +17,7 @@
       }
     }
   </script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
     import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
@@ -66,6 +66,14 @@
               <div id="hatColorRow" class="flex items-center justify-center gap-2">
                 <label for="hatColorPick" class="text-xs font-medium">Hat Color</label>
                 <input id="hatColorPick" type="color" value="#8a4b20" class="w-8 h-8 p-0 border rounded align-middle" />
+              </div>
+              <div id="bootColorRow" class="flex items-center justify-center gap-2">
+                <label for="bootColorPick" class="text-xs font-medium">Boot Color</label>
+                <input id="bootColorPick" type="color" value="#6b4b2a" class="w-8 h-8 p-0 border rounded align-middle" />
+              </div>
+              <div id="bagColorRow" class="flex items-center justify-center gap-2">
+                <label for="bagColorPick" class="text-xs font-medium">Bag Color</label>
+                <input id="bagColorPick" type="color" value="#5a4632" class="w-8 h-8 p-0 border rounded align-middle" />
               </div>
             </div>
             <!-- Anchor Debug removed -->
@@ -256,6 +264,26 @@
       try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
     }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
+    const DEFAULT_BASE_SCALE = 0.92;
+    function readBaseMeshScale(){
+      try{
+        const raw = parseFloat(localStorage.getItem('baseMeshScale')||String(DEFAULT_BASE_SCALE));
+        return (isFinite(raw)&&raw>0)? raw : DEFAULT_BASE_SCALE;
+      }catch{
+        return DEFAULT_BASE_SCALE;
+      }
+    }
+    function readInvBaseMeshScale(){
+      const s = readBaseMeshScale();
+      return (s>0)?(1/s):1;
+    }
+    function applyBaseScaleToRoot(root){
+      try{
+        if (!root || !root.scale || typeof root.scale.set!=='function') return;
+        const s = readBaseMeshScale();
+        root.scale.set(s,s,s);
+      }catch{}
+    }
     // Inflate helpers to thicken meshes (reduce skin poke-through)
     function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
     function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
@@ -313,6 +341,10 @@
     // Eye color: persistence + application helpers
     function getSavedHatHex(){ try { const v=String(localStorage.getItem("hatColorHex")||"").trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
     function setSavedHatHex(hex){ try { if (typeof hex==='string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) localStorage.setItem("hatColorHex", hex.startsWith('#')?hex:'#'+hex); } catch (e) {} }
+    function getSavedBootHex(){ try { const v=String(localStorage.getItem("bootColorHex")||"").trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+    function setSavedBootHex(hex){ try { if (typeof hex==='string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) localStorage.setItem("bootColorHex", hex.startsWith('#')?hex:'#'+hex); } catch (e) {} }
+    function getSavedBagHex(){ try { const v=String(localStorage.getItem("bagColorHex")||"").trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+    function setSavedBagHex(hex){ try { if (typeof hex==='string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) localStorage.setItem("bagColorHex", hex.startsWith('#')?hex:'#'+hex); } catch (e) {} }
     function applyHatColorToRoot(root, hex){
       try {
         if (!root || !hex) return false;
@@ -820,6 +852,7 @@
           root = getBaseRoot(mv);
           if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root or add() missing'); }catch(_){} return false; }
         }
+        applyBaseScaleToRoot(root);
         clearAttachments(mv);
         // Compute base center (without attachments) to match Anchor Tool's centered coordinates
         let baseCenter = null;
@@ -830,9 +863,9 @@
             baseCenter = box0.getCenter(new (THREE||window.THREE).Vector3());
           }
         } catch {}
-        // Read Anchor Tool's base scale to compensate positions (tool scales base by this; shop base is unscaled)
-        const __baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } })();
-        const __invBaseScale = (function(){ try { return (isFinite(__baseScale) && __baseScale>0) ? (1/__baseScale) : 1; } catch { return 1; } })();
+        // Read Anchor Tool's base scale to compensate positions (tool scales base by this)
+        const __baseScale = readBaseMeshScale();
+        const __invBaseScale = readInvBaseMeshScale();
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
         try { console.log('[attach] slots', slots); } catch(_){ }
         const added = [];
@@ -858,7 +891,7 @@
           const rawVal = equip[slot];
           const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
           for (const id of ids){
-          const it = itemsMap.get(id);
+          const it = itemsMap.get(id); if (isHiddenItem && isHiddenItem(it)) { continue; }
           if(!it || !it.model){ try{ console.warn('[attach] missing item for slot', slot, id); }catch(_){} continue; }
           try { console.log('[attach] loading', slot, it.id, it.model); } catch(_){ }
           // Removed HEAD probe to avoid double-requests; GLTFLoader/load will surface errors
@@ -940,13 +973,15 @@
             } catch {}
             const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
             const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
-            let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+            const slotKey = (slot==='bagx') ? 'bag' : slot;
+            let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
             a = snapFeetAnchor(a, slot, anchors);
             const __hasItemOv = !!__ov[it.id];
+            const __hasSlotOv = !!__ov[slotKey];
             const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
             // Apply bag lift unless there is a per-item override,
             // or always if 'bagLiftForce' is set to true in localStorage.
-            if ((slot==='bag') && (!__hasItemOv || __forceLift)) {
+            if ((slotKey==='bag') && (!(__hasItemOv || __hasSlotOv) || __forceLift)) {
               try {
                 const lift = (function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })();
                 a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+lift, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
@@ -956,7 +991,7 @@
             if ((slot==='hair')) {
               try {
                 const force = (function(){ try { return !!JSON.parse(localStorage.getItem('hairLiftForce')||'false'); } catch { return false; } })();
-                if (!__hasItemOv || force) {
+                if (!(__hasItemOv || __hasSlotOv) || force) {
                   const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('hairLift')||'0.012'); return (isFinite(v)?v:0.012); } catch { return 0.012; } })();
                   a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
                 }
@@ -965,7 +1000,7 @@
             if ((slot==='mask') || /^cos-ninjassuitmask$/i.test(String(it.id||''))) {
               try {
                 const force = (function(){ try { return !!JSON.parse(localStorage.getItem('maskLiftForce')||'false'); } catch { return false; } })();
-                if (!__hasItemOv || force) {
+                if (!(__hasItemOv || __hasSlotOv) || force) {
                   const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('maskLift')||'0.01'); return (isFinite(v)?v:0.01); } catch { return 0.01; } })();
                   a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
                 }
@@ -1007,20 +1042,11 @@
               }
               try { wrap.scale.set(s,s,s); } catch {}
             } catch {}
-            // Apply anchor position/rotation on wrapper. Anchor Tool uses a centered + scaled base,
-            // but model-viewer keeps original base transforms; compensate with baseCenter and base scale.
+            // Apply unified rule: world = saved * (1/baseMeshScale)
             try {
-              const bx = (baseCenter && isFinite(baseCenter.x)) ? baseCenter.x : 0;
-              const by = (baseCenter && isFinite(baseCenter.y)) ? baseCenter.y : 0;
-              const bz = (baseCenter && isFinite(baseCenter.z)) ? baseCenter.z : 0;
-              // Compensate for Anchor Tool's smaller base by expanding offsets from center
-              const sx = __invBaseScale, sy = __invBaseScale, sz = __invBaseScale;
-              const ax = (a.position?.[0]||0) * sx;
-              const ay = (a.position?.[1]||0.05) * sy;
-              const az = (a.position?.[2]||0) * sz;
-              const px = ax + bx;
-              const py = ay + by;
-              const pz = az + bz;
+              const px = (a.position?.[0]||0) * __invBaseScale;
+              const py = (a.position?.[1]||0.05) * __invBaseScale;
+              const pz = (a.position?.[2]||0) * __invBaseScale;
               wrap.position.set(px, py, pz);
             } catch{}
             try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch{}
@@ -1098,6 +1124,7 @@
         _tvBaseUrlWanted = url;
         const mySeq = (++_tvLoadSeq);
         if (baseGroup && _tvBaseUrl === url) {
+          applyBaseScaleToRoot(baseGroup);
           try {
             const box = new THREE.Box3().setFromObject(baseGroup);
             const center = box.getCenter(new THREE.Vector3());
@@ -1133,7 +1160,9 @@
         // Drop stale loads if a newer request was issued
         if (mySeq !== _tvLoadSeq || _tvBaseUrlWanted !== url) { try { /* ignore stale */ } catch {} return false; }
         if (!gltf || !gltf.scene) return false;
-        baseGroup = gltf.scene; scene.add(baseGroup);
+        baseGroup = gltf.scene;
+        applyBaseScaleToRoot(baseGroup);
+        scene.add(baseGroup);
         try { window.__TVBaseRoot = baseGroup; } catch {}
         try {
           if (!attachGroup) attachGroup = new THREE.Group();
@@ -1173,7 +1202,7 @@
         _tvBaseUrl = url;
         // Re-apply saved eye color for new base
         try { const hex=getSavedEyeHex(); if (hex) applyEyeColor(hex); } catch {}
-        try { const hex=getSavedHatHex(); if (hex && attachGroup) applyHatColorToRoot(attachGroup, hex); } catch {}
+        try { const hex=getSavedHatHex(); if (hex && attachGroup) applyHatColorToRoot(attachGroup, hex); } catch {} try { const hex2=getSavedBootHex(); if (hex2 && attachGroup) applyBootColorToRoot(attachGroup, hex2); } catch {} try { const hex3=getSavedBagHex(); if (hex3 && attachGroup) applyBagColorToRoot(attachGroup, hex3); } catch {}
         return true;
       }
       function applyEyeColor(hex){ try { if (!baseGroup || !hex) return false; return applyEyeColorToRoot(baseGroup, hex); } catch { return false; } }
@@ -1187,7 +1216,7 @@
           const rawVal = equip[slot];
           const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
           for (const id of ids){
-          const it = itemsMap.get(id); if (!it || !it.model) continue;
+          const it = itemsMap.get(id); if (isHiddenItem && isHiddenItem(it)) { continue; } if (!it || !it.model) continue;
           const loader = new window.__GLTFLoader();
           const gltf = await new Promise(res=>{ try{ loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
           if (!gltf || !gltf.scene) continue;
@@ -1248,11 +1277,12 @@
           try { if (!wrap.name) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
-          const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+          const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); const slotKey = (slot==='bagx') ? 'bag' : slot; let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
           a = snapFeetAnchor(a, slot, anchors);
           const __hasItemOv = !!__ov[it.id];
+          const __hasSlotOv = !!__ov[slotKey];
           const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
-          if ((slot==='bag') && (!__hasItemOv || __forceLift)) {
+          if ((slotKey==='bag') && (!(__hasItemOv || __hasSlotOv) || __forceLift)) {
             try {
               const lift = (function(){ try { const v=parseFloat(localStorage.getItem('bagLift')||'0.1'); return (isFinite(v)?v:0.1); } catch { return 0.1; } })();
               a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+lift, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
@@ -1262,7 +1292,7 @@
           if (slot==='hair') {
             try {
               const force = (function(){ try { return !!JSON.parse(localStorage.getItem('hairLiftForce')||'false'); } catch { return false; } })();
-              if (!__hasItemOv || force) {
+              if (!(__hasItemOv || __hasSlotOv) || force) {
                 const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('hairLift')||'0.012'); return (isFinite(v)?v:0.012); } catch { return 0.012; } })();
                 a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
               }
@@ -1272,7 +1302,7 @@
           if ((slot==='mask') || /^cos-ninjassuitmask$/i.test(String(it.id||''))) {
             try {
               const force = (function(){ try { return !!JSON.parse(localStorage.getItem('maskLiftForce')||'false'); } catch { return false; } })();
-              if (!__hasItemOv || force) {
+              if (!(__hasItemOv || __hasSlotOv) || force) {
                 const liftY = (function(){ try { const v=parseFloat(localStorage.getItem('maskLift')||'0.01'); return (isFinite(v)?v:0.01); } catch { return 0.01; } })();
                 a = { position:[a.position?.[0]||0, (a.position?.[1]||0)+liftY, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] };
               }
@@ -1303,9 +1333,10 @@
           try {
             const baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } })();
             const inv = (baseScale>0)?(1/baseScale):1;
-            const px = (a.position[0]||0)*inv;
-            const py = (a.position[1]||0.05)*inv;
-            const pz = (a.position[2]||0)*inv;
+            const factor = inv;
+            const px = (a.position[0]||0)*factor;
+            const py = (a.position[1]||0.05)*factor;
+            const pz = (a.position[2]||0)*factor;
             wrap.position.set(px, py, pz);
           } catch {}
           try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
@@ -1320,7 +1351,17 @@
       function applyHatColor(hex){ try { if (!baseGroup || !hex) return false; let ok=false; try{ ok=applyHatColorToRoot(baseGroup, hex)||ok; }catch(e){} try{ if(attachGroup) ok=applyHatColorToRoot(attachGroup, hex)||ok; }catch(e){} return ok; } catch(e){ return false; } }
       return { init, loadBase, attachAll, getNodeNames, resize, snapshot, applyEyeColor, applyHatColor };
     })();
-    function isHiddenItem(it){ try { const id=String((it&&it.id)||''); return id==='cos-armorlegs' || id==='cos-armorlegsx'; } catch { return false; } }
+    function isHiddenItem(it){
+      try {
+        const id = String((it&&it.id)||'').toLowerCase();
+        const nm = String((it&&it.name)||'').toLowerCase();
+        const mdl = String((it&&it.model)||'').toLowerCase();
+        if (id==='cos-armorlegs' || id==='cos-armorlegsx') return true;
+        const re = /\boriginal\b/;
+        if (re.test(id) || re.test(nm) || re.test(mdl)) return true;
+        return false;
+      } catch { return false; }
+    }
     function categoriesFrom(items){
       const cats = [];
       const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
@@ -1414,6 +1455,8 @@
           try { if (TV.resize) TV.resize(); } catch {}
           try { await applyEyeColorFromStorage(); } catch {}
           try { await applyHatColorFromStorage(); } catch {}
+          try { await applyBootColorFromStorage(); } catch {}
+          try { await applyBagColorFromStorage(); } catch {}
           try { buildEyeMaterialPicker(); } catch {}
           const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
           const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
@@ -1424,7 +1467,7 @@
         try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
         (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
         try {
-          const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} };
+          const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {} };
           mv.addEventListener('load', once, { once:true });
           mv.addEventListener('scene-graph-ready', once, { once:true });
           mv.addEventListener('load', ()=>{ try { buildEyeMaterialPicker(); } catch {} }, { once:true });
@@ -1481,6 +1524,8 @@
           // Ensure colors reapplies after any preview rebuild
           try { await applyEyeColorFromStorage(); } catch {}
           try { await applyHatColorFromStorage(); } catch {}
+          try { await applyBootColorFromStorage(); } catch {}
+          try { await applyBagColorFromStorage(); } catch {}
           try { buildEyeMaterialPicker(); } catch {}
         } catch (e) {}
       // No fallback preview
@@ -1494,8 +1539,7 @@
           const val = equip[slot];
           const ids = Array.isArray(val) ? val : [val];
           ids.forEach(id=>{
-            const it = itemsMap.get(id);
-            if (!it) return;
+            const it = itemsMap.get(id); if (!it) return;
             const b = document.createElement('button');
             b.className = 'btn btn-ghost text-xs';
             b.innerHTML = `${it.name} <span aria-hidden="true">x</span>`;
@@ -1591,6 +1635,146 @@
           }
         } catch (e) {}
       } catch (e) {}
+    }
+    function applyBootColorToRoot(root, hex){
+      try {
+        if (!root || !hex) return false;
+        let changed = false;
+        const traverse = root.traverse ? (fn)=>root.traverse(fn) : (fn)=>{ (function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} })(root); };
+        // First: strict match on boot_tint material or object name
+        traverse((o)=>{
+          try {
+            if (!o || !o.isMesh) return;
+            const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
+            const on = String(o.name||'').toLowerCase();
+            for (let i=0;i<arr.length;i++){
+              const m = arr[i];
+              const nm = String((m&&m.name)||'').toLowerCase();
+              if (/\bboot_tint\b/.test(nm) || /\bboot_tint\b/.test(on)) {
+                try { m.color&&m.color.set&&m.color.set(hex); } catch {}
+                try { if (m.needsUpdate!==undefined) m.needsUpdate=true; } catch {}
+                changed = true;
+              }
+            }
+          } catch {}
+        });
+        if (!changed) {
+          // Fallback: only under boots/feet attachment wrapper groups
+          try {
+            const targets = [];
+            const markIfBoot = (g)=>{
+              try {
+                const n = String(g?.name||'').toLowerCase();
+                const slot = (g&&g.userData&&g.userData.__slot)||null;
+                if (slot==='boots' || slot==='feet' || /(^|[^a-z0-9])slot[:\-]?(boots|feet)([^a-z0-9]|$)/.test(n)) targets.push(g);
+              } catch {}
+            };
+            root.traverse?.(o=>{ try { if (o && !o.isMesh) markIfBoot(o); } catch {} });
+            for (const g of targets){
+              try {
+                g.traverse?.(o=>{
+                  try {
+                    if (!o || !o.isMesh) return;
+                    const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
+                    for (let i=0;i<arr.length;i++){
+                      const m=arr[i];
+                      try{ m.color&&m.color.set&&m.color.set(hex); }catch{}
+                      try{ if (m.needsUpdate!==undefined) m.needsUpdate=true; }catch{}
+                      changed = true;
+                    }
+                  } catch {}
+                });
+              } catch {}
+            }
+          } catch {}
+        }
+        return changed;
+      } catch { return false; }
+    }
+    async function applyBootColorFromStorage(){
+      try {
+        const hex = getSavedBootHex(); if (!hex) return false;
+        let ok=false;
+        try {
+          const mv=document.getElementById('mvShop'); const root=getBaseRoot(mv);
+          if (root) ok = applyBootColorToRoot(root, hex) || ok;
+        } catch {}
+        try { const ag = (window.__TVAttachGroup||null); if (ag) ok = applyBootColorToRoot(ag, hex) || ok; } catch {}
+        try { console.log('[bootColor] applied', hex, ok); } catch {}
+        return ok;
+      } catch { return false; }
+    }
+
+    function applyBagColorToRoot(root, hex){
+      try {
+        if (!root || !hex) return false;
+        let changed=false;
+        const traverse = root.traverse ? (fn)=>root.traverse(fn) : (fn)=>{ (function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} })(root); };
+        // First: strict match on bag_tint material or object name
+        traverse((o)=>{
+          try {
+            if (!o || !o.isMesh) return;
+            const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
+            const on = String(o.name||'').toLowerCase();
+            for (let i=0;i<arr.length;i++){
+              const m = arr[i];
+              const nm = String((m&&m.name)||'').toLowerCase();
+              if (/\bbag_tint\b/.test(nm) || /\bbag_tint\b/.test(on)) {
+                try { m.color&&m.color.set&&m.color.set(hex); } catch {}
+                try { if (m.map) m.map=null; } catch {}
+                try { if (m.needsUpdate!==undefined) m.needsUpdate=true; } catch {}
+                changed = true;
+              }
+            }
+          } catch {}
+        });
+        if (!changed) {
+          // Fallback: limit to attachments tagged as slot 'bag' or 'bagx'
+          try {
+            const targets = [];
+            const markIfBag = (g)=>{
+              try {
+                const n = String(g?.name||'').toLowerCase();
+                const slot = (g&&g.userData&&g.userData.__slot)||null;
+                if (slot==='bag' || slot==='bagx' || /(^|[^a-z0-9])slot[:\-]?(bagx|bag)([^a-z0-9]|$)/.test(n)) targets.push(g);
+              } catch {}
+            };
+            root.traverse?.(o=>{ try { if (o && !o.isMesh) markIfBag(o); } catch {} });
+            for (const g of targets){
+              try {
+                g.traverse?.(o=>{
+                  try {
+                    if (!o || !o.isMesh) return;
+                    const arr = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
+                    for (let i=0;i<arr.length;i++){
+                      const m=arr[i];
+                      try{ m.color&&m.color.set&&m.color.set(hex); }catch{}
+                      try{ if (m.map) m.map=null; }catch{}
+                      try{ if (m.needsUpdate!==undefined) m.needsUpdate=true; }catch{}
+                      changed = true;
+                    }
+                  } catch {}
+                });
+              } catch {}
+            }
+          } catch {}
+        }
+        return changed;
+      } catch { return false; }
+    }
+    async function applyBagColorFromStorage(){
+      try {
+        const hex = getSavedBagHex(); if (!hex) return false;
+        let ok=false;
+        try { if (window.TV && TV.applyBagColor) ok = TV.applyBagColor(hex) || ok; } catch {}
+        try {
+          const mv=document.getElementById('mvShop'); const root=getBaseRoot(mv);
+          if (root) ok = applyBagColorToRoot(root, hex) || ok;
+        } catch {}
+        try { const ag = (window.__TVAttachGroup||null); if (ag) ok = applyBagColorToRoot(ag, hex) || ok; } catch {}
+        try { console.log('[bagColor] applied', hex, ok); } catch {}
+        return ok;
+      } catch { return false; }
     }
 
     // React to Anchor Tool adjustments in real time (multi-window)
@@ -1805,6 +1989,22 @@
         }
       } catch {}
       try {
+        const boot = document.getElementById('bootColorPick');
+        if (boot && !boot.__wired){
+          boot.__wired = true;
+          try { const savedB = getSavedBootHex(); if (savedB) boot.value = savedB; } catch {}
+          boot.addEventListener('input', ()=>{ try { const v=String(boot.value||'').trim(); setSavedBootHex(v); applyBootColorFromStorage(); } catch {} });
+        }
+      } catch {}
+      try {
+        const bag = document.getElementById('bagColorPick');
+        if (bag && !bag.__wired){
+          bag.__wired = true;
+          try { const savedBag = getSavedBagHex(); if (savedBag) bag.value = savedBag; } catch {}
+          bag.addEventListener('input', ()=>{ try { const v=String(bag.value||'').trim(); setSavedBagHex(v); applyBagColorFromStorage(); } catch {} });
+        }
+      } catch {}
+      try {
         const btn = document.getElementById('eyeApplyBtn');
         const pick = document.getElementById('eyeColorPick');
         const sel = document.getElementById('eyeMatSel');
@@ -1840,12 +2040,28 @@
       
       try { applyEyeColorFromStorage(); } catch {}
       try { applyHatColorFromStorage(); } catch {}
+      try { applyBootColorFromStorage(); } catch {}
+      try { applyBagColorFromStorage(); } catch {}
     })();
 
     loadAll();
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
