@@ -5,7 +5,9 @@
       // Preview-only thickening to prevent poke-through (boots, tops, bags)
       function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch (e) { return 0.0; } }
       function __inflateScene(root, amount){
-        try { if(!root||!amount||!isFinite(amount)||amount<=0) return; const THREE=(window.__THREE||window.THREE); root.traverse(o=>{ try{ if(!o||!o.isMesh||!o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if(!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch (e) {} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length,na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch (e) {} }catch (e) {} }); } catch (e) {} }
+        // Thickness modifier disabled on lesson accessories (no-op).
+        try { return; } catch (e) {}
+      }
       function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch (e) { return false; } }
     </script>
     <meta charset="UTF-8" />
@@ -1442,7 +1444,16 @@
       const items=(cat&&cat.items)||[];
       console.log('[lesson] catalog items', items.length);
       // Pull anchors from server if available (merge into localStorage)
-      try { const r=await fetch('/api/anchors',{cache:'no-store'}); if(r.ok){ const d=await r.json(); const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })(); localStorage.setItem('anchorOverrides', JSON.stringify(Object.assign({}, cur, d.anchors||{}))); if (d.locks&&typeof d.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch (e) { return {}; } })(), d.locks))); } } catch (e) {}
+      try {
+        const r=await fetch('/api/anchors',{cache:'no-store'});
+        if(r.ok){
+          const d=await r.json();
+          const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
+          // Prefer local overrides (e.g. from Anchor Tool) over server defaults
+          localStorage.setItem('anchorOverrides', JSON.stringify(Object.assign({}, d.anchors||{}, cur)));
+          if (d.locks&&typeof d.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch (e) { return {}; } })(), d.locks)));
+        }
+      } catch (e) {}
       const it = items.find(x=> x.id === eq.model && x.model) || items.find(x=> x.id==='model-basemesh' && x.model);
       const mv = document.getElementById('mvLesson'); if (!mv) return;
       if (it && it.model){
@@ -1503,6 +1514,7 @@
                       const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
                       const key = (slot==='bagx') ? 'bag' : slot;
                       let a = ov[id] || ov[key] || anchors[key] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+                      try{ const infl=(typeof a.inflate==='number')?a.inflate:0; if(infl) __inflateScene(obj, infl); }catch(e){}
                       try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch (e) {}
                       try{
                         const inv=(function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?(1/v):1; } catch (e) { return 1; } })();

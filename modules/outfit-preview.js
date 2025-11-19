@@ -51,21 +51,42 @@
   function readBaseMeshScale(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } }
   function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
   function isBootish(id, slot){ try { return slot==='boots' || slot==='feet' || /shoe|bottes/i.test(String(id||'')); } catch { return false; } }
+  function calcAutoInflate(item, slot){
+    try{
+      const BI = readBootInflate();
+      let infl = 0;
+      const idlc = String(item?.id||'').toLowerCase();
+      if (!idlc) return 0;
+      if (idlc==='cos-bottesgreen' || idlc==='cos-bottes') infl = Math.max(infl, BI*2.2);
+      if (isBootish(item.id, slot)) infl = Math.max(infl, BI);
+      return infl;
+    }catch{return 0;}
+  }
   function inflateScene(root, amount){
     try {
-      if (!root || !amount || !isFinite(amount) || amount<=0) return;
       const THREE = (window.__THREE||window.THREE);
+      if (!THREE || !root || !amount || !isFinite(amount) || amount===0) return;
       root.traverse?.(o=>{
-        try {
+        try{
           if (!o || !o.isMesh || !o.geometry) return;
-          const g0=o.geometry; const g=g0.clone(); o.geometry=g;
+          const g0=o.geometry;
+          const g=g0.clone();
+          o.geometry=g;
           if (!g.attributes || !g.attributes.position) return;
           if (!g.attributes.normal) { try { g.computeVertexNormals(); } catch {} }
-          const pos=g.attributes.position, nor=g.attributes.normal; if(!pos||!nor) return;
-          const pa=pos.array, na=nor.array; const len=Math.min(pa.length, na.length);
-          for (let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; }
-          pos.needsUpdate=true; try { g.computeBoundingBox(); g.computeBoundingSphere(); } catch {}
-        } catch {}
+          const pos=g.attributes.position;
+          const nor=g.attributes.normal;
+          const pa=pos.array;
+          const na=nor.array;
+          const len=Math.min(pa.length, na.length);
+          for (let i=0;i<len;i+=3){
+            pa[i]+= (na[i]||0)*amount;
+            pa[i+1]+= (na[i+1]||0)*amount;
+            pa[i+2]+= (na[i+2]||0)*amount;
+          }
+          pos.needsUpdate=true;
+          try { g.computeBoundingBox(); g.computeBoundingSphere(); } catch {}
+        }catch{}
       });
     } catch {}
   }
@@ -126,13 +147,7 @@
           }
           if(!srcScene || !srcScene.clone) { try{ console.warn('[ofp] no cloneable scene for', id); }catch{} continue; }
           const obj = srcScene.clone(true);
-          try {
-            const BOOT_INFLATE = readBootInflate();
-            let infl = 0; const idlc = String(it.id||'').toLowerCase();
-            if (idlc==='cos-bottesgreen' || idlc==='cos-bottes') infl = Math.max(infl, BOOT_INFLATE*2.2);
-            if (isBootish(it.id, slot)) infl = Math.max(infl, BOOT_INFLATE);
-            if (infl>0) inflateScene(obj, infl);
-          } catch {}
+          const autoInflate = calcAutoInflate(it, slot);
           // Wrap and center like the Anchor Tool so transforms behave as expected
           const THREE = (window.__THREE||window.THREE);
           const wrap = new (THREE?.Group||function(){})();
@@ -145,11 +160,13 @@
         const defaults = (window.SLOT_ANCHORS || window.SLOT_ANCHORS_DEFAULT || {});
         const base = defaults[slot] || defaults.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
         let a = ovItem || ovSlot || base;
-        a = snapFeetAnchor(a, slot, root);
+        if (!ovItem) a = snapFeetAnchor(a, slot, root);
         // Heuristic tweak: if boots lacking per-item override and id suggests generic shoes, nudge down slightly
         if (!ovItem && slot==='boots') {
           try { if (/(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
         }
+        const inflateAmt = (typeof a.inflate === 'number') ? a.inflate : autoInflate;
+        if (inflateAmt) { try { inflateScene(obj, inflateAmt); } catch {} }
         const s = (a.scale && a.scale[0]) ? a.scale[0] : defaultScaleFor(slot);
         try { wrap.scale.set(s,s,s); } catch {}
         try { (function(){ try { const THREE=(window.__THREE||window.THREE); const box=new THREE.Box3().setFromObject(root); const center=box.getCenter(new THREE.Vector3()); const inv=(function(){ try{ const s=readBaseMeshScale(); return (isFinite(s)&&s>0)?(1/s):1; }catch{return 1;} })(); const p=new (THREE||window.THREE).Vector3((a.position?.[0]||0)*inv,(a.position?.[1]||0.05)*inv,(a.position?.[2]||0)*inv); const v=center.clone().add(p); try { root.worldToLocal(v); } catch {} wrap.position.set(v.x,v.y,v.z); } catch { const inv2=(function(){ try{ const s=readBaseMeshScale(); return (isFinite(s)&&s>0)?(1/s):1; }catch{return 1;} })(); wrap.position.set((a.position?.[0]||0)*inv2, (a.position?.[1]||0.05)*inv2, (a.position?.[2]||0)*inv2); } })(); } catch {}
@@ -169,9 +186,8 @@
                 const wrap2 = new WrapCtor();
                 try { const box2 = new (window.__THREE||window.THREE).Box3().setFromObject(obj2); const c2 = box2.getCenter(new (window.__THREE||window.THREE).Vector3()); obj2.position.sub(c2); } catch {}
                 try {
-                  const BOOT_INFLATE = readBootInflate();
-                  let infl2 = 0; if (String(it.id||'').toLowerCase()==='cos-bottesgreen') infl2 = Math.max(infl2, BOOT_INFLATE*1.5);
-                  if (isBootish(it.id, slot)) infl2 = Math.max(infl2, BOOT_INFLATE);
+                  let infl2 = calcAutoInflate(it, slot);
+                  if (typeof a.inflate === 'number') infl2 = Math.max(infl2, a.inflate);
                   if (infl2>0) inflateScene(obj2, infl2);
                   wrap2.add(obj2);
                 } catch {}

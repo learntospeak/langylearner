@@ -31,12 +31,12 @@
     const posX=$('#posX'), posY=$('#posY'), posZ=$('#posZ');
     const rotX=$('#rotX'), rotY=$('#rotY'), rotZ=$('#rotZ');
     const scaleF=$('#scaleF');
+    const inflateF=$('#inflateF');
     const saveBtn=$('#saveBtn');
     const copyBtn=$('#copyBtn');
     const resetBtn=$('#resetBtn');
     const scopeItem = $('#scopeItem');
     const scopeSlot = $('#scopeSlot');
-    const parityToggle = $('#matchShopToggle');
     const parityNote = $('#matchShopNote');
     const baseScaleRange = $('#baseScaleRange');
     const baseScaleInput = $('#baseScaleInput');
@@ -52,10 +52,6 @@
     const BASE_SCALE_KEY = 'baseMeshScale';
     const BASE_SCALE_MIN = 0.6;
     const BASE_SCALE_MAX = 1.3;
-    const MATCH_SHOP_KEY = 'anchorToolMatchShop';
-    const state = {
-      matchShop: true
-    };
 
     const SLOT_ANCHORS_DEFAULT = {
       head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
@@ -74,6 +70,20 @@
       bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
       misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
     };
+    let accSourceScene=null, accSourceSlot=null, accSourceId=null;
+
+    function isHiddenItem(it){
+      try{
+        const id = String(it?.id||'').toLowerCase();
+        const nm = String(it?.name||'').toLowerCase();
+        const mdl = String(it?.model||'').toLowerCase();
+        if (id==='cos-armorlegs' || id==='cos-armorlegsx') return true;
+        if (id.includes('original') || nm.includes('original') || mdl.includes('original')) return true;
+        return false;
+      }catch{
+        return false;
+      }
+    }
 
     function getBaseScale(){
       try{
@@ -90,15 +100,18 @@
       return Math.min(BASE_SCALE_MAX, Math.max(BASE_SCALE_MIN, num));
     }
 
-    function useMatchShop(){ return !!state.matchShop; }
+    function clampInflate(v){
+      const num = parseFloat(v);
+      if(!isFinite(num)) return 0;
+      return Math.max(-0.03, Math.min(0.05, num));
+    }
+
+    function currentInflate(){
+      return clampInflate(inflateF?.value||0);
+    }
 
     function toWorldPosition(pos=[]){
       const base = Array.isArray(pos)? pos : [0,0,0];
-      if(!useMatchShop()) return [
-        base[0]||0,
-        base[1]||0,
-        base[2]||0
-      ];
       const inv = 1/getBaseScale();
       return [
         (base[0]||0)*inv,
@@ -109,17 +122,41 @@
 
     function toStoredPosition(world=[]){
       const base = Array.isArray(world)? world : [0,0,0];
-      if(!useMatchShop()) return [
-        base[0]||0,
-        base[1]||0,
-        base[2]||0
-      ];
       const scale = getBaseScale();
       return [
         (base[0]||0)*scale,
         (base[1]||0)*scale,
         (base[2]||0)*scale
       ];
+    }
+
+    function inflateScene(root, amount){
+      try{
+        const THREE = window.THREE || window.__THREE;
+        if(!THREE || !root || !amount || !isFinite(amount) || amount===0) return;
+        root.traverse?.(o=>{
+          try{
+            if (!o || !o.isMesh || !o.geometry) return;
+            const g0=o.geometry;
+            const g=g0.clone();
+            o.geometry=g;
+            if(!g.attributes || !g.attributes.position) return;
+            if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} }
+            const pos=g.attributes.position;
+            const nor=g.attributes.normal;
+            const pa=pos.array;
+            const na=nor.array;
+            const len=Math.min(pa.length, na.length);
+            for(let i=0;i<len;i+=3){
+              pa[i]+= (na[i]||0)*amount;
+              pa[i+1]+= (na[i+1]||0)*amount;
+              pa[i+2]+= (na[i+2]||0)*amount;
+            }
+            pos.needsUpdate=true;
+            try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{}
+          }catch{}
+        });
+      }catch{}
     }
 
     function getOverrides(){
@@ -131,6 +168,32 @@
     }
 
     function fmt(n){ return Number.isFinite(+n) ? (+n).toFixed(3) : '0.000'; }
+
+    function buildAccessoryInstance(){
+      if(!accSourceScene) return null;
+      const inst = accSourceScene.clone(true);
+      try{
+        const box=new THREE.Box3().setFromObject(inst);
+        const c=box.getCenter(new THREE.Vector3());
+        inst.position.sub(c);
+      }catch{}
+      const infl = currentInflate();
+      if (infl) inflateScene(inst, infl);
+      return inst;
+    }
+
+    function rebuildAccessoryGeometry(){
+      if(!accWrap || !accSourceScene) return;
+      const inst = buildAccessoryInstance();
+      if(!inst) return;
+      try{
+        while(accWrap.children.length){
+          accWrap.remove(accWrap.children[0]);
+        }
+        accWrap.add(inst);
+        applyFields();
+      }catch{}
+    }
 
     function applyAnchorToInputs(anchor){
       if(!anchor) return;
@@ -144,6 +207,7 @@
       rotZ.value = Math.round(((rot[2]||0)*180)/Math.PI);
       const sc = (anchor.scale && anchor.scale[0]) || 1;
       scaleF.value = sc.toFixed ? sc.toFixed(3) : sc;
+      if(inflateF) inflateF.value = fmt(anchor.inflate ?? 0);
     }
 
     function getActiveSlot(){
@@ -167,19 +231,15 @@
       const anchor = getAnchorForSelection();
       if(!anchor) return;
       applyAnchorToInputs(anchor);
+      rebuildAccessoryGeometry();
       if(apply) applyFields();
     }
 
     function updateParityNote(){
       if(!parityNote) return;
-      if(useMatchShop()){
-        const bs = getBaseScale();
-        parityNote.textContent = `Preview uses Shop world coords (saved ÷ ${bs.toFixed(3)}). Toggle off to edit raw saved values.`;
-      }else{
-        parityNote.textContent = 'Preview uses raw saved coordinates (no baseMeshScale compensation).';
-      }
+      const bs = getBaseScale();
+      parityNote.textContent = `Preview matches Shop coordinates (saved scale ${bs.toFixed(3)}).`;
     }
-
     function updateBaseScaleUI(explicitValue){
       const scale = (typeof explicitValue==='number' && isFinite(explicitValue)) ? explicitValue : getBaseScale();
       const fixed = scale.toFixed(3);
@@ -212,20 +272,7 @@
       baseScaleReset?.addEventListener('click', ()=>{ handleBaseScaleChange(DEFAULT_BASE_SCALE); });
     })();
 
-    (function initParity(){
-      const stored = localStorage.getItem(MATCH_SHOP_KEY);
-      state.matchShop = stored !== 'off';
-      if(parityToggle){
-        parityToggle.checked = state.matchShop;
-        parityToggle.addEventListener('change', ()=>{
-          state.matchShop = parityToggle.checked;
-          localStorage.setItem(MATCH_SHOP_KEY, state.matchShop ? 'on' : 'off');
-          updateParityNote();
-          refreshAnchorFields(true);
-        });
-      }
-      updateParityNote();
-    })();
+    updateParityNote();
 
     function init(){
       const w = wrap.clientWidth, h = wrap.clientHeight;
@@ -272,9 +319,12 @@
     async function loadAccessory(url){
       if(!baseGroup) return false;
       if(accWrap){ try{ if (tctl && tctl.object===accWrap) tctl.detach(); scene.remove(accWrap);}catch{} accWrap=null; }
-      const obj=await loadGLB(url); if(!obj) return false; const wrap = new THREE.Group();
-      try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
-      wrap.add(obj); accWrap = wrap; window.__ATActiveWrap = accWrap; scene.add(wrap); tctl.attach(wrap); return true;
+      const sceneObj=await loadGLB(url); if(!sceneObj) return false;
+      accSourceScene = sceneObj;
+      const inst = buildAccessoryInstance();
+      if(!inst) return false;
+      const wrap = new THREE.Group();
+      wrap.add(inst); accWrap = wrap; window.__ATActiveWrap = accWrap; scene.add(wrap); tctl.attach(wrap); return true;
     }
 
     function syncFields(){ if(!accWrap) return; try{ posX.value=accWrap.position.x.toFixed(3); posY.value=accWrap.position.y.toFixed(3); posZ.value=accWrap.position.z.toFixed(3); rotX.value=Math.round(accWrap.rotation.x*180/Math.PI); rotY.value=Math.round(accWrap.rotation.y*180/Math.PI); rotZ.value=Math.round(accWrap.rotation.z*180/Math.PI); scaleF.value=accWrap.scale.x.toFixed(3);}catch{} }
@@ -290,7 +340,8 @@
       const storedPos = toStoredPosition(worldPos);
       const rotRad=[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180];
       const s=(+scaleF.value||1)||1;
-      const a={ position:storedPos, rotation:rotRad, scale:[s,s,s] };
+      const infl = clampInflate(inflateF?.value||0);
+      const a={ position:storedPos, rotation:rotRad, scale:[s,s,s], inflate:infl };
       const ov = getOverrides();
       ov[key]=a; localStorage.setItem('anchorOverrides', JSON.stringify(ov));
     }
@@ -306,7 +357,8 @@
         [key]:{
           position:storedPos,
           rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180],
-          scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ]
+          scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ],
+          inflate: clampInflate(inflateF?.value||0)
         }
       };
       const t=JSON.stringify(data, null, 2);
@@ -317,16 +369,19 @@
       const slot=slotSel.value||'misc';
       const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc;
       applyAnchorToInputs(a);
+      if(inflateF) inflateF.value = '0.000';
       applyFields();
+      rebuildAccessoryGeometry();
     });
 
     posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
+    inflateF?.addEventListener('change', ()=>{ rebuildAccessoryGeometry(); });
 
     async function populate(){
       try{
         const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[];
-        const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model');
-        const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model');
+        const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model' && !isHiddenItem(i));
+        const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model' && !isHiddenItem(i));
         models.forEach(m=>{ const o=document.createElement('option'); o.value=m.model; o.textContent=m.name; modelSel.appendChild(o); });
         acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.model; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); });
         const uniqSlots=[...new Set(acc.map(a=>a.slot))];
@@ -334,6 +389,8 @@
         if(models[0]){ await loadBase(models[0].model);}
         if(acc[0]){
           slotSel.value=acc[0].slot;
+          accSourceSlot = acc[0].slot;
+          accSourceId = acc[0].id;
           await loadAccessory(acc[0].model);
           const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc;
           applyAnchorToInputs(a);
@@ -346,6 +403,8 @@
     itemSel.onchange=async()=>{
       const opt=itemSel.options[itemSel.selectedIndex];
       slotSel.value=opt?.dataset?.slot||'misc';
+      accSourceSlot = slotSel.value;
+      accSourceId = opt?.dataset?.id || null;
       await loadAccessory(itemSel.value);
       refreshAnchorFields(true);
     };
@@ -388,14 +447,17 @@
         <label>RotZ° <input id="rotZ" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
         <label>Scale <input id="scaleF" type="number" step="0.01" class="border px-1 py-0.5 w-full"></label>
       </div>
+      <div class="mb-2">
+        <label class="block text-sm font-medium">Inflate (thickness, m)
+          <input id="inflateF" type="number" step="0.001" min="-0.03" max="0.05" class="border px-1 py-0.5 w-full" value="0">
+        </label>
+        <div class="text-xs text-gray-600 mt-1">Positive values push the accessory outward along its surface normals (useful for boots to hide skin).</div>
+      </div>
       <div class="flex gap-2">
         <button id="saveBtn" class="btn btn-primary">Save (local)</button> <button id="copyBtn" class="btn btn-ghost">Copy JSON</button> <button id="resetBtn" class="btn btn-amber">Reset Defaults</button> <button id="camReset" class="btn btn-ghost">Reset Camera</button>
       </div>
       <div class="mt-3 border rounded-lg p-2 bg-amber-50">
-        <label class="flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" id="matchShopToggle" class="scale-110" checked>
-          Match Shop preview (use baseMeshScale)
-        </label>
+        <div class="text-sm font-semibold">Shop Parity</div>
         <div id="matchShopNote" class="text-xs text-gray-700 mt-1"></div>
       </div>
       <div class="mt-3 border rounded-lg p-3 bg-blue-50">

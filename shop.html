@@ -41,7 +41,7 @@
         <!-- Categories -->
         <aside class="max-h-[70vh] overflow-auto pr-1">
           <div class="font-medium mb-2">Categories</div>
-          <div id="catList" class="flex md:flex-col gap-2 overflow-x-auto pb-1"></div>
+          <div id="catList" class="flex flex-col gap-2"></div>
         </aside>
 
         <!-- Preview (sticky) -->
@@ -157,6 +157,58 @@
     }
     let SELECTED = 'upgrades';
     const FORCE_OVERLAY_SLOT = 'top';
+    const SLOT_LABELS = {
+      head:'Head',
+      hat:'Hat',
+      hair:'Hair',
+      mask:'Mask',
+      torso:'Torso',
+      top:'Top',
+      body:'Top',
+      outfit:'Outfit',
+      legs:'Legwear',
+      skirt:'Skirt',
+      boots:'Footwear',
+      feet:'Footwear',
+      belt:'Belt',
+      bag:'Bag',
+      misc:'Accessory',
+      arms:'Arms',
+      hands:'Hands'
+    };
+    const CATEGORY_GROUPS = [
+      { id:'headwear', label:'Headwear', slots:['hat','hair','mask'] },
+      { id:'tops', label:'Tops', slots:['top','torso','body'] },
+      { id:'outfits', label:'Outfits', slots:['outfit'] },
+      { id:'legwear', label:'Legwear', slots:['legs','skirt'] },
+      { id:'footwear', label:'Footwear', slots:['boots','feet'] },
+      { id:'belts', label:'Belts', slots:['belt'] },
+      { id:'bags', label:'Bags & Accessories', slots:['bag','misc'] }
+    ];
+    const NAME_OVERRIDES = {
+      'cos-bottesgreen':'Green Boots',
+      'cos-bottes':'Adventurer Boots',
+      'cos-amorarm':'Arm Guard',
+      'cos-greenoutfit':'Green Outfit',
+      'cos-ninjassuit':'Ninja Suit'
+    };
+    function startCase(str){
+      return String(str||'')
+        .replace(/[_-]+/g,' ')
+        .replace(/([a-z])([A-Z])/g,'$1 $2')
+        .replace(/\s+/g,' ')
+        .trim()
+        .replace(/\b\w/g,c=>c.toUpperCase());
+    }
+    function friendlySlotLabel(slot){
+      return SLOT_LABELS[slot] || startCase(slot||'');
+    }
+    function formatItemName(it){
+      if(!it) return '';
+      const id = String(it.id||'');
+      const raw = NAME_OVERRIDES[id] || NAME_OVERRIDES[it.name] || it.name || id;
+      return startCase(raw);
+    }
     // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
     const SLOT_ANCHORS_DEFAULT = {
       // General body regions
@@ -214,7 +266,8 @@
         const res = await fetch('/api/anchors', { cache:'no-store' });
         if (!res.ok) return false; const data = await res.json();
         const cur = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
-        const merged = Object.assign({}, cur, data.anchors||{});
+        // Prefer local overrides (e.g. from Anchor Tool) over server values
+        const merged = Object.assign({}, data.anchors||{}, cur);
         localStorage.setItem('anchorOverrides', JSON.stringify(merged));
         if (data.locks && typeof data.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })(), data.locks)));
         return true;
@@ -306,9 +359,59 @@
     function isArmish(id, slot){ try { return (slot==='arms'||slot==='hands'||/amorarm|arm\b|bracer|gauntlet/i.test(String(id||''))); } catch { return false; } }
     function inflateScene(root, amount){
       try {
-        const THREE = getThree(); if(!THREE || !root || !amount || !isFinite(amount) || amount<=0) return;
+        const THREE = getThree(); if(!THREE || !root || !amount || !isFinite(amount) || amount===0) return;
         root.traverse?.(o=>{ try { if (!o || !o.isMesh || !o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if (!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length, na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} } catch {} });
       } catch {}
+    }
+    function calcAutoInflate(item, slot){
+      try {
+        const BI=readBootInflate();
+        const TI=readTopInflate();
+        const OI=readOutfitInflate();
+        const HI=readHairInflate();
+        const MI=readMaskInflate();
+        const LI=readLegInflate();
+        const SI=readSkirtInflate();
+        const AI=readArmInflate();
+        let infl=0;
+        if (!item) return 0;
+        if (/^cos-bottesgreen$/i.test(item.id) || /^cos-bottes$/i.test(item.id)) infl=Math.max(infl, BI*2.2);
+        if (isBootish(item.id, slot)) infl=Math.max(infl, BI);
+        if (isTopish(item.id, slot)) infl=Math.max(infl, TI);
+        if (isOutfitish(item.id, slot)) infl=Math.max(infl, OI);
+        if (isHairish(item.id, slot) && shouldThickenHair()) infl=Math.max(infl, HI);
+        if (isMaskish(item.id, slot)) infl=Math.max(infl, MI);
+        if (isLegish(item.id, slot)) infl=Math.max(infl, LI);
+        if (isSkirtish(item.id, slot)) infl=Math.max(infl, SI);
+        if (isArmish(item.id, slot)) infl=Math.max(infl, AI);
+        if (/^cos-(amorplastron|shirt)$/i.test(String(item.id||''))) infl=Math.max(infl, TI*1.6);
+        if (/^cos-chemise$/i.test(String(item.id||''))) {
+          const mul = readChemiseInflateMul();
+          const min = readChemiseInflateMin();
+          infl = Math.max(infl, Math.max(TI*mul, min));
+        }
+        if (/^cos-greenoutfit$/i.test(String(item.id||''))) {
+          const mul = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMul')||'2.0'); return (isFinite(v)&&v>0)?v:2.0; } catch { return 2.0; } })();
+          const min = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+          infl = Math.max(infl, Math.max(OI*mul, min));
+        }
+        if (/^cos-pants$/i.test(String(item.id||''))) {
+          const mul = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMul')||'1.8'); return (isFinite(v)&&v>0)?v:1.8; } catch { return 1.8; } })();
+          const min = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMin')||'0.018'); return (isFinite(v)&&v>=0)?v:0.018; } catch { return 0.018; } })();
+          infl = Math.max(infl, Math.max(LI*mul, min));
+        }
+        if (/^cos-(skirt|armorskirt)$/i.test(String(item.id||''))) {
+          const kmul = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
+          const kmin = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+          infl = Math.max(infl, Math.max(SI*kmul, kmin));
+        }
+        if (/^cos-amorarm$/i.test(String(item.id||''))) {
+          const mul = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
+          const min = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
+          infl = Math.max(infl, Math.max(AI*mul, min));
+        }
+        return infl;
+      } catch { return 0; }
     }
     // Keep boots/feet near the expected foot plane. Baseline is the chosen
     // anchor's own Y (item/slot/default), falling back to the map if missing.
@@ -903,7 +1006,8 @@
               await rec.ready;
               srcScene = getSceneFromViewer(rec.mv);
             }
-            if(!srcScene){ console.warn('[attach] no srcScene', it.id); continue; }
+          if(!srcScene){ console.warn('[attach] no srcScene', it.id); continue; }
+          const autoInflateTV = calcAutoInflate(it, slot);
             let obj = null;
             try {
               if (typeof srcScene.clone === 'function') obj = srcScene.clone(true);
@@ -919,65 +1023,14 @@
             }
             if (!obj) { console.warn('[attach] nothing cloneable for', it.id); continue; }
             // Thicken boots and tops if needed (reduce poke-through)
-            try {
-              const BI=readBootInflate();
-              const TI=readTopInflate();
-              const OI=readOutfitInflate();
-              const HI=readHairInflate();
-              const MI=readMaskInflate();
-              const LI=readLegInflate();
-              const SI=readSkirtInflate();
-              const AI=readArmInflate();
-              let infl=0;
-              if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
-              if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
-              if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
-              if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
-              if (isHairish(it.id, slot) && shouldThickenHair()) infl=Math.max(infl, HI);
-              if (isMaskish(it.id, slot)) infl=Math.max(infl, MI);
-              if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
-              if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
-              if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
-              // Extra thickness for specific tops
-              if (/^cos-(amorplastron|shirt)$/i.test(String(it.id||''))) infl=Math.max(infl, TI*1.6);
-              if (/^cos-chemise$/i.test(String(it.id||''))) {
-                const mul = readChemiseInflateMul();
-                const min = readChemiseInflateMin();
-                infl = Math.max(infl, Math.max(TI*mul, min));
-              }
-              // Outfit-specific bump for green outfit
-              if (/^cos-greenoutfit$/i.test(String(it.id||''))) {
-                const mul = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMul')||'2.0'); return (isFinite(v)&&v>0)?v:2.0; } catch { return 2.0; } })();
-                const min = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-                infl = Math.max(infl, Math.max(OI*mul, min));
-              }
-              // Extra bump for pants
-              if (/^cos-pants$/i.test(String(it.id||''))) {
-                const mul = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMul')||'1.8'); return (isFinite(v)&&v>0)?v:1.8; } catch { return 1.8; } })();
-                const min = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMin')||'0.018'); return (isFinite(v)&&v>=0)?v:0.018; } catch { return 0.018; } })();
-                infl = Math.max(infl, Math.max(LI*mul, min));
-              }
-              // Extra bump for skirts (cover overlap with tops)
-              if (/^cos-(skirt|armorskirt)$/i.test(String(it.id||''))) {
-                const kmul = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
-                const kmin = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-                infl = Math.max(infl, Math.max(SI*kmul, kmin));
-              }
-              // Stronger bump for arm guard
-              if (/^cos-amorarm$/i.test(String(it.id||''))) {
-                const mul = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
-                const min = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-                infl = Math.max(infl, Math.max(AI*mul, min));
-              }
-              if (infl>0) inflateScene(obj, infl);
-            } catch {}
+            const autoInflate = calcAutoInflate(it, slot);
             const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
             const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
             const slotKey = (slot==='bagx') ? 'bag' : slot;
-            let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
-            a = snapFeetAnchor(a, slot, anchors);
             const __hasItemOv = !!__ov[it.id];
             const __hasSlotOv = !!__ov[slotKey];
+            let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
+            if (!__hasItemOv) a = snapFeetAnchor(a, slot, anchors);
             const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
             // Apply bag lift unless there is a per-item override,
             // or always if 'bagLiftForce' is set to true in localStorage.
@@ -1017,12 +1070,14 @@
               } catch {}
             }
             try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
+            const inflateAmt = (typeof a.inflate === 'number') ? a.inflate : autoInflate;
             // Wrap and center like the Anchor Tool
             const THREE = getThree();
-          const wrap = new (THREE?.Group||function(){})();
-          try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
-          try { if (!wrap.name) wrap.name = `slot-hatwrap`; if (slot && !/slot-/.test(wrap.name)) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
+            const wrap = new (THREE?.Group||function(){})();
+            try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
+            try { if (!wrap.name) wrap.name = `slot-hatwrap`; if (slot && !/slot-/.test(wrap.name)) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
             try { const boxObj = new (THREE||window.THREE).Box3().setFromObject(obj); const cObj = boxObj.getCenter(new (THREE||window.THREE).Vector3()); obj.position.sub(cObj); } catch {}
+            if (inflateAmt) { try { inflateScene(obj, inflateAmt); } catch {} }
             try { wrap.add(obj); } catch {}
             // Attach first so world matrices are valid
             try { root.add(wrap); } catch (e) { console.warn('[attach] add failed', e); continue; }
@@ -1277,10 +1332,12 @@
           try { if (!wrap.name) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
-          const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); const slotKey = (slot==='bagx') ? 'bag' : slot; let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
-          a = snapFeetAnchor(a, slot, anchors);
+          const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
+          const slotKey = (slot==='bagx') ? 'bag' : slot;
           const __hasItemOv = !!__ov[it.id];
           const __hasSlotOv = !!__ov[slotKey];
+          let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
+          if (!__hasItemOv) a = snapFeetAnchor(a, slot, anchors);
           const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
           if ((slotKey==='bag') && (!(__hasItemOv || __hasSlotOv) || __forceLift)) {
             try {
@@ -1319,6 +1376,8 @@
             } catch {}
           }
           try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
+          const inflateAmtTV = (typeof a.inflate === 'number') ? a.inflate : autoInflateTV;
+          if (inflateAmtTV) { try { inflateScene(src, inflateAmtTV); } catch{} }
           try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
           try {
             const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
@@ -1356,9 +1415,10 @@
         const id = String((it&&it.id)||'').toLowerCase();
         const nm = String((it&&it.name)||'').toLowerCase();
         const mdl = String((it&&it.model)||'').toLowerCase();
+        // Hide internal debug/legacy items
         if (id==='cos-armorlegs' || id==='cos-armorlegsx') return true;
-        const re = /\boriginal\b/;
-        if (re.test(id) || re.test(nm) || re.test(mdl)) return true;
+        // Hide any items marked as "original" (debug GLBs, e.g. old boots)
+        if (id.includes('original') || nm.includes('original') || mdl.includes('original')) return true;
         return false;
       } catch { return false; }
     }
@@ -1366,23 +1426,49 @@
       const cats = [];
       const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
       const compat = (it)=>{ try{ if(!it||it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} };
-      if ((items||[]).some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
-      // Characters category
-      if ((items||[]).some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
-      // Dynamic clothing categories by slot
-      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it) && !isHiddenItem(it)).map(it=>it.slot)));
-      const names = { outfit:'Outfits', hat:'Hats', hair:'Hair', mask:'Masks', top:'Tops', legs:'Legwear', boots:'Boots', skirt:'Skirts', belt:'Belts', bag:'Bags', misc:'Accessories' };
-      const labelFor = (s)=> names[s] || (s.charAt(0).toUpperCase()+s.slice(1));
-      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s && compat(it) && !isHiddenItem(it) }));
+      const data = Array.isArray(items) ? items : [];
+      if (data.some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
+      if (data.some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
+      const slotCounts = {};
+      data.forEach(it=>{
+        if (it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it) && !isHiddenItem(it)){
+          slotCounts[it.slot] = (slotCounts[it.slot]||0)+1;
+        }
+      });
+      const used = new Set();
+      CATEGORY_GROUPS.forEach(group=>{
+        const slots = group.slots.filter(slot=>slotCounts[slot]);
+        if (slots.length){
+          cats.push({
+            id: group.id,
+            label: group.label,
+            filter:(it)=>it.kind==='cosmetic' && slots.includes(it.slot) && compat(it) && !isHiddenItem(it)
+          });
+          slots.forEach(s=>used.add(s));
+        }
+      });
+      Object.keys(slotCounts).filter(slot=>!used.has(slot)).sort().forEach(slot=>{
+        cats.push({
+          id: slot,
+          label: friendlySlotLabel(slot),
+          filter:(it)=>it.kind==='cosmetic' && it.slot===slot && compat(it) && !isHiddenItem(it)
+        });
+      });
       return cats;
     }
     function renderCats(cats){
       catList.innerHTML = '';
       cats.forEach(c=>{
+        const isActive = SELECTED===c.id;
         const b = document.createElement('button');
-        b.className = 'btn btn-ghost text-sm whitespace-nowrap ' + (SELECTED===c.id ? 'ring-2' : '');
-        b.textContent = c.label; b.dataset.id = c.id;
-        b.addEventListener('click', ()=>{ SELECTED = c.id; catTitle.textContent = c.label; renderItems(); });
+        b.className = 'text-sm px-3 py-2 rounded-lg border transition ' + (isActive ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
+        b.textContent = c.label;
+        b.dataset.id = c.id;
+        b.addEventListener('click', ()=>{
+          SELECTED = c.id;
+          catTitle.textContent = c.label;
+          renderItems();
+        });
         catList.appendChild(b);
       });
       const cur = cats.find(x=>x.id===SELECTED) || cats[0];
@@ -1789,32 +1875,37 @@
         } catch {}
       });
     } catch {}
-      function cardHtml(it, owned, equipped){
-        const curModel = (equipped||{}).model || 'model-basemesh';
-        const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
-        const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
-        const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
-        const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
-        const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
-        let action = buyBtn;
-        if (owned[it.id]) {
-          if (it.kind==='cosmetic') {
-            const slot = it.slot;
-            const val = equipped && equipped[slot];
-            const isEquipped = Array.isArray(val) ? val.includes(it.id) : (val === it.id);
-            action = isCompat ? `${equipBtn(false)} ${unequipBtn(!isEquipped)}` : '<span class="text-xs text-gray-500">Not compatible</span>';
-          } else {
-            action = ownedBadge;
-          }
+    function cardHtml(it, owned, equipped){
+      const curModel = (equipped||{}).model || 'model-basemesh';
+      const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
+      const ownedBadge = '<span class="text-green-700 text-xs font-semibold">Owned</span>';
+      const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
+      const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
+      const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
+      let action = buyBtn;
+      if (owned[it.id]) {
+        if (it.kind==='cosmetic') {
+          const slot = it.slot;
+          const val = equipped && equipped[slot];
+          const isEquipped = Array.isArray(val) ? val.includes(it.id) : (val === it.id);
+          action = isCompat ? `${equipBtn(false)} ${unequipBtn(!isEquipped)}` : '<span class="text-xs text-gray-500">Not compatible</span>';
+        } else {
+          action = ownedBadge;
         }
-      const sub = it.kind==='upgrade' ? 'Upgrade' : (it.slot ? it.slot : 'Cosmetic');
+      }
+      const sub = it.kind==='upgrade' ? 'Upgrade' : (friendlySlotLabel(it.slot) || 'Cosmetic');
+      const ownerLabel = owned[it.id] ? ownedBadge : '';
       return `
-        <div class="p-3 rounded-xl border-2 border-black bg-white shadow">
-          <div class="font-semibold">${it.name}</div>
-          <div class="text-xs text-gray-600 mb-2">${sub}</div>
-          <div class="flex items-center justify-between">
-            <div class="text-sm">Price: <strong>${it.price}</strong></div>
-            <div class="flex items-center gap-2">${action}</div>
+        <div class="p-3 rounded-xl border border-black/50 bg-white shadow-sm space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-semibold">${formatItemName(it)}</div>
+              <div class="text-xs text-gray-600">${sub}</div>
+            </div>
+            ${ownerLabel}
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            ${action}
           </div>
         </div>`;
     }
@@ -1824,11 +1915,18 @@
       const cat = cats.find(c=>c.id===SELECTED) || cats[0];
       const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat).filter(it=>!isHiddenItem(it));
       catalogEl.innerHTML='';
-      list.forEach(it=>{
-        const wrap = document.createElement('div');
-        wrap.innerHTML = cardHtml(it, owned, equipped);
-        const node = wrap.firstElementChild; catalogEl.appendChild(node);
-      });
+      if (!list.length){
+        const empty = document.createElement('div');
+        empty.className = 'text-sm text-gray-500';
+        empty.textContent = 'No items available in this category.';
+        catalogEl.appendChild(empty);
+      } else {
+        list.forEach(it=>{
+          const wrap = document.createElement('div');
+          wrap.innerHTML = cardHtml(it, owned, equipped);
+          const node = wrap.firstElementChild; catalogEl.appendChild(node);
+        });
+      }
       try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch (e) {}
       bindActions();
       try { document.getElementById('itemsPane').scrollTop = 0; } catch (e) {}
