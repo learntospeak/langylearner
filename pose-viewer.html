@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pose Viewer</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+
+    const CANVAS = document.getElementById('poseCanvas');
+    const STATUS = document.getElementById('poseStatus');
+    const VIEWER = document.getElementById('viewerWrap');
+    const POSE_LIST = document.getElementById('poseButtons');
+    const searchParams = new URLSearchParams(window.location.search);
+    const MODEL_URL = decodeURIComponent(searchParams.get('model') || 'assets/chibi/characters/ChibiCharacters/glb/basemeshpr.glb');
+    const MODEL_FILE = MODEL_URL.split('/').pop() || 'basemeshpr.glb';
+    const MODEL_POSE_OVERRIDES = {
+      'basemeshpr.glb': { idle:0.65, arms:0.75, walk:0.82, run:0.88, crouch:0.98 }
+    };
+    const MODEL_CLIP_OVERRIDES = {
+      'basemeshpr.glb': {
+        'anim_walk':['anim_walk.001','anim_walk.002','anim_walk.003','anim_walk.004'],
+        'anim_run':['anim_run.001','anim_run.002','anim_run.003','anim_run.004'],
+        'anim_push':['anim_push.001','anim_push.002','anim_push.003','anim_push.004'],
+        'anim_jump':['anim_jump.001','anim_jump.002','anim_jump.003','anim_jump.004'],
+        'anim_iddle':['anim_iddle.001','anim_iddle.002','anim_iddle.003','anim_iddle.004','anim_iddle.005','anim_iddle.006','anim_iddle.007','anim_iddle.008','anim_iddle.009'],
+        'anim_crouch':['anim_crouch.001','anim_crouch.002','anim_crouch.003','anim_crouch.004'],
+        'anim_uncrouch':['anim_uncrouch.001','anim_uncrouch.002','anim_uncrouch.003','anim_uncrouch.004'],
+        'anim_flip':['anim_flip.001','anim_flip.002','anim_flip.003','anim_flip.004'],
+        'anim_dying':['anim_dying.001','anim_dying.002','anim_dying.003','anim_dying.004'],
+        'anim_crouchiddle':['anim_crouchiddle.001','anim_crouchiddle.002','anim_crouchiddle.003','anim_crouchiddle.004']
+      }
+    };
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, canvas: CANVAS });
+    renderer.setPixelRatio(window.devicePixelRatio||1);
+    renderer.setSize(VIEWER.clientWidth, VIEWER.clientHeight, false);
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(28, VIEWER.clientWidth/VIEWER.clientHeight, 0.01, 50);
+    camera.position.set(0, 0.4, 1.4);
+
+    const controls = new OrbitControls(camera, CANVAS);
+    controls.enableDamping = true;
+    controls.target.set(0, 0.25, 0);
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    hemi.position.set(0, 1, 0);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(0.5, 1, 0.5);
+    scene.add(dir);
+
+    let baseMesh = null;
+    let mixer = null;
+    let clips = [];
+    let currentPose = 'neutral';
+
+    const clock = new THREE.Clock();
+    let freezeAction = null;
+    renderer.setAnimationLoop(()=>{
+      controls.update();
+      const delta = clock.getDelta();
+      if (mixer && !isNaN(delta)) {
+        const step = delta * 0.1;
+        mixer.update(step);
+        if (freezeAction && freezeAction.action) {
+          const cur = freezeAction.action.time || 0;
+          if (cur >= freezeAction.target || cur >= freezeAction.upper) {
+            freezeAction.action.time = freezeAction.target;
+            freezeAction.action.paused = true;
+            freezeAction.action.timeScale = 0;
+            freezeAction = null;
+          }
+        }
+      }
+      renderer.render(scene, camera);
+    });
+
+    const POSES = [
+      { id:'neutral', label:'Neutral', clip:null },
+      { id:'idle', label:'Idle', clip:'anim_iddle', fraction:0.25 },
+      { id:'arms', label:'Arms Out', clip:'anim_push', fraction:0.45 },
+      { id:'walk', label:'Walk', clip:'anim_walk', fraction:0.55 },
+      { id:'run', label:'Run', clip:'anim_run', fraction:0.35 },
+      { id:'crouch', label:'Crouch', clip:'anim_crouch', fraction:0.9 }
+    ];
+
+    function setStatus(msg){ if (STATUS) STATUS.textContent = msg; }
+
+    function findClipVariant(clips, desired){
+      try{
+        if (!Array.isArray(clips) || !clips.length) return null;
+        const base = String(desired||'').trim();
+        if (!base) return null;
+        const addNumericVariants = (label, bucket)=>{
+          const lower = String(label||'').toLowerCase();
+          if (!lower) return;
+          bucket.push(lower);
+          for (let i=1;i<=12;i++){
+            bucket.push(`${lower}.${String(i).padStart(3,'0')}`);
+          }
+        };
+        const candidates = [];
+        const overrides = (MODEL_CLIP_OVERRIDES[MODEL_FILE] && MODEL_CLIP_OVERRIDES[MODEL_FILE][base]) || [];
+        overrides.forEach(label=>addNumericVariants(label, candidates));
+        addNumericVariants(base, candidates);
+        const meta = clips.map(clip=>{
+          const name = String((clip&&clip.name)||'');
+          const lower = name.toLowerCase();
+          return { clip, lower, simple: lower.replace(/[^a-z0-9]/g,'') };
+        });
+        for (const candidate of candidates){
+          const hit = meta.find(m=>m.lower===candidate);
+          if (hit) return hit.clip;
+        }
+        const simpleCandidates = candidates.map(c=>c.replace(/[^a-z0-9]/g,''));
+        for (const candidate of simpleCandidates){
+          const hit = meta.find(m=>m.simple===candidate);
+          if (hit) return hit.clip;
+        }
+        for (const candidate of candidates){
+          const hit = meta.find(m=>m.lower.includes(candidate));
+          if (hit) return hit.clip;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function loadModel(){
+      setStatus('Loading basemesh…');
+      const loader = new GLTFLoader();
+      const gltf = await loader.loadAsync(MODEL_URL).catch(()=>null);
+      if (!gltf || !gltf.scene) { setStatus('Failed to load basemesh'); return; }
+      baseMesh = gltf.scene;
+      clips = gltf.animations || [];
+      mixer = new THREE.AnimationMixer(baseMesh);
+      baseMesh.traverse(o=>{
+        if (o.isBone) {
+          try { o.initialMatrix = o.matrix.clone(); } catch {}
+        }
+        if (o.isMesh) o.castShadow = o.receiveShadow = true;
+      });
+      scene.add(baseMesh);
+
+      const box = new THREE.Box3().setFromObject(baseMesh);
+      const center = box.getCenter(new THREE.Vector3());
+      baseMesh.position.sub(center);
+
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const fitHeight = Math.max(size.y, size.x/ camera.aspect);
+      const dist = fitHeight / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5))) + 0.3;
+      camera.position.set(0, size.y*0.4, dist);
+      controls.target.set(0, size.y*0.2, 0);
+      controls.update();
+      const clipNames = clips.map(c=>c.name);
+      console.log('[pose-viewer] loaded clips', clipNames);
+      setStatus('Basemesh loaded. Choose a pose.');
+      await selectPose(currentPose);
+    }
+
+    function poseFractionFor(pose){
+      const overrides = MODEL_POSE_OVERRIDES[MODEL_FILE];
+      if (overrides && typeof overrides[pose.id] === 'number') return overrides[pose.id];
+      if (typeof pose.fraction === 'number') return pose.fraction;
+      return 0.5;
+    }
+
+    async function selectPose(id){
+      currentPose = id;
+      refreshButtons();
+      if (!baseMesh || !mixer) return;
+      const pose = POSES.find(p=>p.id===id) || POSES[0];
+      if (!pose) return;
+
+      if (!pose.clip) {
+        try { mixer.stopAllAction(); } catch {}
+        try {
+          baseMesh.traverse(node=>{
+            if (node && node.isBone && node.initialMatrix) {
+              node.matrix.copy(node.initialMatrix);
+              node.matrix.decompose(node.position, node.quaternion, node.scale);
+            }
+          });
+          baseMesh.updateMatrixWorld(true);
+        } catch {}
+        setStatus('Reset to neutral');
+        return;
+      }
+      const clip = findClipVariant(clips, pose.clip);
+      if (!clip) { setStatus(`Clip missing: ${pose.clip}`); return; }
+      mixer.stopAllAction();
+      mixer.setTime(0);
+      freezeAction = null;
+      const action = mixer.clipAction(clip);
+      action.reset();
+      action.loop = THREE.LoopOnce;
+      action.clampWhenFinished = true;
+      action.enabled = true;
+      action.setEffectiveWeight(1);
+      action.play();
+      const duration = clip.duration || 0.001;
+      const frac = Math.min(1, Math.max(0, poseFractionFor(pose)));
+      const target = Math.max(0, Math.min(duration, ('time' in pose && typeof pose.time === 'number') ? pose.time : duration * frac));
+      const epsilon = 0.0005;
+      freezeAction = {
+        action,
+        target,
+        reached:false,
+        lower: Math.max(0, target - epsilon),
+        upper: Math.min(duration, target + epsilon)
+      };
+      setStatus(`Pose applied: ${pose.label}`);
+    }
+
+    function buildButtons(){
+      POSES.forEach(p=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.poseId = p.id;
+        btn.textContent = p.label;
+        btn.className = 'text-xs px-3 py-1 rounded border transition bg-white border-gray-200 hover:border-black';
+        btn.addEventListener('click', ()=>selectPose(p.id));
+        POSE_LIST.appendChild(btn);
+      });
+      refreshButtons();
+    }
+
+    function refreshButtons(){
+      document.querySelectorAll('#poseButtons button').forEach(btn=>{
+        const active = btn.dataset.poseId === currentPose;
+        btn.className = 'text-xs px-3 py-1 rounded border transition ' + (active ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
+      });
+    }
+
+    window.addEventListener('resize', ()=>{
+      renderer.setSize(VIEWER.clientWidth, VIEWER.clientHeight, false);
+      camera.aspect = VIEWER.clientWidth/VIEWER.clientHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    buildButtons();
+    loadModel();
+  </script>
+</head>
+<body class="anime-bg min-h-screen p-5">
+  <main class="max-w-4xl mx-auto manga-bubble p-4 space-y-4">
+    <header class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold accent-underline">Pose Viewer</h1>
+        <p class="text-sm text-gray-600">Basemesh character poses (same rig as shop preview).</p>
+      </div>
+      <a href="shop.html" class="btn btn-dark">Back to Shop</a>
+    </header>
+    <div class="grid gap-4 md:grid-cols-[360px,1fr] items-start">
+      <div id="viewerWrap" class="w-full h-[360px] bg-white rounded-xl shadow relative">
+        <canvas id="poseCanvas" class="w-full h-full"></canvas>
+        <div class="absolute inset-x-0 bottom-2 text-center text-xs text-gray-600" id="poseStatus">Preparing viewer…</div>
+      </div>
+      <div>
+        <h2 class="text-lg font-semibold mb-2">Poses</h2>
+        <div id="poseButtons" class="flex flex-wrap gap-2"></div>
+        <p class="text-xs text-gray-500 mt-3">If a pose looks wrong here, it will look wrong in the shop. Snapshots come from <code>data/pose-presets.json</code> and target <code>model-basemesh</code>.</p>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -26,7 +26,7 @@
   </script>
 </head>
 <body class="anime-bg min-h-screen p-5">
-  <main class="max-w-7xl mx-auto">
+  <main class="max-w-5xl mx-auto">
     <header class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
         <a href="#" id="backBtn" class="btn btn-ghost text-sm">Back</a>
@@ -39,42 +39,42 @@
       <!-- 3-column layout: categories (L) | preview (C) | items list (R) -->
       <div class="shop-grid items-start">
         <!-- Categories -->
-        <aside class="max-h-[70vh] overflow-auto pr-1">
-          <div class="font-medium mb-2">Categories</div>
+        <aside class="max-h-[70vh] overflow-auto pr-3 w-full md:w-[190px] space-y-3">
+          <div class="font-medium">Categories</div>
           <div id="catList" class="flex flex-col gap-2"></div>
         </aside>
 
         <!-- Preview (sticky) -->
         <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
-            <div id="mvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;">
+            <div id="mvWrap" class="inline-block relative" style="display:none; width:280px; height:380px; overflow:hidden; z-index:1;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             </div>
-            <div id="tvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;"></div>
+            <div id="tvWrap" class="inline-block relative" style="display:none; width:280px; height:380px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
-            <div id="colorControls" class="flex flex-col items-center gap-1 mt-2">
-              <div id="eyeColorRow" class="flex items-center justify-center gap-2">
-                <label for="eyeColorPick" class="text-xs font-medium">Eye Color</label>
-                <input id="eyeColorPick" type="color" value="#31a2ff" class="w-8 h-8 p-0 border rounded align-middle" />
-                <select id="eyeMatSel" class="text-xs border rounded px-1 py-0.5">
-                  <option value="">Auto</option>
-                </select>
-                <!-- Removed blend/fill controls to keep focus on iris only -->
-                <button id="eyeApplyBtn" class="btn btn-primary text-xs px-2 py-1">Apply</button>
+            <div id="colorControls" class="mt-3 w-full max-w-xs mx-auto text-left space-y-2">
+              <div id="eyeColorRow" class="color-row">
+                <label for="eyeColorPick" class="color-label">Eye Color</label>
+                <input id="eyeColorPick" type="color" value="#31a2ff" class="color-input flex-1" />
+                <button id="eyeApplyBtn" class="btn btn-primary text-xs px-3 py-1">Apply</button>
               </div>
-              <div id="hatColorRow" class="flex items-center justify-center gap-2">
-                <label for="hatColorPick" class="text-xs font-medium">Hat Color</label>
-                <input id="hatColorPick" type="color" value="#8a4b20" class="w-8 h-8 p-0 border rounded align-middle" />
+              <div id="hatColorRow" class="color-row" style="display:none;">
+                <label for="hatColorPick" class="color-label">Headwear</label>
+                <input id="hatColorPick" type="color" value="#8a4b20" class="color-input flex-1" />
               </div>
-              <div id="bootColorRow" class="flex items-center justify-center gap-2">
-                <label for="bootColorPick" class="text-xs font-medium">Boot Color</label>
-                <input id="bootColorPick" type="color" value="#6b4b2a" class="w-8 h-8 p-0 border rounded align-middle" />
+              <div id="bootColorRow" class="color-row" style="display:none;">
+                <label for="bootColorPick" class="color-label">Footwear</label>
+                <input id="bootColorPick" type="color" value="#6b4b2a" class="color-input flex-1" />
               </div>
-              <div id="bagColorRow" class="flex items-center justify-center gap-2">
-                <label for="bagColorPick" class="text-xs font-medium">Bag Color</label>
-                <input id="bagColorPick" type="color" value="#5a4632" class="w-8 h-8 p-0 border rounded align-middle" />
+              <div id="bagColorRow" class="color-row" style="display:none;">
+                <label for="bagColorPick" class="color-label">Bag</label>
+                <input id="bagColorPick" type="color" value="#5a4632" class="color-input flex-1" />
               </div>
+            </div>
+            <div id="poseControls" class="mt-3">
+              <div class="text-xs font-medium mb-1">Pose</div>
+              <div id="poseButtons" class="flex flex-wrap gap-1 justify-center"></div>
             </div>
             <!-- Anchor Debug removed -->
             <div class="text-xs text-gray-600 mt-2">Tap a category and equip/buy to preview.</div>
@@ -82,9 +82,9 @@
         </div>
 
         <!-- Items list -->
-        <div class="max-h-[70vh] overflow-auto pr-1" id="itemsPane">
+        <div class="max-h-[70vh] overflow-auto pr-1 w-full self-start" id="itemsPane">
           <div class="font-medium mb-2" id="catTitle">Items</div>
-          <div id="catalog" class="grid grid-cols-1 gap-2"></div>
+          <div id="catalog" class="grid grid-cols-1 gap-3 md:grid-cols-2"></div>
         </div>
       </div>
     </section>
@@ -140,6 +140,8 @@
 
     // No 2D mascot fallback; preview shows only 3D models
 
+    const FORCE_MV_PREVIEW = (function(){ try { if (typeof window.__forceMVPreview !== 'undefined') return !!window.__forceMVPreview; return /[?&]forcemv=1/i.test((location.search||'')); } catch { return false; } })();
+    try { console.log('[shop] FORCE_MV_PREVIEW', FORCE_MV_PREVIEW); } catch {}
     async function api(path, opts){
       try {
         const url = (typeof path === 'string')
@@ -192,6 +194,64 @@
       'cos-greenoutfit':'Green Outfit',
       'cos-ninjassuit':'Ninja Suit'
     };
+    const COLOR_CATEGORY_RULES = {
+      hat:new Set(['headwear','hat','hair']),
+      boot:new Set(['footwear','boots','feet']),
+      bag:new Set(['bags','bag','misc'])
+    };
+    const ANIMATION_DURATIONS = {
+      'anim_crouch':0.292,
+      'anim_crouchiddle':0.583,
+      'anim_dying':0.75,
+      'anim_flip':1.208,
+      'anim_iddle':0.375,
+      'anim_iddle.001':0.375,
+      'anim_jump':0.875,
+      'anim_push':0.792,
+      'anim_run':0.542,
+      'anim_uncrouch':0.417,
+      'anim_walk':0.792
+    };
+    const POSE_CLIP_ALIASES = {
+      anim_iddle: ['anim_idle','idle','iddle','idleanim','iddleanim','iddleanim_','iddle.001anim_','idleanim_','idle.001anim_'],
+      anim_push: ['push','pushanim','pushanim_','anim_push','armsout','armout','armsup'],
+      anim_walk: ['walk','walkanim','walkanim_','anim_walk','walking'],
+      anim_run: ['run','runanim','runanim_','anim_run','running'],
+      anim_crouch: ['crouch','crouchanim','crouchanim_','crouchidle','crouchiddle','crouchiddleanim_','anim_crouchidle'],
+      anim_uncrouch: ['uncrouch','uncrouchanim','uncrouchanim_','anim_uncrouch'],
+      anim_jump: ['jump','jumpanim','jumpanim_','anim_jump'],
+      anim_flip: ['flip','flipanim','flipanim_','anim_flip'],
+      anim_dying: ['dying','dyinganim','dyinganim_','anim_dying']
+    };
+    const MODEL_CLIP_OVERRIDES = {
+      'model-basemesh': {
+        'anim_walk':['anim_walk.001','anim_walk.002','anim_walk.003','anim_walk.004'],
+        'anim_run':['anim_run.001','anim_run.002','anim_run.003','anim_run.004'],
+        'anim_iddle':['anim_iddle.001','anim_iddle.002','anim_iddle.003','anim_iddle.004','anim_iddle.005','anim_iddle.006','anim_iddle.007','anim_iddle.008','anim_iddle.009'],
+        'anim_push':['anim_push.001','anim_push.002','anim_push.003','anim_push.004'],
+        'anim_jump':['anim_jump.001','anim_jump.002','anim_jump.003','anim_jump.004'],
+        'anim_crouch':['anim_crouch.001','anim_crouch.002','anim_crouch.003','anim_crouch.004'],
+        'anim_uncrouch':['anim_uncrouch.001','anim_uncrouch.002','anim_uncrouch.003','anim_uncrouch.004'],
+        'anim_flip':['anim_flip.001','anim_flip.002','anim_flip.003','anim_flip.004'],
+        'anim_dying':['anim_dying.001','anim_dying.002','anim_dying.003','anim_dying.004'],
+        'anim_crouchiddle':['anim_crouchiddle.001','anim_crouchiddle.002','anim_crouchiddle.003','anim_crouchiddle.004']
+      }
+    };
+    const POSE_PRESETS = [
+      { id:'neutral', label:'Neutral', animation:null, fraction:0, hold:false },
+      { id:'idle', label:'Idle', animation:'anim_iddle', fraction:0.25, hold:true },
+      { id:'arms', label:'Arms Out', animation:'anim_push', fraction:0.45, hold:true },
+      { id:'walk', label:'Walk', animation:'anim_walk', fraction:0.5, hold:true },
+      { id:'run', label:'Run', animation:'anim_run', fraction:0.35, hold:true },
+      { id:'crouch', label:'Crouch', animation:'anim_crouch', fraction:0.95, hold:true }
+    ];
+    const POSE_MODEL_OVERRIDES = {
+      'model-basemesh': { idle:0.65, arms:0.75, walk:0.8, run:0.85, crouch:0.98 }
+    };
+    let CURRENT_POSE_ID = 'neutral';
+    let CURRENT_MODEL_ID = 'model-basemesh';
+    let __poseRetryTimer = null;
+    let __posePresetDataPromise = null;
     function startCase(str){
       return String(str||'')
         .replace(/[_-]+/g,' ')
@@ -337,81 +397,193 @@
         root.scale.set(s,s,s);
       }catch{}
     }
-    // Inflate helpers to thicken meshes (reduce skin poke-through)
-    function readBootInflate(){ try { const v=parseFloat(localStorage.getItem('bootInflate')||'0.009'); return (isFinite(v)&&v>=0)?v:0.009; } catch { return 0.009; } }
-    function readTopInflate(){ try { const v=parseFloat(localStorage.getItem('topInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
-    function readHairInflate(){ try { const v=parseFloat(localStorage.getItem('hairInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
-    function readMaskInflate(){ try { const v=parseFloat(localStorage.getItem('maskInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
-    function shouldThickenHair(){ try { return !!JSON.parse(localStorage.getItem('hairThickenEnabled')||'false'); } catch { return false; } }
-    function readOutfitInflate(){ try { const v=parseFloat(localStorage.getItem('outfitInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
-    function readLegInflate(){ try { const v=parseFloat(localStorage.getItem('legInflate')||'0.01'); return (isFinite(v)&&v>=0)?v:0.01; } catch { return 0.01; } }
-    function readSkirtInflate(){ try { const v=parseFloat(localStorage.getItem('skirtInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
-    function readArmInflate(){ try { const v=parseFloat(localStorage.getItem('armInflate')||'0.012'); return (isFinite(v)&&v>=0)?v:0.012; } catch { return 0.012; } }
-    function readChemiseInflateMul(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMul')||'2.5'); return (isFinite(v)&&v>0)?v:2.5; } catch { return 2.5; } }
-    function readChemiseInflateMin(){ try { const v=parseFloat(localStorage.getItem('chemiseInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } }
-    function isBootish(id, slot){ try { return slot==='boots' || slot==='feet' || /shoe|bottes/i.test(String(id||'')); } catch { return false; } }
-    function isTopish(id, slot){ try { return (slot==='top'||slot==='torso'||slot==='body'||/shirt|chemise|plastron|torso|chest|top/i.test(String(id||''))); } catch { return false; } }
-    function isHairish(id, slot){ try { return (slot==='hair'||/\bhair(?!pin)/i.test(String(id||''))); } catch { return false; } }
-    function isMaskish(id, slot){ try { return (slot==='mask'||/mask/i.test(String(id||''))); } catch { return false; } }
-    function isOutfitish(id, slot){ try { return (slot==='outfit'||/outfit|suit|armor/i.test(String(id||''))); } catch { return false; } }
-    function isLegish(id, slot){ try { return (slot==='legs'||/pants|trouser|legging|legwear|thigh|knee/i.test(String(id||''))); } catch { return false; } }
-    function isSkirtish(id, slot){ try { return (slot==='skirt'||/skirt|dress|armorskirt/i.test(String(id||''))); } catch { return false; } }
-    function isArmish(id, slot){ try { return (slot==='arms'||slot==='hands'||/amorarm|arm\b|bracer|gauntlet/i.test(String(id||''))); } catch { return false; } }
     function inflateScene(root, amount){
       try {
-        const THREE = getThree(); if(!THREE || !root || !amount || !isFinite(amount) || amount===0) return;
-        root.traverse?.(o=>{ try { if (!o || !o.isMesh || !o.geometry) return; const g0=o.geometry; const g=g0.clone(); o.geometry=g; if (!g.attributes||!g.attributes.position) return; if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} } const pos=g.attributes.position, nor=g.attributes.normal; const pa=pos.array, na=nor.array; const len=Math.min(pa.length, na.length); for(let i=0;i<len;i+=3){ pa[i]+= (na[i]||0)*amount; pa[i+1]+= (na[i+1]||0)*amount; pa[i+2]+= (na[i+2]||0)*amount; } pos.needsUpdate=true; try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{} } catch {} });
+        const THREE = getThree();
+        if (!THREE || !root || !amount || !isFinite(amount) || amount===0) return;
+        root.traverse?.(o=>{
+          try {
+            if (!o || !o.isMesh || !o.geometry) return;
+            const g0 = o.geometry;
+            const g = g0.clone();
+            o.geometry = g;
+            if (!g.attributes || !g.attributes.position) return;
+            if (!g.attributes.normal) {
+              try { g.computeVertexNormals(); } catch {}
+            }
+            const pos = g.attributes.position;
+            const nor = g.attributes.normal;
+            const pa = pos.array;
+            const na = nor.array;
+            const len = Math.min(pa.length, na.length);
+            for (let i=0; i<len; i+=3){
+              pa[i]   += (na[i]||0)   * amount;
+              pa[i+1] += (na[i+1]||0) * amount;
+              pa[i+2] += (na[i+2]||0) * amount;
+            }
+            pos.needsUpdate = true;
+            try { g.computeBoundingBox(); g.computeBoundingSphere(); } catch {}
+          } catch {}
+        });
       } catch {}
     }
-    function calcAutoInflate(item, slot){
+    function updateColorControls(){
+      try{
+        const cur = SELECTED || '';
+        const showHat = COLOR_CATEGORY_RULES.hat.has(cur);
+        const showBoot = COLOR_CATEGORY_RULES.boot.has(cur);
+        const showBag = COLOR_CATEGORY_RULES.bag.has(cur);
+        const hatRow = document.getElementById('hatColorRow');
+        if (hatRow) hatRow.style.display = showHat ? 'flex' : 'none';
+        const bootRow = document.getElementById('bootColorRow');
+        if (bootRow) bootRow.style.display = showBoot ? 'flex' : 'none';
+        const bagRow = document.getElementById('bagColorRow');
+        if (bagRow) bagRow.style.display = showBag ? 'flex' : 'none';
+      }catch{}
+    }
+    function resolvePoseClipName(wanted, available, modelId){
+      try{
+        const base = String(wanted||'').trim();
+        if (!base) return null;
+        const avail = Array.isArray(available) ? available.map(x=>String(x||'')) : [];
+        if (!avail.length) return base;
+        const availMeta = avail.map(name=>{
+          const lower = name.toLowerCase();
+          return { name, lower, simple: lower.replace(/[^a-z0-9]/g,'') };
+        });
+        const overrides = (modelId && MODEL_CLIP_OVERRIDES[modelId] && MODEL_CLIP_OVERRIDES[modelId][base]) || [];
+        const aliasList = [...overrides, base, ...(POSE_CLIP_ALIASES[base]||[])].filter(Boolean);
+        const expanded = [];
+        aliasList.forEach(raw=>{
+          const lower = String(raw||'').toLowerCase();
+          if (!lower) return;
+          expanded.push(lower);
+          for (let i=1;i<=12;i++){
+            expanded.push(`${lower}.${String(i).padStart(3,'0')}`);
+          }
+        });
+        const expandedSimple = expanded.map(c=>c.replace(/[^a-z0-9]/g,'')); 
+        for (const candidate of expanded){
+          const meta = availMeta.find(m=>m.lower===candidate);
+          if (meta) return meta.name;
+        }
+        for (const candidate of expandedSimple){
+          const meta = availMeta.find(m=>m.simple===candidate);
+          if (meta) return meta.name;
+        }
+        for (const candidate of expanded){
+          const meta = availMeta.find(m=>m.lower.includes(candidate));
+          if (meta) return meta.name;
+        }
+        return base;
+      }catch{
+        return wanted;
+      }
+    }
+    function poseFor(id){
+      return POSE_PRESETS.find(p=>p.id===id) || POSE_PRESETS[0];
+    }
+    function poseHoldSeconds(pose, durationOverride, modelId){
+      if (!pose || !pose.animation) return 0;
+      if (typeof pose.time === 'number' && isFinite(pose.time)) return Math.max(0, pose.time);
+      const durationBase = (typeof durationOverride === 'number' && isFinite(durationOverride) && durationOverride>0)
+        ? durationOverride
+        : (ANIMATION_DURATIONS[pose.animation] || 0.6);
+      const modelKey = (modelId && String(modelId).trim()) || '';
+      const overrides = modelKey && POSE_MODEL_OVERRIDES[modelKey];
+      const fracOverride = overrides ? overrides[pose.id] : undefined;
+      const frac = (typeof fracOverride === 'number' && isFinite(fracOverride))
+        ? fracOverride
+        : ((typeof pose.fraction === 'number' && isFinite(pose.fraction)) ? pose.fraction : 0.25);
+      return durationBase * Math.min(1, Math.max(0, frac));
+    }
+    function buildPoseControls(){
+      const wrap = document.getElementById('poseButtons');
+      if (!wrap || wrap.__built) return;
+      wrap.__built = true;
+      POSE_PRESETS.forEach(p=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.poseId = p.id;
+        btn.textContent = p.label;
+        btn.className = 'text-xs px-2 py-1 rounded border transition bg-white border-gray-200 hover:border-black';
+        btn.addEventListener('click', ()=>{
+          if (CURRENT_POSE_ID === p.id) return;
+          CURRENT_POSE_ID = p.id;
+          refreshPoseButtons();
+          applyPoseSelection();
+        });
+        wrap.appendChild(btn);
+      });
+      refreshPoseButtons();
+    }
+    function refreshPoseButtons(){
+      const wrap = document.getElementById('poseButtons');
+      if (!wrap) return;
+      wrap.querySelectorAll('button').forEach(btn=>{
+        const isActive = btn.dataset.poseId === CURRENT_POSE_ID;
+        btn.className = 'text-xs px-2 py-1 rounded border transition ' + (isActive ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
+      });
+    }
+    async function applyPoseSelection(){
       try {
-        const BI=readBootInflate();
-        const TI=readTopInflate();
-        const OI=readOutfitInflate();
-        const HI=readHairInflate();
-        const MI=readMaskInflate();
-        const LI=readLegInflate();
-        const SI=readSkirtInflate();
-        const AI=readArmInflate();
-        let infl=0;
-        if (!item) return 0;
-        if (/^cos-bottesgreen$/i.test(item.id) || /^cos-bottes$/i.test(item.id)) infl=Math.max(infl, BI*2.2);
-        if (isBootish(item.id, slot)) infl=Math.max(infl, BI);
-        if (isTopish(item.id, slot)) infl=Math.max(infl, TI);
-        if (isOutfitish(item.id, slot)) infl=Math.max(infl, OI);
-        if (isHairish(item.id, slot) && shouldThickenHair()) infl=Math.max(infl, HI);
-        if (isMaskish(item.id, slot)) infl=Math.max(infl, MI);
-        if (isLegish(item.id, slot)) infl=Math.max(infl, LI);
-        if (isSkirtish(item.id, slot)) infl=Math.max(infl, SI);
-        if (isArmish(item.id, slot)) infl=Math.max(infl, AI);
-        if (/^cos-(amorplastron|shirt)$/i.test(String(item.id||''))) infl=Math.max(infl, TI*1.6);
-        if (/^cos-chemise$/i.test(String(item.id||''))) {
-          const mul = readChemiseInflateMul();
-          const min = readChemiseInflateMin();
-          infl = Math.max(infl, Math.max(TI*mul, min));
+        const pose = poseFor(CURRENT_POSE_ID);
+        const modelId = CURRENT_MODEL_ID || ((_wallet.equipped||{}).model) || 'model-basemesh';
+        const freeze = !!(pose && pose.hold);
+        const holdHint = freeze ? poseHoldSeconds(pose, undefined, modelId) : 0;
+        try { console.log('[pose] apply', pose?.id, 'hold', holdHint, 'freeze', freeze); } catch {}
+        if (window.__useTV && TV && typeof TV.applyPose === 'function') {
+          const ok = await TV.applyPose(pose, holdHint, modelId);
+          if (!ok && pose && pose.animation) {
+            if (__poseRetryTimer) clearTimeout(__poseRetryTimer);
+            __poseRetryTimer = setTimeout(()=>{ if (pose.id===CURRENT_POSE_ID) applyPoseSelection(); }, 200);
+          }
+          return;
         }
-        if (/^cos-greenoutfit$/i.test(String(item.id||''))) {
-          const mul = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMul')||'2.0'); return (isFinite(v)&&v>0)?v:2.0; } catch { return 2.0; } })();
-          const min = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-          infl = Math.max(infl, Math.max(OI*mul, min));
+        await applyPoseInModelViewer(pose, holdHint);
+      } catch (e) {
+        console.warn('pose apply failed', e);
+      }
+    }
+    async function applyPoseInModelViewer(pose, holdSeconds){
+      const mv = document.getElementById('mvShop');
+      if (!mv) return false;
+      const run = ()=>{
+        if (!pose || !pose.animation){
+          try { mv.removeAttribute('animation-name'); } catch {}
+          try { mv.animationName = null; } catch {}
+          try { mv.pause(); } catch {}
+          return true;
         }
-        if (/^cos-pants$/i.test(String(item.id||''))) {
-          const mul = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMul')||'1.8'); return (isFinite(v)&&v>0)?v:1.8; } catch { return 1.8; } })();
-          const min = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMin')||'0.018'); return (isFinite(v)&&v>=0)?v:0.018; } catch { return 0.018; } })();
-          infl = Math.max(infl, Math.max(LI*mul, min));
+        const names = Array.isArray(mv.availableAnimations) ? mv.availableAnimations : [];
+        const modelId = CURRENT_MODEL_ID || ((_wallet.equipped||{}).model) || 'model-basemesh';
+        const wanted = resolvePoseClipName(pose.animation, names, modelId) || pose.animation;
+        try {
+          mv.animationName = wanted;
+          mv.setAttribute('animation-name', wanted);
+          mv.setAttribute('animation-crossfade-duration', '0ms');
+          mv.setAttribute('autoplay', '');
+          if (typeof mv.play === 'function') mv.play();
+        } catch {}
+        if (pose && pose.hold) {
+          const target = Math.max(0, holdSeconds||0);
+          setTimeout(()=>{
+            try { mv.currentTime = target; } catch {}
+            try { mv.pause(); } catch {}
+          }, 60);
         }
-        if (/^cos-(skirt|armorskirt)$/i.test(String(item.id||''))) {
-          const kmul = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
-          const kmin = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-          infl = Math.max(infl, Math.max(SI*kmul, kmin));
+        return true;
+      };
+      if (mv.model) return run();
+      const once = ()=>{
+        try { run(); } finally {
+          try { mv.removeEventListener('load', once); } catch {}
+          try { mv.removeEventListener('scene-graph-ready', once); } catch {}
         }
-        if (/^cos-amorarm$/i.test(String(item.id||''))) {
-          const mul = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
-          const min = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-          infl = Math.max(infl, Math.max(AI*mul, min));
-        }
-        return infl;
-      } catch { return 0; }
+      };
+      try { mv.addEventListener('load', once); } catch {}
+      try { mv.addEventListener('scene-graph-ready', once); } catch {}
+      return true;
     }
     // Keep boots/feet near the expected foot plane. Baseline is the chosen
     // anchor's own Y (item/slot/default), falling back to the map if missing.
@@ -519,8 +691,6 @@
     }
     function getSavedEyeHex(){ try { const v=String(localStorage.getItem('eyeColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v) ? (v.startsWith('#')?v:("#"+v)) : null; } catch { return null; } }
     function setSavedEyeHex(hex){ try { if (typeof hex==='string' && /^#?[0-9a-fA-F]{6}$/.test(hex)) localStorage.setItem('eyeColorHex', hex.startsWith('#')?hex:("#"+hex)); } catch {} }
-    function getEyeMatFilter(){ try { const v=String(localStorage.getItem('eyeMatFilter')||'').trim(); return v||''; } catch { return ''; } }
-    function setEyeMatFilter(s){ try { localStorage.setItem('eyeMatFilter', String(s||'')); } catch {} }
     function getEyeOverlayMode(){ try { const v=String(localStorage.getItem('eyeOverlayMode')||'flat'); return (v==='flat'||v==='shaded')?v:'flat'; } catch { return 'flat'; } }
     function setEyeOverlayMode(s){ try { localStorage.setItem('eyeOverlayMode', (s==='shaded')?'shaded':'flat'); } catch {} }
     function getEyeFillMode(){ try { const v=String(localStorage.getItem('eyeFillMode')||'natural'); return (v==='single')?'single':'natural'; } catch { return 'natural'; } }
@@ -895,50 +1065,6 @@
       } catch { return false; }
     }
 
-    // Build iris material dropdown from current base model
-    function buildEyeMaterialPicker(){
-      try {
-        const el = document.getElementById('eyeMatSel'); if (!el) return;
-        const mv = document.getElementById('mvShop'); const root = getBaseRoot(mv) || window.__TVBaseRoot || null;
-        // Clear existing except 'Auto'
-        while (el.options.length>1) el.remove(1);
-        if (!root || !root.traverse) return;
-        const seenMat = new Set(); const seenObj = new Set(); const rows = [];
-        root.traverse(o=>{
-          try {
-            if (!o || !o.isMesh) return;
-            const mats = Array.isArray(o.material) ? o.material : (o.material?[o.material]:[]);
-            mats.forEach(m=>{
-              try {
-                // Material entry
-                const kMat = String(m.name||'');
-                if (kMat && !seenMat.has(kMat)){
-                  seenMat.add(kMat);
-                  const label = `[mat] ${kMat}`;
-                  const low = label.toLowerCase();
-                  const score = (low.includes('eye')||low.includes('yeux')||low.includes('iris')||low.includes('pupil')||low.includes('sclera')) ? 2 : 0;
-                  rows.push({ label, val:`m:${kMat}`, score });
-                }
-                // Mesh entry
-                const kObj = String(o.name||'');
-                if (kObj && !seenObj.has(kObj)){
-                  seenObj.add(kObj);
-                  const label = `[mesh] ${kObj}`;
-                  const low = label.toLowerCase();
-                  const score = (low.includes('eye')||low.includes('yeux')||low.includes('iris')||low.includes('pupil')||low.includes('sclera')) ? 1 : 0;
-                  rows.push({ label, val:`o:${kObj}`, score });
-                }
-              } catch {}
-            });
-          } catch {}
-        });
-        rows.sort((a,b)=> b.score - a.score || a.label.localeCompare(b.label));
-        rows.forEach(r=>{ const opt=document.createElement('option'); opt.value=r.val; opt.textContent=r.label; el.appendChild(opt); });
-        // Restore selection
-        const cur = getEyeMatFilter();
-        if (cur) { try { el.value = cur; } catch {} }
-      } catch {}
-    }
     async function attachAccessoriesToBase(mv, equip, itemsMap){
       try {
         let root = getBaseRoot(mv);
@@ -1007,7 +1133,6 @@
               srcScene = getSceneFromViewer(rec.mv);
             }
           if(!srcScene){ console.warn('[attach] no srcScene', it.id); continue; }
-          const autoInflateTV = calcAutoInflate(it, slot);
             let obj = null;
             try {
               if (typeof srcScene.clone === 'function') obj = srcScene.clone(true);
@@ -1023,7 +1148,6 @@
             }
             if (!obj) { console.warn('[attach] nothing cloneable for', it.id); continue; }
             // Thicken boots and tops if needed (reduce poke-through)
-            const autoInflate = calcAutoInflate(it, slot);
             const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
             const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
             const slotKey = (slot==='bagx') ? 'bag' : slot;
@@ -1070,13 +1194,13 @@
               } catch {}
             }
             try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
-            const inflateAmt = (typeof a.inflate === 'number') ? a.inflate : autoInflate;
             // Wrap and center like the Anchor Tool
             const THREE = getThree();
             const wrap = new (THREE?.Group||function(){})();
             try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
             try { if (!wrap.name) wrap.name = `slot-hatwrap`; if (slot && !/slot-/.test(wrap.name)) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
             try { const boxObj = new (THREE||window.THREE).Box3().setFromObject(obj); const cObj = boxObj.getCenter(new (THREE||window.THREE).Vector3()); obj.position.sub(cObj); } catch {}
+            const inflateAmt = (typeof a.inflate === 'number') ? a.inflate : 0;
             if (inflateAmt) { try { inflateScene(obj, inflateAmt); } catch {} }
             try { wrap.add(obj); } catch {}
             // Attach first so world matrices are valid
@@ -1121,6 +1245,8 @@
       let initialized = false, scene=null, camera=null, renderer=null, baseGroup=null, attachGroup=null, controls=null;
       let _tvLoadSeq = 0; // guard against async race when switching models quickly
       let _tvBaseUrlWanted = null;
+      let mixer = null, baseClips = [], poseAction = null, lastPoseMeta = null, lastPoseSeconds = 0;
+      let clock = null;
       function init(){
         if (initialized) return true;
         const THREE = getThree(); if (!THREE) return false;
@@ -1151,7 +1277,18 @@
         attachGroup = new THREE.Group(); scene.add(attachGroup);
         try { window.__TVAttachGroup = attachGroup; } catch {}
         try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.1,0); } } catch(_){ }
-        function tick(){ try { if(controls) controls.update(); renderer.render(scene, camera); } catch (_) {} requestAnimationFrame(tick); }
+        if (!clock) { try { clock = new (THREE||window.THREE).Clock(); } catch { clock = null; } }
+        function tick(){
+          try {
+            if(controls) controls.update();
+            if (clock && mixer) {
+              const delta = clock.getDelta();
+              if (isFinite(delta)) mixer.update(delta);
+            }
+            renderer.render(scene, camera);
+          } catch (_) {}
+          requestAnimationFrame(tick);
+        }
         requestAnimationFrame(tick);
         initialized = true; return true;
       }
@@ -1171,6 +1308,8 @@
           const THREE = getThree(); if(!THREE) return;
           if (baseGroup) { scene.remove(baseGroup); baseGroup=null; }
           while(attachGroup && attachGroup.children.length){ attachGroup.remove(attachGroup.children[0]); }
+          if (mixer) { mixer.stopAllAction(); mixer = null; }
+          baseClips = []; poseAction = null;
         } catch {} 
       }
       let _tvBaseUrl = null; async function loadBase(url){
@@ -1216,6 +1355,10 @@
         if (mySeq !== _tvLoadSeq || _tvBaseUrlWanted !== url) { try { /* ignore stale */ } catch {} return false; }
         if (!gltf || !gltf.scene) return false;
         baseGroup = gltf.scene;
+        baseClips = Array.isArray(gltf.animations) ? gltf.animations : [];
+        try { console.log('[TV] loaded clips', baseClips.map(c=>c.name)); } catch {}
+        mixer = (baseClips.length && THREE && THREE.AnimationMixer) ? new THREE.AnimationMixer(baseGroup) : null;
+        poseAction = null;
         applyBaseScaleToRoot(baseGroup);
         scene.add(baseGroup);
         try { window.__TVBaseRoot = baseGroup; } catch {}
@@ -1258,6 +1401,7 @@
         // Re-apply saved eye color for new base
         try { const hex=getSavedEyeHex(); if (hex) applyEyeColor(hex); } catch {}
         try { const hex=getSavedHatHex(); if (hex && attachGroup) applyHatColorToRoot(attachGroup, hex); } catch {} try { const hex2=getSavedBootHex(); if (hex2 && attachGroup) applyBootColorToRoot(attachGroup, hex2); } catch {} try { const hex3=getSavedBagHex(); if (hex3 && attachGroup) applyBagColorToRoot(attachGroup, hex3); } catch {}
+        try { if (lastPoseMeta) await applyPosePreset(lastPoseMeta, lastPoseSeconds, CURRENT_MODEL_ID); } catch {}
         return true;
       }
       function applyEyeColor(hex){ try { if (!baseGroup || !hex) return false; return applyEyeColorToRoot(baseGroup, hex); } catch { return false; } }
@@ -1276,57 +1420,6 @@
           const gltf = await new Promise(res=>{ try{ loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
           if (!gltf || !gltf.scene) continue;
           const src = gltf.scene.clone(true);
-          try {
-            const BI=readBootInflate();
-            const TI=readTopInflate();
-            const HI=readHairInflate();
-            const MI=readMaskInflate();
-            const OI=readOutfitInflate();
-            const LI=readLegInflate();
-            const SI=readSkirtInflate();
-            const AI=readArmInflate();
-            let infl=0;
-            if (/^cos-bottesgreen$/i.test(it.id) || /^cos-bottes$/i.test(it.id)) infl=Math.max(infl, BI*2.2);
-            if (isBootish(it.id, slot)) infl=Math.max(infl, BI);
-            if (isTopish(it.id, slot)) infl=Math.max(infl, TI);
-            if (isOutfitish(it.id, slot)) infl=Math.max(infl, OI);
-            if (isHairish(it.id, slot) && shouldThickenHair()) infl=Math.max(infl, HI);
-            if (isMaskish(it.id, slot)) infl=Math.max(infl, MI);
-            if (isLegish(it.id, slot)) infl=Math.max(infl, LI);
-            if (isSkirtish(it.id, slot)) infl=Math.max(infl, SI);
-            if (isArmish(it.id, slot)) infl=Math.max(infl, AI);
-            // Extra thickness for specific tops
-            if (/^cos-(amorplastron|shirt)$/i.test(String(it.id||''))) infl=Math.max(infl, TI*1.6);
-            if (/^cos-chemise$/i.test(String(it.id||''))) {
-              const mul = readChemiseInflateMul();
-              const min = readChemiseInflateMin();
-              infl = Math.max(infl, Math.max(TI*mul, min));
-            }
-            if (/^cos-greenoutfit$/i.test(String(it.id||''))) {
-              const mul = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMul')||'2.0'); return (isFinite(v)&&v>0)?v:2.0; } catch { return 2.0; } })();
-              const min = (function(){ try { const v=parseFloat(localStorage.getItem('greenOutfitInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-              infl = Math.max(infl, Math.max(OI*mul, min));
-            }
-            // Extra bump for pants
-            if (/^cos-pants$/i.test(String(it.id||''))) {
-              const mul = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMul')||'1.8'); return (isFinite(v)&&v>0)?v:1.8; } catch { return 1.8; } })();
-              const min = (function(){ try { const v=parseFloat(localStorage.getItem('pantInflateMin')||'0.018'); return (isFinite(v)&&v>=0)?v:0.018; } catch { return 0.018; } })();
-              infl = Math.max(infl, Math.max(LI*mul, min));
-            }
-            // Extra bump for skirts
-            if (/^cos-(skirt|armorskirt)$/i.test(String(it.id||''))) {
-              const kmul = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMul')||'1.9'); return (isFinite(v)&&v>0)?v:1.9; } catch { return 1.9; } })();
-              const kmin = (function(){ try { const v=parseFloat(localStorage.getItem('skirtInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-              infl = Math.max(infl, Math.max(SI*kmul, kmin));
-            }
-            // Stronger bump for arm guard
-            if (/^cos-amorarm$/i.test(String(it.id||''))) {
-              const mul = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMul')||'2.2'); return (isFinite(v)&&v>0)?v:2.2; } catch { return 2.2; } })();
-              const min = (function(){ try { const v=parseFloat(localStorage.getItem('amorarmInflateMin')||'0.02'); return (isFinite(v)&&v>=0)?v:0.02; } catch { return 0.02; } })();
-              infl = Math.max(infl, Math.max(AI*mul, min));
-            }
-            if (infl>0) inflateScene(src, infl);
-          } catch {}
           const wrap = new THREE.Group();
           try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
           try { if (!wrap.name) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
@@ -1376,8 +1469,8 @@
             } catch {}
           }
           try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
-          const inflateAmtTV = (typeof a.inflate === 'number') ? a.inflate : autoInflateTV;
-          if (inflateAmtTV) { try { inflateScene(src, inflateAmtTV); } catch{} }
+          const inflateAmtTV = (typeof a.inflate === 'number') ? a.inflate : 0;
+          if (inflateAmtTV) { try { inflateScene(src, inflateAmtTV); } catch {} }
           try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
           try {
             const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
@@ -1408,7 +1501,133 @@
       try { window.addEventListener('resize', ()=>resize()); } catch {}
       function snapshot(){ try { return renderer && renderer.domElement ? renderer.domElement.toDataURL('image/png') : null; } catch { return null; } }
       function applyHatColor(hex){ try { if (!baseGroup || !hex) return false; let ok=false; try{ ok=applyHatColorToRoot(baseGroup, hex)||ok; }catch(e){} try{ if(attachGroup) ok=applyHatColorToRoot(attachGroup, hex)||ok; }catch(e){} return ok; } catch(e){ return false; } }
-      return { init, loadBase, attachAll, getNodeNames, resize, snapshot, applyEyeColor, applyHatColor };
+      async function ensurePosePresetData(){
+        if (!__posePresetDataPromise) {
+          __posePresetDataPromise = (async ()=>{
+            try {
+              const res = await fetch('data/pose-presets.json', { cache:'no-store' });
+              if (!res.ok) return null;
+              return await res.json();
+            } catch {
+              return null;
+            }
+          })();
+        }
+        return __posePresetDataPromise;
+      }
+      function applyPresetPoseToRoot(root, poseId, data){
+        try {
+          if (!root || !data) return false;
+          const pose = data[poseId] || data.neutral;
+          if (!pose) return false;
+          const THREE = getThree();
+          if (!THREE) return false;
+          Object.keys(pose).forEach(name=>{
+            const node = root.getObjectByName(name);
+            if (!node) return;
+            const tr = pose[name] || {};
+            if (tr.translation && tr.translation.length===3) {
+              node.position.set(tr.translation[0], tr.translation[1], tr.translation[2]);
+            }
+            if (tr.rotation && tr.rotation.length===4) {
+              node.quaternion.set(tr.rotation[0], tr.rotation[1], tr.rotation[2], tr.rotation[3]);
+            }
+            if (tr.scale && tr.scale.length===3) {
+              node.scale.set(tr.scale[0], tr.scale[1], tr.scale[2]);
+            }
+            node.updateMatrix();
+          });
+          root.updateMatrixWorld(true);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      async function applyPosePreset(pose, secondsHint, modelId){
+        try {
+          lastPoseMeta = pose || null;
+          lastPoseSeconds = secondsHint || 0;
+          const effectiveModel = (modelId || CURRENT_MODEL_ID || ((_wallet||{}).equipped||{}).model || 'model-basemesh');
+          try { console.log('[TV] pose request', pose?.id, 'secondsHint', secondsHint, 'model', effectiveModel, 'clips', baseClips?.length||0, 'mixer?', !!mixer); } catch {}
+          if (!pose || !pose.animation){
+            if (mixer) {
+              try { mixer.stopAllAction(); mixer.update(0); } catch {}
+            }
+            return !!baseGroup;
+          }
+          if (!baseGroup || !mixer || !baseClips.length) return false;
+          const normalizedModel = String(effectiveModel||'').trim();
+          const THREE = getThree(); if (!THREE) return false;
+          const clipNames = baseClips.map(c=>c && c.name ? c.name : '').filter(Boolean);
+          const resolvedName = resolvePoseClipName(pose.animation, clipNames, normalizedModel) || pose.animation;
+          let clip = THREE.AnimationClip.findByName(baseClips, resolvedName);
+          if (!clip) {
+            const wantedLower = String(resolvedName||'').toLowerCase();
+            const wantedSimple = wantedLower.replace(/[^a-z0-9]/g,'');
+            clip = baseClips.find(c=>{
+              if (!c || !c.name) return false;
+              const nm = String(c.name).toLowerCase();
+              if (nm === wantedLower) return true;
+              if (nm.replace(/[^a-z0-9]/g,'') === wantedSimple) return true;
+              return false;
+            }) || null;
+          }
+          if (!clip) {
+            const data = await ensurePosePresetData();
+            if (data) {
+              try { mixer.stopAllAction(); mixer.update(0); } catch {}
+              const applied = applyPresetPoseToRoot(baseGroup, pose.id || 'neutral', data);
+              if (applied) {
+                poseAction = null;
+                try { console.warn('[TV] pose fallback via preset', pose.id); } catch {}
+                return true;
+              }
+            }
+            try { console.warn('[TV] pose clip missing', pose.animation, 'resolved as', resolvedName, 'available', clipNames); } catch{}
+            return false;
+          }
+          try { mixer.stopAllAction(); } catch {}
+          const action = mixer.clipAction(clip);
+          action.reset();
+          action.enabled = true;
+          const freeze = !!(pose && pose.hold);
+          const clipDuration = (clip && Number.isFinite(clip.duration) && clip.duration>0) ? clip.duration : 0;
+          const secondsFallback = (typeof secondsHint === 'number' && secondsHint>0) ? secondsHint : 0;
+          const targetSeconds = freeze ? poseHoldSeconds(pose, clipDuration || secondsFallback || 0, normalizedModel) : 0;
+          if (freeze) {
+            action.loop = THREE.LoopOnce;
+            action.clampWhenFinished = true;
+            action.setEffectiveWeight(1);
+            action.play();
+            const duration = clipDuration || secondsFallback || targetSeconds || 0.001;
+            const target = Math.max(0, Math.min(duration, targetSeconds || duration));
+            action.time = target;
+            try {
+              if (typeof mixer.setTime === 'function') mixer.setTime(target);
+              mixer.update(0.0001);
+            } catch {}
+            action.paused = true;
+            action.timeScale = 0;
+            poseAction = action;
+            try { console.log('[TV] pose applied (freeze)', pose.id, 'time', target.toFixed(3), 'duration', duration.toFixed(3)); } catch {}
+          } else {
+            action.loop = THREE.LoopRepeat;
+            action.clampWhenFinished = false;
+            action.enabled = true;
+            action.setEffectiveWeight(1);
+            action.paused = false;
+            action.timeScale = 1;
+            action.play();
+            poseAction = action;
+            try { console.log('[TV] pose applied (loop)', pose.id); } catch {}
+          }
+          return true;
+        } catch (e) {
+          console.warn('[TV] pose apply failed', e);
+          return false;
+        }
+      }
+      return { init, loadBase, attachAll, getNodeNames, resize, snapshot, applyEyeColor, applyHatColor, applyPose: applyPosePreset };
     })();
     function isHiddenItem(it){
       try {
@@ -1461,13 +1680,14 @@
       cats.forEach(c=>{
         const isActive = SELECTED===c.id;
         const b = document.createElement('button');
-        b.className = 'text-sm px-3 py-2 rounded-lg border transition ' + (isActive ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
+        b.className = 'text-sm px-3 py-2 rounded-xl border transition text-left w-full ' + (isActive ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
         b.textContent = c.label;
         b.dataset.id = c.id;
         b.addEventListener('click', ()=>{
           SELECTED = c.id;
           catTitle.textContent = c.label;
           renderItems();
+          updateColorControls();
         });
         catList.appendChild(b);
       });
@@ -1476,12 +1696,26 @@
     }
     let _items = [], _wallet = { coins:0, owned:{}, equipped:{} }, _cats = [];
     async function loadAll(){
-      const [cat, wall] = await Promise.all([
-        api('/api/shop/catalog'),
-        api('/api/wallet')
-      ]).catch(()=>[{items:[]},{coins:0,owned:{},equipped:{}}]);
+      let responses;
+      try {
+        responses = await Promise.all([api('/api/shop/catalog'), api('/api/wallet')]);
+      } catch {
+        responses = [null, null];
+      }
+      let [cat, wall] = responses;
+      if (!cat || cat.error) {
+        try {
+          const localCat = await fetch('data/catalog_dump.json').then(r=>r.json());
+          cat = localCat || { items:[] };
+        } catch {
+          cat = { items:[] };
+        }
+      }
+      if (!wall || wall.error) {
+        wall = { coins:0, owned:{}, equipped:{ model:'model-basemesh' } };
+      }
       _items = cat.items||[];
-      const safeWall = (wall && !wall.error) ? wall : { coins:0, owned:{}, equipped:{} };
+      const safeWall = wall || { coins:0, owned:{}, equipped:{} };
       _wallet = safeWall;
       // Ensure a default model is selected client-side if server view omitted it
       try {
@@ -1498,10 +1732,12 @@
       _cats = categoriesFrom(_items);
       renderCats(_cats);
       renderItems();
+      updateColorControls();
     }
 
     async function renderPreview(){
       const equip = _wallet.equipped||{};
+      try { CURRENT_MODEL_ID = (equip.model || CURRENT_MODEL_ID || 'model-basemesh'); } catch {}
       const itemsMap = new Map((_items||[]).map(x=>[x.id,x]));
       const mv = document.getElementById('mvShop');
       // Build summary list safely
@@ -1512,12 +1748,6 @@
         const modelItem = equip.model && itemsMap.get(equip.model);
         try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
         if (modelItem && modelItem.model && mv) {
-          // Use Three.js fallback viewer (preferred)
-          // Ensure TV wrapper is visible before measuring size
-          try {
-            const tvWrap0 = document.getElementById('tvWrap'); if (tvWrap0) tvWrap0.style.display='inline-block';
-            const mvWrap0 = document.getElementById('mvWrap'); if (mvWrap0) mvWrap0.style.display='none';
-          } catch {}
           async function ensureThreeReady(ms=2000){
             const t0 = Date.now();
             return await new Promise(r=>{
@@ -1531,35 +1761,37 @@
             });
           }
           await ensureThreeReady(2000);
-          const tvOk = TV && TV.init && TV.init();
-      if (tvOk) {
-        try {
-          window.__useTV = true;
-          const tvWrap = document.getElementById('tvWrap');
-          const mvWrap = document.getElementById('mvWrap');
-          await TV.loadBase(modelItem.model);
-          try { if (TV.resize) TV.resize(); } catch {}
-          try { await applyEyeColorFromStorage(); } catch {}
-          try { await applyHatColorFromStorage(); } catch {}
-          try { await applyBootColorFromStorage(); } catch {}
-          try { await applyBagColorFromStorage(); } catch {}
-          try { buildEyeMaterialPicker(); } catch {}
-          const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
-          const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
-          await TV.attachAll(equip, itemsMap, anchors);
-        } catch (_){ }
-      } else {
-        mv.src = modelItem.model;
-        try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
-        (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
-        try {
-          const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {} };
-          mv.addEventListener('load', once, { once:true });
-          mv.addEventListener('scene-graph-ready', once, { once:true });
-          mv.addEventListener('load', ()=>{ try { buildEyeMaterialPicker(); } catch {} }, { once:true });
-          mv.addEventListener('scene-graph-ready', ()=>{ try { buildEyeMaterialPicker(); } catch {} }, { once:true });
-        } catch {}
-      }
+          let usedTV = false;
+          const tvOk = (!FORCE_MV_PREVIEW) && TV && TV.init && TV.init();
+          if (tvOk) {
+            try {
+              console.log('[shop] using TV preview');
+              window.__useTV = true;
+              const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
+              const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
+              await TV.loadBase(modelItem.model);
+              try { if (TV.resize) TV.resize(); } catch {}
+              try { await applyEyeColorFromStorage(); } catch {}
+              try { await applyHatColorFromStorage(); } catch {}
+              try { await applyBootColorFromStorage(); } catch {}
+              try { await applyBagColorFromStorage(); } catch {}
+              const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+              const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+              const attached = await TV.attachAll(equip, itemsMap, anchors);
+              if (attached) {
+                usedTV = true;
+              } else {
+                window.__useTV = false;
+              }
+            } catch (err){
+              console.warn('[shop] TV preview failed', err);
+              window.__useTV = false;
+            }
+          }
+          console.log('[shop] usedTV flag', usedTV);
+          if (!usedTV) {
+            showModelViewerPreview(mv, modelItem);
+          }
           // 3D only
           try { mv.pause(); } catch (e) {}
           // Nudge animation to show change
@@ -1612,7 +1844,8 @@
           try { await applyHatColorFromStorage(); } catch {}
           try { await applyBootColorFromStorage(); } catch {}
           try { await applyBagColorFromStorage(); } catch {}
-          try { buildEyeMaterialPicker(); } catch {}
+          try { await applyPoseSelection(); } catch {}
+          updateColorControls();
         } catch (e) {}
       // No fallback preview
       // Render equipped chips with quick remove buttons + refresh Anchor panel slots
@@ -1896,7 +2129,7 @@
       const sub = it.kind==='upgrade' ? 'Upgrade' : (friendlySlotLabel(it.slot) || 'Cosmetic');
       const ownerLabel = owned[it.id] ? ownedBadge : '';
       return `
-        <div class="p-3 rounded-xl border border-black/50 bg-white shadow-sm space-y-3">
+        <div class="p-3 rounded-xl border border-black/40 bg-white shadow-sm space-y-3">
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="font-semibold">${formatItemName(it)}</div>
@@ -1921,11 +2154,11 @@
         empty.textContent = 'No items available in this category.';
         catalogEl.appendChild(empty);
       } else {
-        list.forEach(it=>{
-          const wrap = document.createElement('div');
-          wrap.innerHTML = cardHtml(it, owned, equipped);
-          const node = wrap.firstElementChild; catalogEl.appendChild(node);
-        });
+      list.forEach(it=>{
+        const wrap = document.createElement('div');
+        wrap.innerHTML = cardHtml(it, owned, equipped);
+        const node = wrap.firstElementChild; catalogEl.appendChild(node);
+      });
       }
       try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch (e) {}
       bindActions();
@@ -2027,8 +2260,29 @@
             if (it && it.slot) {
               if (slot === 'model') { _wallet.equipped = { model: id }; }
               else { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
-            }
-          }
+      }
+    }
+    function showModelViewerPreview(mv, modelItem){
+      try {
+        window.__useTV = false;
+        const tvWrap0 = document.getElementById('tvWrap'); if (tvWrap0) tvWrap0.style.display='none';
+        const mvWrap0 = document.getElementById('mvWrap'); if (mvWrap0) mvWrap0.style.display='inline-block';
+        window.__mvPreviewCount = (window.__mvPreviewCount||0)+1;
+        console.log('[shop] using model-viewer preview', window.__mvPreviewCount);
+      } catch {}
+      if (!mv || !modelItem || !modelItem.model) return;
+      mv.src = modelItem.model;
+      try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
+      try {
+        const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {} };
+        mv.addEventListener('load', once, { once:true });
+        mv.addEventListener('scene-graph-ready', once, { once:true });
+        const poseOnce = ()=>{ try { applyPoseSelection().catch(()=>{}); } catch {} };
+        mv.addEventListener('load', poseOnce, { once:true });
+        mv.addEventListener('scene-graph-ready', poseOnce, { once:true });
+      } catch {}
+      try { applyPoseSelection().catch(()=>{}); } catch {}
+    }
           renderPreview();
           // Rebuild categories after model change to ensure upgrades show correctly
           try { if (slot === 'model') { _cats = categoriesFrom(_items); renderCats(_cats); } } catch {}
@@ -2105,16 +2359,14 @@
       try {
         const btn = document.getElementById('eyeApplyBtn');
         const pick = document.getElementById('eyeColorPick');
-        const sel = document.getElementById('eyeMatSel');
         if (btn && !btn.__wired) {
           btn.__wired = true;
           btn.addEventListener('click', async ()=>{
             try {
               const v = String((pick && pick.value) || '').trim();
               if (v) setSavedEyeHex(v);
-              try { if (sel) setEyeMatFilter(sel.value||''); } catch {}
               
-              btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Applying…';
+              btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Applying...';
               try {
                 let ok = await applyEyeColorFromStorage();
                 // Fallback: if nothing applied (e.g., scene not ready), rebuild preview then re-apply
@@ -2127,19 +2379,13 @@
           });
         }
       } catch {}
-      try {
-        const sel = document.getElementById('eyeMatSel');
-        if (sel && !sel.__wired) {
-          sel.__wired = true;
-          const cur = getEyeMatFilter(); if (cur) sel.value = cur;
-          sel.addEventListener('change', ()=>{ try { setEyeMatFilter(sel.value||''); applyEyeColorFromStorage(); } catch {} });
-        }
-      } catch {}
       
       try { applyEyeColorFromStorage(); } catch {}
       try { applyHatColorFromStorage(); } catch {}
       try { applyBootColorFromStorage(); } catch {}
       try { applyBagColorFromStorage(); } catch {}
+      try { buildPoseControls(); } catch {}
+      try { applyPoseSelection().catch(()=>{}); } catch {}
     })();
 
     loadAll();
