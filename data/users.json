@@ -56,8 +56,8 @@
         },
         "equipped": {
           "model": "model-basemesh",
-          "misc": "cos-amorarm",
-          "boots": "cos-ninjassuitshoe"
+          "top": "cos-chemise",
+          "legs": "cos-ninjassuitthigh"
         },
         "anchors": {
           "cos-armorshoe": {

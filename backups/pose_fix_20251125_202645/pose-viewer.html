@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pose Viewer</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+
+    const CANVAS = document.getElementById('poseCanvas');
+    const STATUS = document.getElementById('poseStatus');
+    const VIEWER = document.getElementById('viewerWrap');
+    const POSE_LIST = document.getElementById('poseButtons');
+    const searchParams = new URLSearchParams(window.location.search);
+    const MODEL_URL = decodeURIComponent(searchParams.get('model') || 'assets/chibi/characters/ChibiCharacters/glb/basemeshpr.glb');
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, canvas: CANVAS });
+    renderer.setPixelRatio(window.devicePixelRatio||1);
+    renderer.setSize(VIEWER.clientWidth, VIEWER.clientHeight, false);
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(28, VIEWER.clientWidth/VIEWER.clientHeight, 0.01, 50);
+    camera.position.set(0, 0.4, 1.4);
+
+    const controls = new OrbitControls(camera, CANVAS);
+    controls.enableDamping = true;
+    controls.target.set(0, 0.25, 0);
+
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    hemi.position.set(0, 1, 0);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(0.5, 1, 0.5);
+    scene.add(dir);
+
+    let baseMesh = null;
+    let mixer = null;
+    let clips = [];
+    let currentPose = 'neutral';
+
+    renderer.setAnimationLoop(()=>{
+      controls.update();
+      renderer.render(scene, camera);
+    });
+
+    const POSES = [
+      { id:'neutral', label:'Neutral', clip:null },
+      { id:'idle', label:'Idle', clip:'anim_iddle', fraction:0.25 },
+      { id:'arms', label:'Arms Out', clip:'anim_push', fraction:0.45 },
+      { id:'walk', label:'Walk', clip:'anim_walk', fraction:0.55 },
+      { id:'run', label:'Run', clip:'anim_run', fraction:0.35 },
+      { id:'crouch', label:'Crouch', clip:'anim_crouch', fraction:0.9 }
+    ];
+
+    function setStatus(msg){ if (STATUS) STATUS.textContent = msg; }
+
+    async function loadModel(){
+      setStatus('Loading basemesh…');
+      const loader = new GLTFLoader();
+      const gltf = await loader.loadAsync(MODEL_URL).catch(()=>null);
+      if (!gltf || !gltf.scene) { setStatus('Failed to load basemesh'); return; }
+      baseMesh = gltf.scene;
+      clips = gltf.animations || [];
+      mixer = new THREE.AnimationMixer(baseMesh);
+      baseMesh.traverse(o=>{ if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+      scene.add(baseMesh);
+
+      const box = new THREE.Box3().setFromObject(baseMesh);
+      const center = box.getCenter(new THREE.Vector3());
+      baseMesh.position.sub(center);
+
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const fitHeight = Math.max(size.y, size.x/ camera.aspect);
+      const dist = fitHeight / (2*Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5))) + 0.3;
+      camera.position.set(0, size.y*0.4, dist);
+      controls.target.set(0, size.y*0.2, 0);
+      controls.update();
+      const clipNames = clips.map(c=>c.name);
+      console.log('[pose-viewer] loaded clips', clipNames);
+      setStatus('Basemesh loaded. Choose a pose.');
+      await selectPose(currentPose);
+    }
+
+    async function selectPose(id){
+      currentPose = id;
+      refreshButtons();
+      if (!baseMesh || !mixer) return;
+      const pose = POSES.find(p=>p.id===id) || POSES[0];
+      if (!pose || !pose.clip) {
+        try { mixer.stopAllAction(); } catch {}
+        try {
+          baseMesh.traverse(node=>{
+            if (node && node.isBone && node.initialMatrix) {
+              node.matrix.copy(node.initialMatrix);
+            }
+          });
+          baseMesh.updateMatrixWorld(true);
+        } catch {}
+        setStatus('Reset to neutral');
+        return;
+      }
+      const clip = THREE.AnimationClip.findByName(clips, pose.clip);
+      if (!clip) { setStatus(`Clip missing: ${pose.clip}`); return; }
+      mixer.stopAllAction();
+      const action = mixer.clipAction(clip);
+      action.reset();
+      action.loop = THREE.LoopOnce;
+      action.clampWhenFinished = true;
+      action.enabled = true;
+      action.setEffectiveWeight(1);
+      action.play();
+      const duration = clip.duration || 0.001;
+      const fraction = ('time' in pose) ? pose.time : (pose.fraction ?? 0.5);
+      const target = Math.max(0, Math.min(duration, typeof fraction === 'number' ? duration * fraction : duration));
+      mixer.setTime(target);
+      mixer.update(0);
+      action.paused = true;
+      action.timeScale = 0;
+      setStatus(`Pose applied: ${pose.label}`);
+    }
+
+    function buildButtons(){
+      POSES.forEach(p=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.poseId = p.id;
+        btn.textContent = p.label;
+        btn.className = 'text-xs px-3 py-1 rounded border transition bg-white border-gray-200 hover:border-black';
+        btn.addEventListener('click', ()=>selectPose(p.id));
+        POSE_LIST.appendChild(btn);
+      });
+      refreshButtons();
+    }
+
+    function refreshButtons(){
+      document.querySelectorAll('#poseButtons button').forEach(btn=>{
+        const active = btn.dataset.poseId === currentPose;
+        btn.className = 'text-xs px-3 py-1 rounded border transition ' + (active ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
+      });
+    }
+
+    window.addEventListener('resize', ()=>{
+      renderer.setSize(VIEWER.clientWidth, VIEWER.clientHeight, false);
+      camera.aspect = VIEWER.clientWidth/VIEWER.clientHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    buildButtons();
+    loadModel();
+  </script>
+</head>
+<body class="anime-bg min-h-screen p-5">
+  <main class="max-w-4xl mx-auto manga-bubble p-4 space-y-4">
+    <header class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold accent-underline">Pose Viewer</h1>
+        <p class="text-sm text-gray-600">Basemesh character poses (same rig as shop preview).</p>
+      </div>
+      <a href="shop.html" class="btn btn-dark">Back to Shop</a>
+    </header>
+    <div class="grid gap-4 md:grid-cols-[360px,1fr] items-start">
+      <div id="viewerWrap" class="w-full h-[360px] bg-white rounded-xl shadow relative">
+        <canvas id="poseCanvas" class="w-full h-full"></canvas>
+        <div class="absolute inset-x-0 bottom-2 text-center text-xs text-gray-600" id="poseStatus">Preparing viewer…</div>
+      </div>
+      <div>
+        <h2 class="text-lg font-semibold mb-2">Poses</h2>
+        <div id="poseButtons" class="flex flex-wrap gap-2"></div>
+        <p class="text-xs text-gray-500 mt-3">If a pose looks wrong here, it will look wrong in the shop. Snapshots come from <code>data/pose-presets.json</code> and target <code>model-basemesh</code>.</p>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

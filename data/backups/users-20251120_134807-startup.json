@@ -50,40 +50,20 @@
           "cos-greenoutfitneckless": true,
           "cos-ninjassuit": true,
           "cos-ninjasuitshort": true,
-          "cos-ninjassuitmask": true
+          "cos-ninjassuitmask": true,
+          "cos-armorshoeoriginal": true,
+          "cos-bottesgreenoriginal": true
         },
         "equipped": {
           "model": "model-basemesh",
-          "hair": "cos-hairtail",
-          "top": "cos-chemise",
-          "skirt": "cos-skirt",
-          "boots": "cos-bottes",
-          "bag": "cos-bag",
-          "hat": "cos-hat",
-          "belt": "cos-greenoutfitbelt"
+          "hat": "cos-armorhelmet",
+          "top": "cos-chemise"
         },
         "anchors": {
           "cos-armorshoe": {
             "position": [
               0,
               -0.353,
-              0.06
-            ],
-            "rotation": [
-              0,
-              0,
-              0
-            ],
-            "scale": [
-              1,
-              1,
-              1
-            ]
-          },
-          "boots": {
-            "position": [
-              0,
-              -0.39,
               0.06
             ],
             "rotation": [
@@ -304,8 +284,8 @@
           "cos-bag": {
             "position": [
               -0.006,
-              0.436,
-              -0.083
+              0.81,
+              -0.111
             ],
             "rotation": [
               0,
@@ -313,9 +293,9 @@
               0
             ],
             "scale": [
-              1.2,
-              1.2,
-              1.2
+              1,
+              1,
+              1
             ]
           },
           "cos-ceinture": {
@@ -338,8 +318,8 @@
           "cos-chemise": {
             "position": [
               0,
-              0.482,
-              0.026
+              0.837,
+              0.01
             ],
             "rotation": [
               0,
@@ -381,9 +361,9 @@
               0
             ],
             "scale": [
-              1.21,
-              1.21,
-              1.21
+              1.2,
+              1.2,
+              1.2
             ]
           },
           "cos-greenoutfitneckless": {
@@ -527,23 +507,6 @@
               0,
               0.208,
               0
-            ],
-            "rotation": [
-              0,
-              0,
-              0
-            ],
-            "scale": [
-              1,
-              1,
-              1
-            ]
-          },
-          "bag": {
-            "position": [
-              -0.001,
-              0.463,
-              -0.121
             ],
             "rotation": [
               0,
@@ -759,6 +722,74 @@
               1,
               1
             ]
+          },
+          "cos-bottesgreenoriginal": {
+            "position": [
+              0,
+              -0.276,
+              0.06
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.03,
+              1.03,
+              1.03
+            ]
+          },
+          "cos-shoe": {
+            "position": [
+              0,
+              -0.355,
+              0.066
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "boots": {
+            "position": [
+              0,
+              -0.39,
+              0.06
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "bag": {
+            "position": [
+              0.004,
+              0.81,
+              -0.112
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
           }
         },
         "anchorLocks": {
@@ -790,7 +821,9 @@
           "cos-bottesgreen": true,
           "cos-greenoutfit": true,
           "cos-skirt": true,
-          "cos-hairone": true
+          "cos-hairone": true,
+          "cos-bottesgreenoriginal": true,
+          "cos-shoe": true
         }
       }
     },

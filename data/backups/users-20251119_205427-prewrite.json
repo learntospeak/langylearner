@@ -56,13 +56,10 @@
         },
         "equipped": {
           "model": "model-basemesh",
-          "hair": "cos-hairtail",
-          "top": "cos-chemise",
-          "skirt": "cos-skirt",
-          "bag": "cos-bag",
+          "hair": "cos-hairvariant",
           "hat": "cos-hat",
-          "belt": "cos-greenoutfitbelt",
-          "boots": "cos-shoe"
+          "boots": "cos-armorshoe",
+          "top": "cos-chemise"
         },
         "anchors": {
           "cos-armorshoe": {
@@ -288,9 +285,9 @@
           },
           "cos-bag": {
             "position": [
-              0.004,
+              -0.006,
               0.81,
-              -0.112
+              -0.111
             ],
             "rotation": [
               0,
@@ -323,8 +320,8 @@
           "cos-chemise": {
             "position": [
               0,
-              0.482,
-              0.026
+              0.837,
+              0.01
             ],
             "rotation": [
               0,
@@ -767,6 +764,23 @@
               0,
               -0.39,
               0.06
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "bag": {
+            "position": [
+              0.004,
+              0.81,
+              -0.112
             ],
             "rotation": [
               0,

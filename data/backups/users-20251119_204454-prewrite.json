@@ -55,14 +55,7 @@
           "cos-bottesgreenoriginal": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "hair": "cos-hairtail",
-          "top": "cos-chemise",
-          "skirt": "cos-skirt",
-          "bag": "cos-bag",
-          "hat": "cos-hat",
-          "belt": "cos-greenoutfitbelt",
-          "boots": "cos-shoe"
+          "model": "model-basemesh"
         },
         "anchors": {
           "cos-armorshoe": {
@@ -288,9 +281,9 @@
           },
           "cos-bag": {
             "position": [
-              0.12,
+              -0.006,
               0.81,
-              -0.07
+              -0.111
             ],
             "rotation": [
               0,
@@ -323,8 +316,8 @@
           "cos-chemise": {
             "position": [
               0,
-              0.482,
-              0.026
+              0.837,
+              0.01
             ],
             "rotation": [
               0,

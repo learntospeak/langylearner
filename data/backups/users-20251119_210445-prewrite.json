@@ -56,13 +56,11 @@
         },
         "equipped": {
           "model": "model-basemesh",
-          "hair": "cos-hairtail",
+          "boots": "cos-armorshoe",
           "top": "cos-chemise",
-          "skirt": "cos-skirt",
-          "bag": "cos-bag",
-          "hat": "cos-hat",
-          "belt": "cos-greenoutfitbelt",
-          "boots": "cos-shoe"
+          "legs": "cos-armorknees",
+          "skirt": "cos-armorskirt",
+          "hair": "cos-hairtail"
         },
         "anchors": {
           "cos-armorshoe": {
@@ -323,8 +321,8 @@
           "cos-chemise": {
             "position": [
               0,
-              0.482,
-              0.026
+              0.837,
+              0.01
             ],
             "rotation": [
               0,
