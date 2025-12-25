@@ -141,6 +141,39 @@
       }
     }
 
+          const arr = await parser.getDependency('accessor', def.inverseBindMatrices).catch(()=>null);
+          inverseCache.set(skinIdx, arr || null);
+          return arr || null;
+        };
+        let paired = false;
+        for (const mesh of skinned){
+          const skinIdx = skinForNode.has(mesh.name) ? skinForNode.get(mesh.name) : 0;
+          const jointNames = jointNamesFor(skinIdx);
+          const bones = jointNames.map(name=>boneMap.get(name)).filter(Boolean);
+          if (!bones.length) continue;
+          let inverseMats = null;
+          const invArr = await inverseFor(skinIdx);
+          if (invArr && invArr.length >= bones.length*16){
+            inverseMats = [];
+            for (let i=0;i<bones.length;i++){
+              const m = new THREE.Matrix4();
+              m.fromArray(invArr.slice(i*16, i*16+16));
+              inverseMats.push(m);
+            }
+          }
+          const skeleton = new THREE.Skeleton(bones, inverseMats || undefined);
+          mesh.bind(skeleton);
+          try { mesh.normalizeSkinWeights?.(); } catch {}
+          if (mesh.material && mesh.material.skinning === false) mesh.material.skinning = true;
+          paired = true;
+        }
+        return paired;
+      } catch (e){
+        console.warn('[pose-viewer] failed to pair mesh to armature', e);
+        return false;
+      }
+    }
+
     async function loadModel(){
       setStatus('Loading basemesh…');
       const loader = new GLTFLoader();
@@ -160,6 +193,7 @@
       const box = new THREE.Box3().setFromObject(baseMesh);
       const center = box.getCenter(new THREE.Vector3());
       baseMesh.position.sub(center);
+      try { await pairMeshToArmature(gltf); } catch {}
 
       const size = new THREE.Vector3();
       box.getSize(size);
@@ -267,8 +301,8 @@
       </div>
       <a href="shop.html" class="btn btn-dark">Back to Shop</a>
     </header>
-    <div class="grid gap-4 md:grid-cols-[360px,1fr] items-start">
-      <div id="viewerWrap" class="w-full h-[360px] bg-white rounded-xl shadow relative">
+    <div class="grid gap-4 md:grid-cols-[720px,1fr] items-start">
+      <div id="viewerWrap" class="w-full h-[720px] bg-white rounded-xl shadow relative">
         <canvas id="poseCanvas" class="w-full h-full"></canvas>
         <div class="absolute inset-x-0 bottom-2 text-center text-xs text-gray-600" id="poseStatus">Preparing viewer…</div>
       </div>

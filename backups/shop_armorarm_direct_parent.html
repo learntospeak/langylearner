@@ -13,16 +13,16 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "./vendor/three.module.js"
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
       }
     }
   </script>
-  <script type="module" src="./vendor/model-viewer.min.js"></script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <script type="module">
-    import * as THREE from './vendor/three.module.js';
-    import { GLTFLoader } from './vendor/GLTFLoader.js';
-    import { OrbitControls } from './vendor/OrbitControls.js';
-    import { TransformControls } from './vendor/TransformControls.js';
+    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+    import { TransformControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/TransformControls.js';
     window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls; window.__TransformControls = TransformControls;
   </script>
 </head>
@@ -205,70 +205,8 @@
     };
     const ARMORARM_KEY = 'miscArmorArms';
     const isArmorArm = (id)=>{ try { return /armorarm|amorarm/i.test(String(id||'')); } catch { return false; } };
-    const ARMORARM_DEFAULT_OFFSETS = {
-      // These come from your existing saved anchors for L/R so we always have a sane forearm placement
-      left:{
-        pos:[-0.034403016805831535, 0.04411172206355481, 0.0390447441387427],
-        rot:[-0.019854197659057184, 0.28876278671539896, 2.075238667617461],
-        scl:[1,1,1]
-      },
-      right:{
-        pos:[-0.029601914289105795, -0.0056423670045653695, 0.02200428201841935],
-        rot:[2.957661836177801, -0.6321156150147867, 1.0030662658174405],
-        scl:[1,1,1]
-      }
-    };
-    const ARMORARM_DEFAULT_ANCHORS = {
-      shared:{ position:[0, 0.502, 0.003], rotation:[0,0,0], scale:[1,1,1] },
-      left:{ position:[-0.034403016805831535, 0.04411172206355481, 0.0390447441387427], rotation:[-0.019854197659057184, 0.28876278671539896, 2.075238667617461], scale:[1,1,1] },
-      right:{ position:[-0.029601914289105795, -0.0056423670045653695, 0.02200428201841935], rotation:[2.957661836177801, -0.6321156150147867, 1.0030662658174405], scale:[1,1,1] }
-    };
     const loadArmorArmsLocal = ()=>{ try { const a=JSON.parse(localStorage.getItem(ARMORARM_KEY)||'[]'); return Array.isArray(a)?a.filter(Boolean):[]; } catch { return []; } };
     const saveArmorArmsLocal = (arr)=>{ try { localStorage.setItem(ARMORARM_KEY, JSON.stringify(arr||[])); } catch {} };
-    function readArmorOffset(key){
-      try {
-        const raw = JSON.parse(localStorage.getItem(key)||'null');
-        if (raw && typeof raw==='object') return raw;
-      } catch {}
-      try {
-        const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};
-        const val = ov[key];
-        if (val && typeof val==='object') {
-          return {
-            pos: val.pos || val.position || [0,0,0],
-            rot: val.rot || val.rotation || [0,0,0],
-            scl: val.scl || val.scale || [1,1,1]
-          };
-        }
-      } catch {}
-      try {
-        if (/^armorarmOffset[LR]$/.test(String(key||''))) {
-          const side = key.endsWith('R') ? 'right' : 'left';
-          const fallback = (ARMORARM_DEFAULT_OFFSETS && ARMORARM_DEFAULT_OFFSETS[side]) ? ARMORARM_DEFAULT_OFFSETS[side] : null;
-          if (fallback) return fallback;
-        }
-      } catch {}
-      return null;
-    }
-    function writeArmorOffset(key, data){
-      try {
-        if (data) localStorage.setItem(key, JSON.stringify(data)); else localStorage.removeItem(key);
-      } catch {}
-      try {
-        const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};
-        if (data) {
-          ov[key] = {
-            position: data.pos || data.position || [0,0,0],
-            rotation: data.rot || data.rotation || [0,0,0],
-            scale: data.scl || data.scale || [1,1,1]
-          };
-        } else {
-          delete ov[key];
-        }
-        localStorage.setItem('anchorOverrides', JSON.stringify(ov));
-      } catch {}
-      try { pushServerAnchorsSoon(); } catch {}
-    }
     const ANIMATION_DURATIONS = {
       'anim_crouch':0.292,
       'anim_crouchiddle':0.583,
@@ -355,29 +293,6 @@
         }
         // Ninjashoe needs a separate higher placement (only if not locked and missing)
         (function(){ try { const id='cos-ninjashoe'; const y=-0.26, z=0.06; if (!locks[id] && !ov[id]) { ov[id] = { position:[0,y,z], rotation:[0,0,0], scale:[1,1,1] }; changed=true; } } catch{} })();
-        if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
-      } catch {}
-    })();
-    // Seed defaults for armor arms so they always have per-side anchors even when localStorage is empty
-    (function seedArmorArmAnchors(){
-      try {
-        const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
-        const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })();
-        const def = ARMORARM_DEFAULT_ANCHORS || {};
-        const candidates = [
-          ['cos-amorarm', def.shared || def.left || def.right],
-          ['cos-amorarm-left', def.left || def.shared || def.right],
-          ['cos-amorarm-right', def.right || def.shared || def.left],
-          ['cos-amorarm-l', def.left || def.shared || def.right],
-          ['cos-amorarm-r', def.right || def.shared || def.left],
-          ['cos-amorarmx', def.left || def.shared || def.right]
-        ];
-        let changed=false;
-        for (const [id,val] of candidates){
-          if (!id || !val) continue;
-          if (locks[id]) continue;
-          if (!ov[id]) { ov[id] = { position:[...val.position], rotation:[...val.rotation], scale:[...val.scale] }; changed=true; }
-        }
         if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
       } catch {}
     })();
@@ -1356,7 +1271,6 @@
     // ---------- Lightweight Three.js viewer fallback ----------
     const TV = (function(){
       let initialized = false, scene=null, camera=null, renderer=null, baseGroup=null, attachGroup=null, controls=null;
-      let camHomePos = null, camHomeTarget = null, camLastPos = null, camLastTarget = null;
       let _tvLoadSeq = 0; // guard against async race when switching models quickly
       let _tvBaseUrlWanted = null;
       let mixer = null, baseClips = [], poseAction = null, lastPoseMeta = null, lastPoseSeconds = 0;
@@ -1557,17 +1471,7 @@
             controls.maxDistance = baseDist*6.0;
             controls.enablePan = true;
             controls.update();
-            try {
-              controls.removeEventListener('change', __onCamChange);
-              controls.addEventListener('change', __onCamChange);
-            } catch {}
           }
-          try {
-            camHomePos = camera.position.clone();
-            camHomeTarget = (controls && controls.target) ? controls.target.clone() : new THREE.Vector3(0, size.y*(window.TV_TARGET_Y||0.54), 0);
-            camLastPos = camHomePos.clone();
-            camLastTarget = camHomeTarget.clone();
-          } catch {}
         } catch {}
         _tvBaseUrl = url;
         // Re-apply saved eye color for new base
@@ -1576,40 +1480,12 @@
         try { if (lastPoseMeta) applyPosePreset(lastPoseMeta, lastPoseSeconds); } catch {}
         return true;
       }
-      function __onCamChange(){
-        try {
-          if (camera) camLastPos = camera.position.clone();
-          if (controls && controls.target) camLastTarget = controls.target.clone();
-        } catch {}
-      }
       function applyEyeColor(hex){ try { if (!baseGroup || !hex) return false; return applyEyeColorToRoot(baseGroup, hex); } catch { return false; } }
       async function attachAll(equip, itemsMap, anchors){
         const THREE = getThree(); if (!THREE || !initialized) return false;
-        // Preserve camera/target across reattach so the view doesn't jump when items change
-        const camPrevPos = (camLastPos && camLastPos.clone) ? camLastPos.clone() : ((camera && camera.position) ? camera.position.clone() : null);
-        const camPrevTarget = (camLastTarget && camLastTarget.clone) ? camLastTarget.clone() : ((controls && controls.target) ? controls.target.clone() : null);
-        const cloneAnchor = (src)=>({
-          position:[...(src?.position||[0,0,0])],
-          rotation:[...(src?.rotation||[0,0,0])],
-          scale:[...(src?.scale||[1,1,1])],
-          inflate:(typeof src?.inflate==='number') ? src.inflate : undefined
-        });
-        // Clean up any previous attachments, including ones parented to bones
-        try {
-          const prev = Array.isArray(window.__TVAttachments) ? window.__TVAttachments.slice() : [];
-          prev.forEach(node=>{ try { if (node && node.parent) node.parent.remove(node); } catch {} });
-          window.__TVAttachments = [];
-        } catch {}
         followers.length = 0;
-        const allAttached = [];
         if (!attachGroup) { attachGroup = new THREE.Group(); try { window.__TVAttachGroup = attachGroup; } catch {} }
-        try {
-          const targetParent = baseGroup || scene;
-          if (targetParent && attachGroup.parent !== targetParent) {
-            if (attachGroup.parent) attachGroup.parent.remove(attachGroup);
-            targetParent.add(attachGroup);
-          }
-        } catch {}
+        try { if (attachGroup.parent !== scene) { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); scene.add(attachGroup); } } catch {}
         while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
         try { if (baseGroup) baseGroup.updateWorldMatrix(true, true); } catch {}
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
@@ -1623,19 +1499,15 @@
           if (!gltf || !gltf.scene) continue;
           const src = gltf.scene.clone(true);
           const wrap = new THREE.Group();
-          const idStr = String(it.id||'').toLowerCase();
           try {
             wrap.userData = wrap.userData || {};
             wrap.userData.__slot = slot;
             wrap.userData.__itemId = it.id||null;
             // Hint left/right for armor arms so gizmo and bone parenting can detect sides
             if (/armorarm|amorarm/i.test(String(it.id||''))) {
-              const sideGuess = (function(){
-                if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr)) return 'left';
-                if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr)) return 'right';
-                return null;
-              })();
-              if (sideGuess) wrap.userData.__side = sideGuess;
+              const idStr = String(it.id||'').toLowerCase();
+              if (/left|\\blx?\\b|_l\\b/.test(idStr)) wrap.userData.__side = 'left';
+              if (/right|\\brx?\\b|_r\\b/.test(idStr)) wrap.userData.__side = 'right';
             }
           } catch {}
           try { if (!wrap.name) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
@@ -1645,93 +1517,7 @@
           const slotKey = (slot==='bagx') ? 'bag' : slot;
           const __hasItemOv = !!__ov[it.id];
           const __hasSlotOv = !!__ov[slotKey];
-          const sideHint = (function(){
-            const hint = String(wrap.userData?.__side||'').toLowerCase();
-            if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr) || hint==='right') return 'right';
-            if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr) || hint==='left') return 'left';
-            if (/amorarmx\b/.test(idStr)) return 'left'; // shared model defaults to left
-            try {
-              const hasL = !!readArmorOffset('armorarmOffsetL');
-              const hasR = !!readArmorOffset('armorarmOffsetR');
-              if (hasL && !hasR) return 'left';
-              if (hasR && !hasL) return 'right';
-            } catch {}
-            return null;
-          })();
-          let a = cloneAnchor(__ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc));
-          // Armor arms: reuse the shared anchor when side-specific IDs have no data, then apply saved per-side offsets
-          if (isArmorArm(it.id)) {
-            const fallbackDefaults = ARMORARM_DEFAULT_ANCHORS || {};
-            const pickDefaultArmAnchor = (side)=>{
-              if (side==='right') return fallbackDefaults.right || fallbackDefaults.shared || fallbackDefaults.left || null;
-              if (side==='left')  return fallbackDefaults.left  || fallbackDefaults.shared || fallbackDefaults.right || null;
-              return fallbackDefaults.shared || fallbackDefaults.left || fallbackDefaults.right || null;
-            };
-            const derivedSide = (function(){
-              if (sideHint) return sideHint;
-              if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr)) return 'right';
-              if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr)) return 'left';
-              return null;
-            })();
-            if (derivedSide && !wrap.userData.__side) wrap.userData.__side = derivedSide;
-            let offKey = derivedSide==='right' ? 'armorarmOffsetR' : (derivedSide==='left' ? 'armorarmOffsetL' : null);
-            const ensureKey = ()=>{
-              if (wrap.userData.__armorArmOffsetKey) return wrap.userData.__armorArmOffsetKey;
-              if (offKey) return (wrap.userData.__armorArmOffsetKey = offKey);
-              if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr)) return (wrap.userData.__armorArmOffsetKey = 'armorarmOffsetR');
-              if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr)) return (wrap.userData.__armorArmOffsetKey = 'armorarmOffsetL');
-              return null;
-            };
-            const fallbackArmAnchor = __ov[it.id] || anchors[it.id] || pickDefaultArmAnchor(derivedSide);
-            const setOffsetFrom = (src)=>{
-              if (!src) return false;
-              const posOff = src.position || src.pos || [0,0,0];
-              const rotOff = src.rotation || src.rot || [0,0,0];
-              const sclOff = src.scale || src.scl || [1,1,1];
-              const s = (sclOff && sclOff[0]) ? sclOff[0] : 1;
-              wrap.userData.__armorArmOffset = {
-                pos: [posOff[0]||0, posOff[1]||0, posOff[2]||0],
-                rot: [rotOff[0]||0, rotOff[1]||0, rotOff[2]||0],
-                scl: [s,s,s]
-              };
-              a = cloneAnchor({ position: wrap.userData.__armorArmOffset.pos, rotation: wrap.userData.__armorArmOffset.rot, scale: wrap.userData.__armorArmOffset.scl });
-              return true;
-            };
-            if (!__hasItemOv) {
-              const baseArmAnchor = __ov['cos-amorarm'] || anchors['cos-amorarm'] || anchors['cos-amorarmx'] || pickDefaultArmAnchor(null);
-              if (baseArmAnchor) a = cloneAnchor(baseArmAnchor);
-              else if (fallbackArmAnchor) a = cloneAnchor(fallbackArmAnchor);
-            } else if (fallbackArmAnchor) {
-              a = cloneAnchor(fallbackArmAnchor);
-            }
-            if (offKey) wrap.userData.__armorArmOffsetKey = offKey;
-            if (offKey) {
-              try {
-                const extra = readArmorOffset(offKey);
-                if (extra) {
-                  setOffsetFrom(extra);
-                } else if (fallbackArmAnchor) {
-                  setOffsetFrom(fallbackArmAnchor);
-                } else if (ARMORARM_DEFAULT_OFFSETS) {
-                  const def = offKey==='armorarmOffsetR' ? ARMORARM_DEFAULT_OFFSETS.right : ARMORARM_DEFAULT_OFFSETS.left;
-                  if (def) setOffsetFrom(def);
-                }
-              } catch {}
-            } else if (fallbackArmAnchor) {
-              ensureKey();
-              setOffsetFrom(fallbackArmAnchor);
-            }
-            // If we still don't have a stored offset, seed it from the active anchor so bone parenting keeps position
-            if (!wrap.userData.__armorArmOffset) {
-              ensureKey();
-              if (!setOffsetFrom(a)) {
-                const def = (wrap.userData.__armorArmOffsetKey==='armorarmOffsetR')
-                  ? (ARMORARM_DEFAULT_OFFSETS && ARMORARM_DEFAULT_OFFSETS.right)
-                  : (ARMORARM_DEFAULT_OFFSETS && ARMORARM_DEFAULT_OFFSETS.left);
-                if (def) setOffsetFrom(def);
-              }
-            }
-          }
+          let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
           if (!__hasItemOv) a = snapFeetAnchor(a, slot, anchors);
           const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
           if ((slotKey==='bag') && (!(__hasItemOv || __hasSlotOv) || __forceLift)) {
@@ -1826,7 +1612,7 @@
               wrap.scale.set(s,s,s);
             } catch { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; wrap.scale.set(def,def,def); }
             try {
-              const baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'1'); return (isFinite(v)&&v>0)?v:1; } catch { return 1; } })();
+              const baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } })();
               const inv = (baseScale>0)?(1/baseScale):1;
               const factor = inv;
               const px = (a.position[0]||0)*factor;
@@ -1836,101 +1622,65 @@
             } catch {}
             try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
           }
-          // Armor arms: parent directly to the arm bone and preserve the current world transform
+          // Add to attach group now so world matrices are correct for follower calculations
+          attachGroup.add(wrap);
+          // Armor arms: follow arm bones via per-frame follower instead of reparenting
           if (slot==='misc' && /armorarm|amorarm/i.test(String(it.id||'')) && baseGroup) {
-            let bound=false;
             try {
-              const THREE = getThree() || window.THREE;
               const side = (function(){
-                const s = String(wrap.userData?.__side||'').toLowerCase();
-                if (s) return s;
-                if (wrap.userData?.__armorArmOffsetKey==='armorarmOffsetR') return 'right';
-                if (wrap.userData?.__armorArmOffsetKey==='armorarmOffsetL') return 'left';
-                return sideHint;
+                const idStr = String(it.id||'').toLowerCase();
+                if (/right|\\brx?\\b|_r\\b/.test(idStr)) return 'right';
+                if (/left|\\blx?\\b|_l\\b/.test(idStr)) return 'left';
+                return null;
               })();
-              const bones = [];
-              baseGroup.traverse?.(o=>{ if (o && o.isBone) bones.push(o); });
-              const matchSide = (name, sideTag)=>{
-                if (!sideTag) return true;
-                if (sideTag==='right') return /(\.R\b|_R\b|-R\b|right\b)/i.test(name);
-                if (sideTag==='left')  return /(\.L\b|_L\b|-L\b|left\b)/i.test(name);
-                return false;
-              };
-              const preferOrder = side==='right'
-                ? ['DEF-hand.R','DEF-forearm.R','DEF-forearm.R.001','DEF-lower_arm.R','DEF-upper_arm.R','DEF-upper_arm.R.001','DEF-shoulder.R']
-                : ['DEF-hand.L','DEF-forearm.L','DEF-forearm.L.001','DEF-lower_arm.L','DEF-upper_arm.L','DEF-upper_arm.L.001','DEF-shoulder.L'];
-              let bone = null;
-              let boneName = preferOrder.find(n=>!!baseGroup.getObjectByName(n)) || null;
-              if (boneName) bone = baseGroup.getObjectByName(boneName);
-              if (!bone && bones.length){
-                const first = bones.find(b=>matchSide(b.name, side) && /forearm|lower[_ ]?arm|hand/i.test(b.name));
-                bone = first || bones.find(b=>matchSide(b.name, side) && /upper[_ ]?arm|shoulder|arm/i.test(b.name)) || bones.find(b=>matchSide(b.name, side));
-                boneName = bone ? bone.name : null;
-              }
-              if (bone && THREE) {
-                try { baseGroup.updateMatrixWorld?.(true); bone.updateWorldMatrix?.(true, true); } catch {}
-                // Build world matrix from the current local placement (which was computed in baseGroup/world space)
-                const parentForWorld = baseGroup || (attachGroup && attachGroup.parent) || scene;
-                wrap.updateMatrix(); // ensure wrap.matrix matches position/rotation/scale we just set
-                const offset = wrap.userData?.__armorArmOffset || null;
-                if (offset) {
-                  try { if (wrap.parent) wrap.parent.remove(wrap); } catch {}
-                  bone.add(wrap);
-                  const bs = readBaseMeshScale();
-                  const div = (bs && isFinite(bs) && bs!==0) ? bs : 1;
-                  wrap.position.set((offset.pos?.[0]||0)/div, (offset.pos?.[1]||0)/div, (offset.pos?.[2]||0)/div);
-                  wrap.rotation.set(offset.rot?.[0]||0, offset.rot?.[1]||0, offset.rot?.[2]||0);
-                  const sVal = offset.scl?.[0] || 1;
-                  wrap.scale.set(sVal, sVal, sVal);
-                  bound = true;
-                } else {
-                  let worldMat = wrap.matrix.clone();
-                  try {
-                    if (parentForWorld) {
-                      parentForWorld.updateMatrixWorld?.(true);
-                      worldMat = new THREE.Matrix4().multiplyMatrices(parentForWorld.matrixWorld, worldMat);
-                    }
-                  } catch {}
-                  const inv = new THREE.Matrix4().copy(bone.matrixWorld).invert();
-                  const localMat = new THREE.Matrix4().multiplyMatrices(inv, worldMat);
-                  const lp = new THREE.Vector3();
-                  const lq = new THREE.Quaternion();
-                  const ls = new THREE.Vector3();
-                  localMat.decompose(lp, lq, ls);
-                  try { if (wrap.parent) wrap.parent.remove(wrap); } catch {}
-                  bone.add(wrap);
-                  wrap.position.copy(lp);
-                  wrap.quaternion.copy(lq);
-                  wrap.rotation.setFromQuaternion(lq);
-                  wrap.scale.copy(ls);
-                  bound = true;
+              const names = side==='right'
+                ? ['DEF-hand.R','DEF-forearm.R','DEF-forearm.R.001','DEF-upper_arm.R','DEF-upper_arm.R.001','DEF-shoulder.R']
+                : ['DEF-hand.L','DEF-forearm.L','DEF-forearm.L.001','DEF-upper_arm.L','DEF-upper_arm.L.001','DEF-shoulder.L'];
+              const boneName = names.find(n=>!!baseGroup.getObjectByName(n));
+              if (boneName) {
+                const THREE = getThree() || window.THREE;
+                if (THREE) {
+                  const bone = baseGroup.getObjectByName(boneName);
+                  if (bone) {
+                    bone.updateWorldMatrix(true, true);
+                    wrap.updateWorldMatrix(true, true);
+                    const rel = new THREE.Matrix4();
+                    const inv = new THREE.Matrix4().copy(bone.matrixWorld).invert();
+                    rel.multiplyMatrices(inv, wrap.matrixWorld);
+                    followers.push({ obj: wrap, boneName, rel: rel.toArray(), relMatrix: rel.clone() });
+                  }
                 }
-                try { console.log('[TV] armorarm bound to', boneName||bone?.name||''); } catch {}
               }
             } catch {}
-            if (!bound) { attachGroup.add(wrap); }
-          } else {
-            attachGroup.add(wrap);
           }
-          try { allAttached.push(wrap); } catch {}
         }
        }
-        // Armor arms already parented directly to bones above; no extra reparent
-        try { updateFollowersOnce(); } catch {}
-        // Keep camera/target stable across equip/unequip
+        // Reparent armor arms directly to arm bones so they follow poses
         try {
-          const pos = camPrevPos || camHomePos;
-          const tgt = camPrevTarget || camHomeTarget;
-          if (camera && pos) { camera.position.copy(pos); camera.updateProjectionMatrix?.(); }
-          if (controls && tgt) { controls.target.copy(tgt); controls.update?.(); }
-          setTimeout(()=>{ try {
-            const p2 = camLastPos || pos;
-            const t2 = camLastTarget || tgt;
-            if (camera && p2) { camera.position.copy(p2); camera.updateProjectionMatrix?.(); }
-            if (controls && t2) { controls.target.copy(t2); controls.update?.(); }
-          } catch {} }, 0);
+          if (baseGroup && attachGroup) {
+            const kids = attachGroup.children ? attachGroup.children.slice() : [];
+            kids.forEach(wrap=>{
+              try {
+                const id = String((wrap.userData && wrap.userData.__itemId) || '');
+                if (!/armorarm|amorarm/i.test(id)) return;
+                const side = (/right|\brx?\b|_r\b/i.test(id)) ? 'right' : (/left|\blx?\b|_l\b/i.test(id)) ? 'left' : null;
+                const names = side==='right'
+                  ? ['DEF-hand.R','DEF-forearm.R','DEF-forearm.R.001','DEF-upper_arm.R','DEF-upper_arm.R.001','DEF-shoulder.R']
+                  : ['DEF-hand.L','DEF-forearm.L','DEF-forearm.L.001','DEF-upper_arm.L','DEF-upper_arm.L.001','DEF-shoulder.L'];
+                const boneName = names.find(n=>!!baseGroup.getObjectByName(n));
+                const bone = boneName ? baseGroup.getObjectByName(boneName) : null;
+                if (!bone) return;
+                const pos = wrap.position.clone(); const rot = wrap.rotation.clone(); const scl = wrap.scale.clone();
+                attachGroup.remove(wrap);
+                bone.add(wrap);
+                wrap.position.copy(pos);
+                wrap.rotation.copy(rot);
+                wrap.scale.copy(scl);
+              } catch {}
+            });
+          }
         } catch {}
-        try { window.__TVAttachments = allAttached; } catch {}
+        try { updateFollowersOnce(); } catch {}
         return true;
       }
       function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
@@ -2194,17 +1944,6 @@
       };
       const anchorKeyFor = (obj)=>{
         const side = String(obj?.userData?.__side||obj?.name||'').toLowerCase();
-        if (/armorarm|amorarm/i.test(String(currentAdjId||''))) {
-          if (/right/.test(side)) return 'armorarmOffsetR';
-          if (/left/.test(side)) return 'armorarmOffsetL';
-          try {
-            const hasL = !!readArmorOffset('armorarmOffsetL');
-            const hasR = !!readArmorOffset('armorarmOffsetR');
-            if (hasL && !hasR) return 'armorarmOffsetL';
-            if (hasR && !hasL) return 'armorarmOffsetR';
-          } catch {}
-          return 'armorarmOffsetL';
-        }
         if (/left/.test(side)) return `${currentAdjId||''}-left`;
         if (/right/.test(side)) return `${currentAdjId||''}-right`;
         return currentAdjId;
@@ -2212,16 +1951,6 @@
       const saveAnchorFromObject = (obj)=>{
         if (!obj || !currentAdjId) return;
         const key = anchorKeyFor(obj);
-        if (/^armorarmOffset[LR]$/.test(key)) {
-          const bs = readBaseMeshScale();
-          const toStored = (v)=>[ (v.x||0)*bs, (v.y||0)*bs, (v.z||0)*bs ];
-          writeArmorOffset(key, {
-            pos: toStored(obj.position||{x:0,y:0,z:0}),
-            rot: [obj.rotation.x||0, obj.rotation.y||0, obj.rotation.z||0],
-            scl: [obj.scale.x||1, obj.scale.y||1, obj.scale.z||1]
-          });
-          return;
-        }
         const ov = ovAll();
         const prev = ov[key] || {};
         const bs = readBaseMeshScale();
@@ -2284,13 +2013,14 @@
             ? ['armorarmOffsetL','armorarmOffsetR']
             : [ isRight ? 'armorarmOffsetR' : 'armorarmOffsetL' ];
           targets.forEach(key=>{
-            let ov2 = readArmorOffset(key);
+            let ov2 = null;
+            try { ov2 = JSON.parse(localStorage.getItem(key)||'null'); } catch {}
             const pos = (ov2 && ov2.pos) || [0,0,0];
             const rot = (ov2 && ov2.rot) || [0,0,0];
             const scl = (ov2 && (ov2.scl || ov2.scale)) || [1,1,1];
             const sVal = Math.max(0.1, (scl?.[0]||1) + dScale);
             const next = { pos: [pos[0]+dPos[0], pos[1]+dPos[1], pos[2]+dPos[2]], rot: [rot[0]+dRot[0], rot[1]+dRot[1], rot[2]+dRot[2]], scl: [sVal,sVal,sVal] };
-            writeArmorOffset(key, next);
+            try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
           });
           if (targets.length===2) {
             nudgeLive('cos-amorarm-left', dPos, dRot, dScale);
@@ -2312,17 +2042,17 @@
           try { pushServerAnchorsSoon(); } catch {}
         }
       };
-        const resetCurrent = ()=>{
-          if (!currentAdjId) return;
-          if (/cos-amorarm/i.test(currentAdjId)) {
-            const isRight = /(-r\b|-right\b|_r\b|right)$/i.test(currentAdjId);
-            const key = isRight ? 'armorarmOffsetR' : 'armorarmOffsetL';
-          try { writeArmorOffset(key, null); } catch {}
-          } else {
-            const ov = ovAll();
-            delete ov[currentAdjId];
-            saveOv(ov);
-          }
+      const resetCurrent = ()=>{
+        if (!currentAdjId) return;
+        if (/cos-amorarm/i.test(currentAdjId)) {
+          const isRight = /(-r\b|-right\b|_r\b|right)$/i.test(currentAdjId);
+          const key = isRight ? 'armorarmOffsetR' : 'armorarmOffsetL';
+          try { localStorage.removeItem(key); } catch {}
+        } else {
+          const ov = ovAll();
+          delete ov[currentAdjId];
+          saveOv(ov);
+        }
         try { if (adjCtl) adjCtl.detach(); } catch {}
         try { renderPreview(); } catch {}
       };
@@ -2423,33 +2153,10 @@
       _items = cat.items||[];
       const safeWall = wall || { coins:0, owned:{}, equipped:{} };
       _wallet = safeWall;
-      // Keep local armor arm cache in sync with server state; only restore dual arms when at least one is equipped
-      try {
-        const miscVal = (_wallet?.equipped && _wallet.equipped.misc) || null;
-        const miscArr = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-        const serverArms = miscArr.filter(id=>isArmorArm(id));
-        if (!serverArms.length) {
-          saveArmorArmsLocal([]);
-        } else {
-          const savedArms = loadArmorArmsLocal().filter(id=>isArmorArm(id));
-          if (savedArms.length) {
-            const merged = [];
-            const pushUnique = (id)=>{ if (id && !merged.includes(id)) merged.push(id); };
-            serverArms.forEach(pushUnique);
-            savedArms.forEach(pushUnique);
-            _wallet.equipped = _wallet.equipped || {};
-            _wallet.equipped.misc = merged.length===1 ? merged[0] : merged;
-            saveArmorArmsLocal(merged);
-          }
-        }
-      } catch {}
       // Restore dual armorarm equip (local only)
       try {
         const savedArms = loadArmorArmsLocal();
-        const miscVal = (_wallet?.equipped && _wallet.equipped.misc) || null;
-        const miscArr = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-        const hasServerArm = miscArr.some(id=>isArmorArm(id));
-        if (hasServerArm && Array.isArray(savedArms) && savedArms.length){
+        if (Array.isArray(savedArms) && savedArms.length){
           _wallet.equipped = _wallet.equipped || {};
           const cur = _wallet.equipped.misc;
           const merged = [];
@@ -2490,7 +2197,7 @@
         const modelItem = equip.model && itemsMap.get(equip.model);
         try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
         if (modelItem && modelItem.model && mv) {
-          async function ensureThreeReady(ms=4000){
+          async function ensureThreeReady(ms=2000){
             const t0 = Date.now();
             return await new Promise(r=>{
               (function poll(){
@@ -2502,30 +2209,25 @@
               })();
             });
           }
-          await ensureThreeReady(4000);
+          await ensureThreeReady(2000);
           let usedTV = false;
-          if (!FORCE_MV_PREVIEW && TV && TV.init) {
+          const tvOk = (!FORCE_MV_PREVIEW) && TV && TV.init && TV.init();
+          if (tvOk) {
             try {
-              if (TV.init()) {
-                console.log('[shop] using TV preview');
-                window.__useTV = true;
-                const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
-                const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
-                const baseOk = await TV.loadBase(modelItem.model);
-                if (baseOk) {
-                  try { if (TV.resize) TV.resize(); } catch {}
-                  try { await applyEyeColorFromStorage(); } catch {}
-                  try { await applyHatColorFromStorage(); } catch {}
-                  try { await applyBootColorFromStorage(); } catch {}
-                  try { await applyBagColorFromStorage(); } catch {}
-                  const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
-                  const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
-                  try { await TV.attachAll(equip, itemsMap, anchors); } catch (errAttach) { console.warn('[shop] TV attachAll failed', errAttach); }
-                  usedTV = true;
-                } else {
-                  window.__useTV = false;
-                }
-              }
+              console.log('[shop] using TV preview');
+              window.__useTV = true;
+              const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
+              const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
+              await TV.loadBase(modelItem.model);
+              try { if (TV.resize) TV.resize(); } catch {}
+              try { await applyEyeColorFromStorage(); } catch {}
+              try { await applyHatColorFromStorage(); } catch {}
+              try { await applyBootColorFromStorage(); } catch {}
+              try { await applyBagColorFromStorage(); } catch {}
+              const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+              const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+              try { await TV.attachAll(equip, itemsMap, anchors); } catch (errAttach) { console.warn('[shop] TV attachAll failed', errAttach); }
+              usedTV = true;
             } catch (err){
               console.warn('[shop] TV preview failed', err);
               window.__useTV = false;
@@ -2612,22 +2314,11 @@
                 if (Array.isArray(current)) {
                   _wallet.equipped[slot] = current.filter(x=>x!==id);
                   if (_wallet.equipped[slot].length===1) _wallet.equipped[slot] = _wallet.equipped[slot][0];
-                  if (slot==='misc') {
-                    const arr = Array.isArray(_wallet.equipped[slot]) ? _wallet.equipped[slot] : (_wallet.equipped[slot] ? [_wallet.equipped[slot]] : []);
-                    const arms = arr.filter(x=>isArmorArm(x));
-                    saveArmorArmsLocal(arms);
-                  }
                   renderPreview(); renderItems(); return;
                 }
                 const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ slot }) });
                 if (!res.ok && res.error) { alert(res.error); return; }
                 _wallet.equipped = res.equipped || _wallet.equipped || {};
-                if (slot==='misc') {
-                  const miscVal = (_wallet.equipped||{}).misc;
-                  const arr = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-                  const arms = arr.filter(x=>isArmorArm(x));
-                  saveArmorArmsLocal(arms);
-                }
                 renderPreview();
                 renderItems();
               } catch (e) {}

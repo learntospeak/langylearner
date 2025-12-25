@@ -232,6 +232,28 @@
     function buildAccessoryInstance(){
       if(!accSourceScene) return null;
       const inst = accSourceScene.clone(true);
+      // For synthetic armorarm left/right, strip the opposite side: if only one mesh, duplicate for right/left selection; if two meshes, keep the first for left and the second for right
+      try{
+        const id = (accSourceId||'').toLowerCase();
+        const wantLeft  = id.includes('armorarm') && id.includes('left');
+        const wantRight = id.includes('armorarm') && id.includes('right');
+        if (wantLeft || wantRight){
+          const meshes = [];
+          inst.traverse(n=>{ if(n && n.isMesh) meshes.push(n); });
+          if (meshes.length >= 2){
+            const keep = wantLeft ? [meshes[0]] : [meshes[1]];
+            const kill = meshes.filter(m=>!keep.includes(m));
+            kill.forEach(n=>{ try{ n.parent && n.parent.remove(n); }catch{} });
+          } else if (meshes.length === 1){
+            if (wantRight){
+              // For right, clone the lone mesh and remove the original
+              const clone = meshes[0].clone(true);
+              try { meshes[0].parent && meshes[0].parent.remove(meshes[0]); } catch {}
+              inst.add(clone);
+            }
+          }
+        }
+      }catch{}
       try{
         const box=new THREE.Box3().setFromObject(inst);
         const c=box.getCenter(new THREE.Vector3());
@@ -275,9 +297,24 @@
       return slotSel?.value || opt?.dataset?.slot || 'misc';
     }
 
+    function getActiveOverrideKey(){
+      const slot = getActiveSlot();
+      const id = getActiveItemId();
+      return (scopeItem && scopeItem.checked && id) ? id : slot;
+    }
+
     function getActiveItemId(){
       const opt=itemSel?.options?.[itemSel.selectedIndex];
       return opt?.dataset?.id || null;
+    }
+
+    function anchorFromInputs(){
+      const worldPos=[+posX.value||0,+posY.value||0,+posZ.value||0];
+      const storedPos = toStoredPosition(worldPos);
+      const rotRad=[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180];
+      const s=(+scaleF.value||1)||1;
+      const infl = clampInflate(inflateF?.value||0);
+      return { position:storedPos, rotation:rotRad, scale:[s,s,s], inflate:infl };
     }
 
     function getAnchorForSelection(){
@@ -348,7 +385,8 @@
       const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir);
       orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.target.set(0,0.05,0);
       tctl = new TransformControls(camera, renderer.domElement);
-      tctl.addEventListener('dragging-changed', e=>{ orbit.enabled = !e.value; syncFields(); });
+      tctl.addEventListener('dragging-changed', e=>{ orbit.enabled = !e.value; syncFields(); saveAnchorLive(); });
+      tctl.addEventListener('objectChange', ()=>{ syncFields(); saveAnchorLive(); });
       scene.add(tctl);
       (function tick(){ try{ orbit.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick); })();
     }
@@ -391,21 +429,19 @@
 
     function applyFields(){ if(!accWrap) return; const rx=(+rotX.value||0)*Math.PI/180, ry=(+rotY.value||0)*Math.PI/180, rz=(+rotZ.value||0)*Math.PI/180, s=(+scaleF.value||1)||1; try{ accWrap.position.set(+posX.value||0,+posY.value||0,+posZ.value||0); accWrap.rotation.order='XYZ'; accWrap.rotation.set(rx,ry,rz); accWrap.scale.set(s,s,s);}catch{} }
 
-    function saveAnchor(){
-      const slot=slotSel.value||'misc';
-      const itemOpt = itemSel.options[itemSel.selectedIndex];
-      const itemId = itemOpt && itemOpt.dataset && itemOpt.dataset.id;
-      const key = (scopeItem && scopeItem.checked && itemId) ? itemId : slot;
-      const worldPos=[+posX.value||0,+posY.value||0,+posZ.value||0];
-      const storedPos = toStoredPosition(worldPos);
-      const rotRad=[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180];
-      const s=(+scaleF.value||1)||1;
-      const infl = clampInflate(inflateF?.value||0);
-      const a={ position:storedPos, rotation:rotRad, scale:[s,s,s], inflate:infl };
+    function saveAnchor(isLive=false){
+      const key = getActiveOverrideKey() || 'misc';
+      const a = anchorFromInputs();
       const ov = getOverrides();
       ov[key]=a;
       setOverrides(ov);
       pushAnchorsSoon();
+    }
+
+    let __liveSaveRaf = null;
+    function saveAnchorLive(){
+      if (__liveSaveRaf) return;
+      __liveSaveRaf = requestAnimationFrame(()=>{ __liveSaveRaf=null; saveAnchor(true); });
     }
 
     copyBtn?.addEventListener('click', ()=>{
@@ -434,21 +470,44 @@
       if(inflateF) inflateF.value = '0.000';
       applyFields();
       rebuildAccessoryGeometry();
-      const key = (scopeItem && scopeItem.checked && getActiveItemId()) || slot;
+      const key = getActiveOverrideKey();
       const ov = getOverrides();
       delete ov[key];
       setOverrides(ov);
       pushAnchorsSoon();
     });
 
-    posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
-    inflateF?.addEventListener('change', ()=>{ rebuildAccessoryGeometry(); });
+    const liveApplyAndSave = ()=>{ applyFields(); saveAnchorLive(); };
+    ['input','change'].forEach(evt=>{
+      posX.addEventListener(evt, liveApplyAndSave);
+      posY.addEventListener(evt, liveApplyAndSave);
+      posZ.addEventListener(evt, liveApplyAndSave);
+      rotX.addEventListener(evt, liveApplyAndSave);
+      rotY.addEventListener(evt, liveApplyAndSave);
+      rotZ.addEventListener(evt, liveApplyAndSave);
+      scaleF.addEventListener(evt, liveApplyAndSave);
+    });
+    inflateF?.addEventListener('change', ()=>{ rebuildAccessoryGeometry(); saveAnchorLive(); });
 
     async function populate(){
       try{
         const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[];
         const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model' && !isHiddenItem(i));
         const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model' && !isHiddenItem(i));
+        // Add synthetic left/right entries for armorarm so you can anchor each side separately
+        try {
+          const aa = acc.find(a=>a.id==='cos-amorarm' || a.id==='cos-amorarmx' || (String(a.name||'').toLowerCase().includes('amorarm')));
+          const hasLeft = acc.some(a=>/amorarm[-_ ]?left/i.test(a.id||''));
+          const hasRight = acc.some(a=>/amorarm[-_ ]?right/i.test(a.id||''));
+          if (aa && (!hasLeft || !hasRight)) {
+            const make = (id,label,model)=>({ ...aa, id, name: label, model, __synthetic:true });
+            const baseModel = aa.model||'';
+            const leftModel = baseModel.replace('amorarm.glb','amorarm_L.glb');
+            const rightModel= baseModel.replace('amorarm.glb','amorarm_R.glb');
+            if (!hasLeft) acc.push(make('cos-amorarm-left','Armorarm (Left)', leftModel));
+            if (!hasRight) acc.push(make('cos-amorarm-right','Armorarm (Right)', rightModel));
+          }
+        } catch {}
         models.forEach(m=>{ const o=document.createElement('option'); o.value=m.model; o.textContent=m.name; modelSel.appendChild(o); });
         acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.model; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); });
         const uniqSlots=[...new Set(acc.map(a=>a.slot))];

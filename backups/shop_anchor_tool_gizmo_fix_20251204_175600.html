@@ -13,16 +13,16 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "./vendor/three.module.js"
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
       }
     }
   </script>
-  <script type="module" src="./vendor/model-viewer.min.js"></script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
   <script type="module">
-    import * as THREE from './vendor/three.module.js';
-    import { GLTFLoader } from './vendor/GLTFLoader.js';
-    import { OrbitControls } from './vendor/OrbitControls.js';
-    import { TransformControls } from './vendor/TransformControls.js';
+    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+    import { TransformControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/TransformControls.js';
     window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls; window.__TransformControls = TransformControls;
   </script>
 </head>
@@ -38,7 +38,7 @@
 
     <section class="manga-bubble p-3">
       <!-- 3-column layout: categories (L) | preview (C) | items list (R) -->
-      <div class="shop-grid items-start" style="grid-template-columns:200px 620px 1fr;">
+      <div class="shop-grid items-start">
         <!-- Categories -->
         <aside class="max-h-[70vh] overflow-auto pr-3 w-full md:w-[190px] space-y-3">
           <div class="font-medium">Categories</div>
@@ -48,10 +48,10 @@
         <!-- Preview (sticky) -->
         <div class="flex items-start justify-center sm:sticky top-2">
           <div class="text-center">
-            <div id="mvWrap" class="inline-block relative" style="display:none; width:420px; height:520px; overflow:hidden; z-index:1; padding-top:60px; box-sizing:border-box;">
+            <div id="mvWrap" class="inline-block relative" style="display:none; width:280px; height:380px; overflow:hidden; z-index:1;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             </div>
-            <div id="tvWrap" class="inline-block relative" style="display:none; width:420px; height:520px; overflow:hidden; z-index:1; padding-top:60px; box-sizing:border-box;"></div>
+            <div id="tvWrap" class="inline-block relative" style="display:none; width:280px; height:380px; overflow:hidden; z-index:1;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
             <div id="colorControls" class="mt-3 w-full max-w-xs mx-auto text-left space-y-2">
@@ -203,72 +203,6 @@
       boot:new Set(['footwear','boots','feet']),
       bag:new Set(['bags','bag','misc'])
     };
-    const ARMORARM_KEY = 'miscArmorArms';
-    const isArmorArm = (id)=>{ try { return /armorarm|amorarm/i.test(String(id||'')); } catch { return false; } };
-    const ARMORARM_DEFAULT_OFFSETS = {
-      // These come from your existing saved anchors for L/R so we always have a sane forearm placement
-      left:{
-        pos:[-0.034403016805831535, 0.04411172206355481, 0.0390447441387427],
-        rot:[-0.019854197659057184, 0.28876278671539896, 2.075238667617461],
-        scl:[1,1,1]
-      },
-      right:{
-        pos:[-0.029601914289105795, -0.0056423670045653695, 0.02200428201841935],
-        rot:[2.957661836177801, -0.6321156150147867, 1.0030662658174405],
-        scl:[1,1,1]
-      }
-    };
-    const ARMORARM_DEFAULT_ANCHORS = {
-      shared:{ position:[0, 0.502, 0.003], rotation:[0,0,0], scale:[1,1,1] },
-      left:{ position:[-0.034403016805831535, 0.04411172206355481, 0.0390447441387427], rotation:[-0.019854197659057184, 0.28876278671539896, 2.075238667617461], scale:[1,1,1] },
-      right:{ position:[-0.029601914289105795, -0.0056423670045653695, 0.02200428201841935], rotation:[2.957661836177801, -0.6321156150147867, 1.0030662658174405], scale:[1,1,1] }
-    };
-    const loadArmorArmsLocal = ()=>{ try { const a=JSON.parse(localStorage.getItem(ARMORARM_KEY)||'[]'); return Array.isArray(a)?a.filter(Boolean):[]; } catch { return []; } };
-    const saveArmorArmsLocal = (arr)=>{ try { localStorage.setItem(ARMORARM_KEY, JSON.stringify(arr||[])); } catch {} };
-    function readArmorOffset(key){
-      try {
-        const raw = JSON.parse(localStorage.getItem(key)||'null');
-        if (raw && typeof raw==='object') return raw;
-      } catch {}
-      try {
-        const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};
-        const val = ov[key];
-        if (val && typeof val==='object') {
-          return {
-            pos: val.pos || val.position || [0,0,0],
-            rot: val.rot || val.rotation || [0,0,0],
-            scl: val.scl || val.scale || [1,1,1]
-          };
-        }
-      } catch {}
-      try {
-        if (/^armorarmOffset[LR]$/.test(String(key||''))) {
-          const side = key.endsWith('R') ? 'right' : 'left';
-          const fallback = (ARMORARM_DEFAULT_OFFSETS && ARMORARM_DEFAULT_OFFSETS[side]) ? ARMORARM_DEFAULT_OFFSETS[side] : null;
-          if (fallback) return fallback;
-        }
-      } catch {}
-      return null;
-    }
-    function writeArmorOffset(key, data){
-      try {
-        if (data) localStorage.setItem(key, JSON.stringify(data)); else localStorage.removeItem(key);
-      } catch {}
-      try {
-        const ov = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};
-        if (data) {
-          ov[key] = {
-            position: data.pos || data.position || [0,0,0],
-            rotation: data.rot || data.rotation || [0,0,0],
-            scale: data.scl || data.scale || [1,1,1]
-          };
-        } else {
-          delete ov[key];
-        }
-        localStorage.setItem('anchorOverrides', JSON.stringify(ov));
-      } catch {}
-      try { pushServerAnchorsSoon(); } catch {}
-    }
     const ANIMATION_DURATIONS = {
       'anim_crouch':0.292,
       'anim_crouchiddle':0.583,
@@ -358,29 +292,6 @@
         if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
       } catch {}
     })();
-    // Seed defaults for armor arms so they always have per-side anchors even when localStorage is empty
-    (function seedArmorArmAnchors(){
-      try {
-        const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
-        const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch { return {}; } })();
-        const def = ARMORARM_DEFAULT_ANCHORS || {};
-        const candidates = [
-          ['cos-amorarm', def.shared || def.left || def.right],
-          ['cos-amorarm-left', def.left || def.shared || def.right],
-          ['cos-amorarm-right', def.right || def.shared || def.left],
-          ['cos-amorarm-l', def.left || def.shared || def.right],
-          ['cos-amorarm-r', def.right || def.shared || def.left],
-          ['cos-amorarmx', def.left || def.shared || def.right]
-        ];
-        let changed=false;
-        for (const [id,val] of candidates){
-          if (!id || !val) continue;
-          if (locks[id]) continue;
-          if (!ov[id]) { ov[id] = { position:[...val.position], rotation:[...val.rotation], scale:[...val.scale] }; changed=true; }
-        }
-        if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
-      } catch {}
-    })();
     // Accessory pool (offscreen model-viewers) to load GLBs for scene-graph cloning
     const accPool = document.createElement('div'); accPool.id = 'accPool';
     accPool.style.position = 'absolute'; accPool.style.left = '-9999px'; accPool.style.top = '0'; accPool.style.width = '1px'; accPool.style.height = '1px'; accPool.style.overflow = 'hidden';
@@ -442,7 +353,7 @@
       try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
     }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
-    const DEFAULT_BASE_SCALE = 1.0;
+    const DEFAULT_BASE_SCALE = 0.92;
     function readBaseMeshScale(){
       try{
         const raw = parseFloat(localStorage.getItem('baseMeshScale')||String(DEFAULT_BASE_SCALE));
@@ -551,6 +462,7 @@
         btn.textContent = p.label;
         btn.className = 'text-xs px-2 py-1 rounded border transition bg-white border-gray-200 hover:border-black';
         btn.addEventListener('click', ()=>{
+          if (CURRENT_POSE_ID === p.id) return;
           CURRENT_POSE_ID = p.id;
           refreshPoseButtons();
           applyPoseSelection();
@@ -619,12 +531,11 @@
         try { console.log('[pose] apply', pose?.id, 'hold', hold, 'freeze', freeze); } catch {}
         if (window.__useTV && TV && typeof TV.applyPose === 'function') {
           const ok = await TV.applyPose(pose, hold);
-          if (ok) return;
           if (!ok && pose && pose.animation) {
             if (__poseRetryTimer) clearTimeout(__poseRetryTimer);
             __poseRetryTimer = setTimeout(()=>{ if (pose.id===CURRENT_POSE_ID) applyPoseSelection(); }, 200);
           }
-          // Fall through to model-viewer as a backup when TV fails (e.g., clip missing)
+          return;
         }
         await applyPoseInModelViewer(pose, hold);
       } catch (e) {
@@ -647,7 +558,7 @@
         } catch {}
         return false;
       };
-      // Attempt snapshot first so pose is visible even if animation names mismatch
+      if (snapshot && trySnapshot()) return true;
       const run = ()=>{
         if (!pose || !pose.animation){
           try { mv.removeAttribute('animation-name'); } catch {}
@@ -656,16 +567,7 @@
           return true;
         }
         const names = Array.isArray(mv.availableAnimations) ? mv.availableAnimations : [];
-        const animLc = String(pose.animation||'').toLowerCase();
-        const wanted = (function pickAnimation(){
-          const exact = names.find(name => String(name||'').toLowerCase() === animLc);
-          if (exact) return exact;
-          const strip = (s)=>String(s||'').toLowerCase().replace(/\\.\\d+$/,'');
-          const byRoot = names.find(name => strip(name) === strip(animLc) || strip(name) === animLc);
-          if (byRoot) return byRoot;
-          const prefix = names.find(name => String(name||'').toLowerCase().startsWith(animLc+'.'));
-          return prefix || pose.animation;
-        })();
+        const wanted = names.find(name => String(name||'').toLowerCase() === String(pose.animation||'').toLowerCase()) || pose.animation;
         try {
           mv.animationName = wanted;
           mv.setAttribute('animation-name', wanted);
@@ -682,12 +584,7 @@
         }
         return true;
       };
-      if (snapshot) { trySnapshot(); }
-      if (mv.model) {
-        const ok = run();
-        if (ok) return true;
-      }
-      if (snapshot && trySnapshot()) return true;
+      if (mv.model) return run();
       const once = ()=>{
         try { run(); } finally {
           try { mv.removeEventListener('load', once); } catch {}
@@ -1356,40 +1253,10 @@
     // ---------- Lightweight Three.js viewer fallback ----------
     const TV = (function(){
       let initialized = false, scene=null, camera=null, renderer=null, baseGroup=null, attachGroup=null, controls=null;
-      let camHomePos = null, camHomeTarget = null, camLastPos = null, camLastTarget = null;
       let _tvLoadSeq = 0; // guard against async race when switching models quickly
       let _tvBaseUrlWanted = null;
       let mixer = null, baseClips = [], poseAction = null, lastPoseMeta = null, lastPoseSeconds = 0;
       let clock = null;
-      const followers = []; // [{ obj, boneName, rel: Matrix4 }]
-      function updateFollowersOnce(){
-        try {
-          if (!baseGroup || !followers.length) return;
-          const THREE = getThree(); if (!THREE) return;
-          try { baseGroup.updateWorldMatrix(true, true); } catch {}
-          const parent = attachGroup && attachGroup.parent ? attachGroup.parent : scene;
-          const invParent = new THREE.Matrix4();
-          try { if (parent) { parent.updateWorldMatrix?.(true,true); invParent.copy(parent.matrixWorld).invert(); } } catch {}
-          followers.forEach(f=>{
-            const bone = f && f.boneName ? baseGroup.getObjectByName(f.boneName) : null;
-            const obj = f && f.obj;
-            if (!bone || !obj) return;
-            try {
-              bone.updateWorldMatrix(true, true);
-              const rel = f.relMatrix || (f.rel ? new THREE.Matrix4().fromArray(f.rel) : null);
-              if (!rel) return;
-              const worldMat = new THREE.Matrix4().multiplyMatrices(bone.matrixWorld, rel);
-              const localMat = new THREE.Matrix4().multiplyMatrices(invParent, worldMat);
-              const pos = new THREE.Vector3(); const quat = new THREE.Quaternion(); const scl = new THREE.Vector3();
-              localMat.decompose(pos, quat, scl);
-              obj.position.copy(pos);
-              obj.quaternion.copy(quat);
-              obj.scale.copy(scl);
-              obj.updateMatrixWorld(true);
-            } catch {}
-          });
-        } catch {}
-      }
       function init(){
         if (initialized) return true;
         const THREE = getThree(); if (!THREE) return false;
@@ -1419,7 +1286,7 @@
         try { renderer.domElement.style.display = 'block'; } catch {}
         attachGroup = new THREE.Group(); scene.add(attachGroup);
         try { window.__TVAttachGroup = attachGroup; } catch {}
-        try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.enableZoom = false; controls.enablePan = false; controls.target.set(0,0.1,0); } } catch(_){ }
+        try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.1,0); } } catch(_){ }
         if (!clock) { try { clock = new (THREE||window.THREE).Clock(); } catch { clock = null; } }
         function tick(){
           try {
@@ -1428,7 +1295,6 @@
               const delta = clock.getDelta();
               if (isFinite(delta)) mixer.update(delta);
             }
-            try { updateFollowersOnce(); } catch {}
             renderer.render(scene, camera);
           } catch (_) {}
           requestAnimationFrame(tick);
@@ -1452,7 +1318,6 @@
           const THREE = getThree(); if(!THREE) return;
           if (baseGroup) { scene.remove(baseGroup); baseGroup=null; }
           while(attachGroup && attachGroup.children.length){ attachGroup.remove(attachGroup.children[0]); }
-          followers.length = 0;
           if (mixer) { mixer.stopAllAction(); mixer = null; }
           baseClips = []; poseAction = null;
         } catch {} 
@@ -1505,31 +1370,14 @@
         mixer = (baseClips.length && THREE && THREE.AnimationMixer) ? new THREE.AnimationMixer(baseGroup) : null;
         poseAction = null;
         applyBaseScaleToRoot(baseGroup);
-        try {
-          baseGroup.traverse(o=>{
-            if (o && o.isMesh) {
-              try { o.castShadow = o.receiveShadow = true; } catch {}
-              try {
-                if (o.material) {
-                  if (Array.isArray(o.material)) o.material.forEach(m=>{ if (m) m.skinning = true; });
-                  else o.material.skinning = true;
-                }
-              } catch {}
-            }
-            if (o && o.isBone) { try { o.initialMatrix = o.matrix.clone(); } catch {} }
-          });
-          const box = new THREE.Box3().setFromObject(baseGroup);
-          const center = box.getCenter(new THREE.Vector3());
-          baseGroup.position.sub(center);
-        } catch {}
         scene.add(baseGroup);
         try { window.__TVBaseRoot = baseGroup; } catch {}
         try {
           if (!attachGroup) attachGroup = new THREE.Group();
-          // Parent attachments under the base so they follow poses
-          if (attachGroup.parent !== baseGroup) {
+          // Keep attachments in world space (scene), matching Anchor Tool coordinates
+          if (attachGroup.parent !== scene) {
             try { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); } catch{}
-            baseGroup.add(attachGroup);
+            scene.add(attachGroup);
           }
         } catch{}
         try {
@@ -1557,17 +1405,7 @@
             controls.maxDistance = baseDist*6.0;
             controls.enablePan = true;
             controls.update();
-            try {
-              controls.removeEventListener('change', __onCamChange);
-              controls.addEventListener('change', __onCamChange);
-            } catch {}
           }
-          try {
-            camHomePos = camera.position.clone();
-            camHomeTarget = (controls && controls.target) ? controls.target.clone() : new THREE.Vector3(0, size.y*(window.TV_TARGET_Y||0.54), 0);
-            camLastPos = camHomePos.clone();
-            camLastTarget = camHomeTarget.clone();
-          } catch {}
         } catch {}
         _tvBaseUrl = url;
         // Re-apply saved eye color for new base
@@ -1576,42 +1414,12 @@
         try { if (lastPoseMeta) applyPosePreset(lastPoseMeta, lastPoseSeconds); } catch {}
         return true;
       }
-      function __onCamChange(){
-        try {
-          if (camera) camLastPos = camera.position.clone();
-          if (controls && controls.target) camLastTarget = controls.target.clone();
-        } catch {}
-      }
       function applyEyeColor(hex){ try { if (!baseGroup || !hex) return false; return applyEyeColorToRoot(baseGroup, hex); } catch { return false; } }
       async function attachAll(equip, itemsMap, anchors){
         const THREE = getThree(); if (!THREE || !initialized) return false;
-        // Preserve camera/target across reattach so the view doesn't jump when items change
-        const camPrevPos = (camLastPos && camLastPos.clone) ? camLastPos.clone() : ((camera && camera.position) ? camera.position.clone() : null);
-        const camPrevTarget = (camLastTarget && camLastTarget.clone) ? camLastTarget.clone() : ((controls && controls.target) ? controls.target.clone() : null);
-        const cloneAnchor = (src)=>({
-          position:[...(src?.position||[0,0,0])],
-          rotation:[...(src?.rotation||[0,0,0])],
-          scale:[...(src?.scale||[1,1,1])],
-          inflate:(typeof src?.inflate==='number') ? src.inflate : undefined
-        });
-        // Clean up any previous attachments, including ones parented to bones
-        try {
-          const prev = Array.isArray(window.__TVAttachments) ? window.__TVAttachments.slice() : [];
-          prev.forEach(node=>{ try { if (node && node.parent) node.parent.remove(node); } catch {} });
-          window.__TVAttachments = [];
-        } catch {}
-        followers.length = 0;
-        const allAttached = [];
         if (!attachGroup) { attachGroup = new THREE.Group(); try { window.__TVAttachGroup = attachGroup; } catch {} }
-        try {
-          const targetParent = baseGroup || scene;
-          if (targetParent && attachGroup.parent !== targetParent) {
-            if (attachGroup.parent) attachGroup.parent.remove(attachGroup);
-            targetParent.add(attachGroup);
-          }
-        } catch {}
+        try { if (attachGroup.parent !== scene) { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); scene.add(attachGroup); } } catch {}
         while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
-        try { if (baseGroup) baseGroup.updateWorldMatrix(true, true); } catch {}
         const slots = Object.keys(equip||{}).filter(s=>s!=='model');
         for (const slot of slots){
           const rawVal = equip[slot];
@@ -1623,21 +1431,7 @@
           if (!gltf || !gltf.scene) continue;
           const src = gltf.scene.clone(true);
           const wrap = new THREE.Group();
-          const idStr = String(it.id||'').toLowerCase();
-          try {
-            wrap.userData = wrap.userData || {};
-            wrap.userData.__slot = slot;
-            wrap.userData.__itemId = it.id||null;
-            // Hint left/right for armor arms so gizmo and bone parenting can detect sides
-            if (/armorarm|amorarm/i.test(String(it.id||''))) {
-              const sideGuess = (function(){
-                if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr)) return 'left';
-                if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr)) return 'right';
-                return null;
-              })();
-              if (sideGuess) wrap.userData.__side = sideGuess;
-            }
-          } catch {}
+          try { wrap.userData = wrap.userData || {}; wrap.userData.__slot = slot; wrap.userData.__itemId = it.id||null; } catch {}
           try { if (!wrap.name) wrap.name = `slot-${slot}-${it.id||''}`; } catch {}
           try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
           wrap.add(src);
@@ -1645,93 +1439,7 @@
           const slotKey = (slot==='bagx') ? 'bag' : slot;
           const __hasItemOv = !!__ov[it.id];
           const __hasSlotOv = !!__ov[slotKey];
-          const sideHint = (function(){
-            const hint = String(wrap.userData?.__side||'').toLowerCase();
-            if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr) || hint==='right') return 'right';
-            if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr) || hint==='left') return 'left';
-            if (/amorarmx\b/.test(idStr)) return 'left'; // shared model defaults to left
-            try {
-              const hasL = !!readArmorOffset('armorarmOffsetL');
-              const hasR = !!readArmorOffset('armorarmOffsetR');
-              if (hasL && !hasR) return 'left';
-              if (hasR && !hasL) return 'right';
-            } catch {}
-            return null;
-          })();
-          let a = cloneAnchor(__ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc));
-          // Armor arms: reuse the shared anchor when side-specific IDs have no data, then apply saved per-side offsets
-          if (isArmorArm(it.id)) {
-            const fallbackDefaults = ARMORARM_DEFAULT_ANCHORS || {};
-            const pickDefaultArmAnchor = (side)=>{
-              if (side==='right') return fallbackDefaults.right || fallbackDefaults.shared || fallbackDefaults.left || null;
-              if (side==='left')  return fallbackDefaults.left  || fallbackDefaults.shared || fallbackDefaults.right || null;
-              return fallbackDefaults.shared || fallbackDefaults.left || fallbackDefaults.right || null;
-            };
-            const derivedSide = (function(){
-              if (sideHint) return sideHint;
-              if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr)) return 'right';
-              if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr)) return 'left';
-              return null;
-            })();
-            if (derivedSide && !wrap.userData.__side) wrap.userData.__side = derivedSide;
-            let offKey = derivedSide==='right' ? 'armorarmOffsetR' : (derivedSide==='left' ? 'armorarmOffsetL' : null);
-            const ensureKey = ()=>{
-              if (wrap.userData.__armorArmOffsetKey) return wrap.userData.__armorArmOffsetKey;
-              if (offKey) return (wrap.userData.__armorArmOffsetKey = offKey);
-              if (/right|\brx?\b|_r\b|-r\b|[^a-z]r\b|r$/.test(idStr)) return (wrap.userData.__armorArmOffsetKey = 'armorarmOffsetR');
-              if (/left|\blx?\b|_l\b|-l\b|[^a-z]l\b|l$/.test(idStr)) return (wrap.userData.__armorArmOffsetKey = 'armorarmOffsetL');
-              return null;
-            };
-            const fallbackArmAnchor = __ov[it.id] || anchors[it.id] || pickDefaultArmAnchor(derivedSide);
-            const setOffsetFrom = (src)=>{
-              if (!src) return false;
-              const posOff = src.position || src.pos || [0,0,0];
-              const rotOff = src.rotation || src.rot || [0,0,0];
-              const sclOff = src.scale || src.scl || [1,1,1];
-              const s = (sclOff && sclOff[0]) ? sclOff[0] : 1;
-              wrap.userData.__armorArmOffset = {
-                pos: [posOff[0]||0, posOff[1]||0, posOff[2]||0],
-                rot: [rotOff[0]||0, rotOff[1]||0, rotOff[2]||0],
-                scl: [s,s,s]
-              };
-              a = cloneAnchor({ position: wrap.userData.__armorArmOffset.pos, rotation: wrap.userData.__armorArmOffset.rot, scale: wrap.userData.__armorArmOffset.scl });
-              return true;
-            };
-            if (!__hasItemOv) {
-              const baseArmAnchor = __ov['cos-amorarm'] || anchors['cos-amorarm'] || anchors['cos-amorarmx'] || pickDefaultArmAnchor(null);
-              if (baseArmAnchor) a = cloneAnchor(baseArmAnchor);
-              else if (fallbackArmAnchor) a = cloneAnchor(fallbackArmAnchor);
-            } else if (fallbackArmAnchor) {
-              a = cloneAnchor(fallbackArmAnchor);
-            }
-            if (offKey) wrap.userData.__armorArmOffsetKey = offKey;
-            if (offKey) {
-              try {
-                const extra = readArmorOffset(offKey);
-                if (extra) {
-                  setOffsetFrom(extra);
-                } else if (fallbackArmAnchor) {
-                  setOffsetFrom(fallbackArmAnchor);
-                } else if (ARMORARM_DEFAULT_OFFSETS) {
-                  const def = offKey==='armorarmOffsetR' ? ARMORARM_DEFAULT_OFFSETS.right : ARMORARM_DEFAULT_OFFSETS.left;
-                  if (def) setOffsetFrom(def);
-                }
-              } catch {}
-            } else if (fallbackArmAnchor) {
-              ensureKey();
-              setOffsetFrom(fallbackArmAnchor);
-            }
-            // If we still don't have a stored offset, seed it from the active anchor so bone parenting keeps position
-            if (!wrap.userData.__armorArmOffset) {
-              ensureKey();
-              if (!setOffsetFrom(a)) {
-                const def = (wrap.userData.__armorArmOffsetKey==='armorarmOffsetR')
-                  ? (ARMORARM_DEFAULT_OFFSETS && ARMORARM_DEFAULT_OFFSETS.right)
-                  : (ARMORARM_DEFAULT_OFFSETS && ARMORARM_DEFAULT_OFFSETS.left);
-                if (def) setOffsetFrom(def);
-              }
-            }
-          }
+          let a = __ov[it.id] || __ov[slotKey] || (anchors[slotKey]||anchors.misc);
           if (!__hasItemOv) a = snapFeetAnchor(a, slot, anchors);
           const __forceLift = (function(){ try { return !!JSON.parse(localStorage.getItem('bagLiftForce')||'false'); } catch { return false; } })();
           if ((slotKey==='bag') && (!(__hasItemOv || __hasSlotOv) || __forceLift)) {
@@ -1774,163 +1482,29 @@
           const inflateAmtTV = (typeof a.inflate === 'number') ? a.inflate : 0;
           if (inflateAmtTV) { try { inflateScene(src, inflateAmtTV); } catch {} }
           try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
-          let anchored = false;
           try {
-            const THREE = getThree() || window.THREE;
-            if (THREE && baseGroup) {
-              const anchorMap = {
-                hat:'attach_hat', hair:'attach_hair', mask:'attach_mask',
-                top:'attach_top', torso:'attach_top', body:'attach_top', outfit:'attach_top',
-                legs:'attach_legs', skirt:'attach_legs', belt:'attach_belt',
-                bag:'attach_bag', misc:'attach_misc',
-                boots:'attach_boot.L', feet:'attach_boot.L'
-              };
-              let anchorName = anchorMap[slot] || null;
-              if ((slot==='boots' || slot==='feet') && sideHint) {
-                anchorName = sideHint==='right' ? 'attach_boot.R' : 'attach_boot.L';
-              }
-              const anchorNode = anchorName ? (baseGroup.getObjectByName(anchorName) || null) : null;
-              const parent = baseGroup || (attachGroup && attachGroup.parent) || scene;
-              if (anchorNode && parent) {
-                anchorNode.updateWorldMatrix(true, true);
-                parent.updateMatrixWorld?.(true);
-                const invParent = new THREE.Matrix4().copy(parent.matrixWorld).invert();
-                const localMat = new THREE.Matrix4().multiplyMatrices(invParent, anchorNode.matrixWorld);
-                const pos = new THREE.Vector3(); const quat = new THREE.Quaternion(); const scl = new THREE.Vector3();
-                localMat.decompose(pos, quat, scl);
-                wrap.position.copy(pos);
-                wrap.quaternion.copy(quat);
-                wrap.rotation.setFromQuaternion(quat);
-                const off = new THREE.Vector3(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);
-                off.applyQuaternion(quat);
-                wrap.position.add(off);
-                wrap.rotation.x += a.rotation?.[0]||0;
-                wrap.rotation.y += a.rotation?.[1]||0;
-                wrap.rotation.z += a.rotation?.[2]||0;
-                const s = (a.scale && a.scale[0]) ? a.scale[0] : 1;
-                wrap.scale.copy(scl);
-                if (s && isFinite(s)) wrap.scale.multiplyScalar(s);
-                anchored = true;
-              }
-            }
+            const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
+            const boxObj  = new (window.__THREE||window.THREE).Box3().setFromObject(src);
+            const baseH = Math.max(1e-6, boxBase.max.y - boxBase.min.y);
+            const objH  = Math.max(1e-6, boxObj.max.y - boxObj.min.y);
+            let target = (slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25);
+            let sAuto = (target*baseH)/objH;
+            const s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto)&&sAuto>0&&sAuto<10 ? sAuto : target);
+            wrap.scale.set(s,s,s);
+          } catch { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; wrap.scale.set(def,def,def); }
+          try {
+            const baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?v:0.92; } catch { return 0.92; } })();
+            const inv = (baseScale>0)?(1/baseScale):1;
+            const factor = inv;
+            const px = (a.position[0]||0)*factor;
+            const py = (a.position[1]||0.05)*factor;
+            const pz = (a.position[2]||0)*factor;
+            wrap.position.set(px, py, pz);
           } catch {}
-          if (!anchored){
-            try {
-              const boxBase = new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup);
-              const boxObj  = new (window.__THREE||window.THREE).Box3().setFromObject(src);
-              const baseH = Math.max(1e-6, boxBase.max.y - boxBase.min.y);
-              const objH  = Math.max(1e-6, boxObj.max.y - boxObj.min.y);
-              let target = (slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25);
-              let sAuto = (target*baseH)/objH;
-              const s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto)&&sAuto>0&&sAuto<10 ? sAuto : target);
-              wrap.scale.set(s,s,s);
-            } catch { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; wrap.scale.set(def,def,def); }
-            try {
-              const baseScale = (function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'1'); return (isFinite(v)&&v>0)?v:1; } catch { return 1; } })();
-              const inv = (baseScale>0)?(1/baseScale):1;
-              const factor = inv;
-              const px = (a.position[0]||0)*factor;
-              const py = (a.position[1]||0.05)*factor;
-              const pz = (a.position[2]||0)*factor;
-              wrap.position.set(px, py, pz);
-            } catch {}
-            try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
+          try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
+          attachGroup.add(wrap);
           }
-          // Armor arms: parent directly to the arm bone and preserve the current world transform
-          if (slot==='misc' && /armorarm|amorarm/i.test(String(it.id||'')) && baseGroup) {
-            let bound=false;
-            try {
-              const THREE = getThree() || window.THREE;
-              const side = (function(){
-                const s = String(wrap.userData?.__side||'').toLowerCase();
-                if (s) return s;
-                if (wrap.userData?.__armorArmOffsetKey==='armorarmOffsetR') return 'right';
-                if (wrap.userData?.__armorArmOffsetKey==='armorarmOffsetL') return 'left';
-                return sideHint;
-              })();
-              const bones = [];
-              baseGroup.traverse?.(o=>{ if (o && o.isBone) bones.push(o); });
-              const matchSide = (name, sideTag)=>{
-                if (!sideTag) return true;
-                if (sideTag==='right') return /(\.R\b|_R\b|-R\b|right\b)/i.test(name);
-                if (sideTag==='left')  return /(\.L\b|_L\b|-L\b|left\b)/i.test(name);
-                return false;
-              };
-              const preferOrder = side==='right'
-                ? ['DEF-hand.R','DEF-forearm.R','DEF-forearm.R.001','DEF-lower_arm.R','DEF-upper_arm.R','DEF-upper_arm.R.001','DEF-shoulder.R']
-                : ['DEF-hand.L','DEF-forearm.L','DEF-forearm.L.001','DEF-lower_arm.L','DEF-upper_arm.L','DEF-upper_arm.L.001','DEF-shoulder.L'];
-              let bone = null;
-              let boneName = preferOrder.find(n=>!!baseGroup.getObjectByName(n)) || null;
-              if (boneName) bone = baseGroup.getObjectByName(boneName);
-              if (!bone && bones.length){
-                const first = bones.find(b=>matchSide(b.name, side) && /forearm|lower[_ ]?arm|hand/i.test(b.name));
-                bone = first || bones.find(b=>matchSide(b.name, side) && /upper[_ ]?arm|shoulder|arm/i.test(b.name)) || bones.find(b=>matchSide(b.name, side));
-                boneName = bone ? bone.name : null;
-              }
-              if (bone && THREE) {
-                try { baseGroup.updateMatrixWorld?.(true); bone.updateWorldMatrix?.(true, true); } catch {}
-                // Build world matrix from the current local placement (which was computed in baseGroup/world space)
-                const parentForWorld = baseGroup || (attachGroup && attachGroup.parent) || scene;
-                wrap.updateMatrix(); // ensure wrap.matrix matches position/rotation/scale we just set
-                const offset = wrap.userData?.__armorArmOffset || null;
-                if (offset) {
-                  try { if (wrap.parent) wrap.parent.remove(wrap); } catch {}
-                  bone.add(wrap);
-                  const bs = readBaseMeshScale();
-                  const div = (bs && isFinite(bs) && bs!==0) ? bs : 1;
-                  wrap.position.set((offset.pos?.[0]||0)/div, (offset.pos?.[1]||0)/div, (offset.pos?.[2]||0)/div);
-                  wrap.rotation.set(offset.rot?.[0]||0, offset.rot?.[1]||0, offset.rot?.[2]||0);
-                  const sVal = offset.scl?.[0] || 1;
-                  wrap.scale.set(sVal, sVal, sVal);
-                  bound = true;
-                } else {
-                  let worldMat = wrap.matrix.clone();
-                  try {
-                    if (parentForWorld) {
-                      parentForWorld.updateMatrixWorld?.(true);
-                      worldMat = new THREE.Matrix4().multiplyMatrices(parentForWorld.matrixWorld, worldMat);
-                    }
-                  } catch {}
-                  const inv = new THREE.Matrix4().copy(bone.matrixWorld).invert();
-                  const localMat = new THREE.Matrix4().multiplyMatrices(inv, worldMat);
-                  const lp = new THREE.Vector3();
-                  const lq = new THREE.Quaternion();
-                  const ls = new THREE.Vector3();
-                  localMat.decompose(lp, lq, ls);
-                  try { if (wrap.parent) wrap.parent.remove(wrap); } catch {}
-                  bone.add(wrap);
-                  wrap.position.copy(lp);
-                  wrap.quaternion.copy(lq);
-                  wrap.rotation.setFromQuaternion(lq);
-                  wrap.scale.copy(ls);
-                  bound = true;
-                }
-                try { console.log('[TV] armorarm bound to', boneName||bone?.name||''); } catch {}
-              }
-            } catch {}
-            if (!bound) { attachGroup.add(wrap); }
-          } else {
-            attachGroup.add(wrap);
-          }
-          try { allAttached.push(wrap); } catch {}
         }
-       }
-        // Armor arms already parented directly to bones above; no extra reparent
-        try { updateFollowersOnce(); } catch {}
-        // Keep camera/target stable across equip/unequip
-        try {
-          const pos = camPrevPos || camHomePos;
-          const tgt = camPrevTarget || camHomeTarget;
-          if (camera && pos) { camera.position.copy(pos); camera.updateProjectionMatrix?.(); }
-          if (controls && tgt) { controls.target.copy(tgt); controls.update?.(); }
-          setTimeout(()=>{ try {
-            const p2 = camLastPos || pos;
-            const t2 = camLastTarget || tgt;
-            if (camera && p2) { camera.position.copy(p2); camera.updateProjectionMatrix?.(); }
-            if (controls && t2) { controls.target.copy(t2); controls.update?.(); }
-          } catch {} }, 0);
-        } catch {}
-        try { window.__TVAttachments = allAttached; } catch {}
         return true;
       }
       function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
@@ -1949,68 +1523,47 @@
             return !!baseGroup;
           }
           const snap = pose && pose.snapshot;
-          // Always try snapshot first to force a visible pose even if clips mismatch
-          if (snap) { try { applyPoseSnapshot(baseGroup, snap); } catch {} }
-          if (!baseGroup || !mixer || !baseClips.length) {
-            try { baseGroup.visible = true; baseGroup.updateMatrixWorld?.(true); scene?.updateMatrixWorld?.(true); renderer?.render?.(scene, camera); } catch {}
-            return !!snap;
-          }
-          const THREE = getThree(); if (!THREE) {
-            try { baseGroup.visible = true; baseGroup.updateMatrixWorld?.(true); scene?.updateMatrixWorld?.(true); renderer?.render?.(scene, camera); } catch {}
-            return !!snap;
-          }
-          const clip = (function findClip(name){
-            if (!name) return null;
-            const direct = THREE.AnimationClip.findByName(baseClips, name);
-            if (direct) return direct;
-            const want = String(name||'').toLowerCase();
-            const strip = (s)=>String(s||'').toLowerCase().replace(/\\.\\d+$/,'');
-            return baseClips.find(c=>{
-              const n = String(c?.name||'').toLowerCase();
-              return n===want || strip(n)===want || n.startsWith(want+'.');
-            }) || null;
-          })(pose.animation);
-          if (clip) {
-            try { mixer.stopAllAction(); } catch {}
-            const action = mixer.clipAction(clip);
-            action.reset();
-            action.enabled = true;
-            const freeze = !!(pose && pose.hold);
-            if (freeze) {
-              action.loop = THREE.LoopOnce;
-              action.clampWhenFinished = true;
-              action.setEffectiveWeight(1);
-              action.play();
-              const duration = clip.duration || seconds || 0.001;
-              const target = Math.max(0, Math.min(duration, seconds || duration));
-              action.time = target;
-              try {
-                if (typeof mixer.setTime === 'function') mixer.setTime(target);
-                mixer.update(0.001);
-              } catch {}
-              action.paused = true;
-              action.timeScale = 0;
-              poseAction = action;
-              try { console.log('[TV] pose applied (freeze)', pose.id, 'time', target.toFixed(3)); } catch {}
-            } else {
-              action.loop = THREE.LoopRepeat;
-              action.clampWhenFinished = false;
-              action.enabled = true;
-              action.setEffectiveWeight(1);
-              action.paused = false;
-              action.timeScale = 1;
-              action.play();
-              try { mixer.update(0.001); } catch {}
-              poseAction = action;
-              try { console.log('[TV] pose applied (loop)', pose.id); } catch {}
-            }
-            try { baseGroup?.updateMatrixWorld?.(true); scene?.updateMatrixWorld?.(true); renderer?.render?.(scene, camera); } catch {}
+          if (snap && applyPoseSnapshot(baseGroup, snap)) {
+            try { console.log('[TV] applied snapshot pose', pose.id); } catch {}
             return true;
           }
-          // If no animation clip found, snapshot already applied above
-          try { console.warn('[TV] pose missing clip, used snapshot instead', pose?.id, pose?.animation); } catch {}
-          try { baseGroup.visible = true; baseGroup.updateMatrixWorld?.(true); scene?.updateMatrixWorld?.(true); renderer?.render?.(scene, camera); } catch {}
-          return snap ? true : false;
+          if (!baseGroup || !mixer || !baseClips.length) return false;
+          const THREE = getThree(); if (!THREE) return false;
+          const clip = THREE.AnimationClip.findByName(baseClips, pose.animation);
+          if (!clip) { try { console.warn('[TV] pose clip missing', pose.animation); } catch{} return false; }
+          try { mixer.stopAllAction(); } catch {}
+          const action = mixer.clipAction(clip);
+          action.reset();
+          action.enabled = true;
+          const freeze = !!(pose && pose.hold);
+          if (freeze) {
+            action.loop = THREE.LoopOnce;
+            action.clampWhenFinished = true;
+            action.setEffectiveWeight(1);
+            action.play();
+            const duration = clip.duration || seconds || 0.001;
+            const target = Math.max(0, Math.min(duration, seconds || duration));
+            action.time = target;
+            try {
+              if (typeof mixer.setTime === 'function') mixer.setTime(target);
+              mixer.update(0.0001);
+            } catch {}
+            action.paused = true;
+            action.timeScale = 0;
+            poseAction = action;
+            try { console.log('[TV] pose applied (freeze)', pose.id, 'time', target.toFixed(3)); } catch {}
+          } else {
+            action.loop = THREE.LoopRepeat;
+            action.clampWhenFinished = false;
+            action.enabled = true;
+            action.setEffectiveWeight(1);
+            action.paused = false;
+            action.timeScale = 1;
+            action.play();
+            poseAction = action;
+            try { console.log('[TV] pose applied (loop)', pose.id); } catch {}
+          }
+          return true;
         } catch (e) {
           console.warn('[TV] pose apply failed', e);
           return false;
@@ -2102,7 +1655,6 @@
           </div>
         </div>
         <div id="adjItemLabel" style="font-size:12px; margin-bottom:8px; color:#444;"></div>
-        <div id="adjItemPicker" class="flex flex-wrap gap-1 mb-2" style="display:none;"></div>
         <div class="flex gap-2 mb-2">
           <button data-mode="translate" class="btn btn-xs btn-primary" id="modeMove">Move</button>
           <button data-mode="rotate" class="btn btn-xs btn-ghost" id="modeRotate">Rotate</button>
@@ -2143,34 +1695,18 @@
     const adjItemLabel = adjustOverlay.querySelector('#adjItemLabel');
     const adjFallback = adjustOverlay.querySelector('#adjFallback');
     const adjPanel = adjustOverlay.querySelector('#adjPanel');
-    const adjItemPicker = adjustOverlay.querySelector('#adjItemPicker');
     const modeBtns = {
       translate: adjustOverlay.querySelector('#modeMove'),
       rotate: adjustOverlay.querySelector('#modeRotate'),
       scale: adjustOverlay.querySelector('#modeScale')
     };
     function updateAdjustOverlayLabel(){
-      const miscVal = (_wallet?.equipped && _wallet.equipped.misc) || null;
-      const miscIds = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-      const curId = (typeof window.__currentAdjId === 'string' && miscIds.includes(window.__currentAdjId))
-        ? window.__currentAdjId
-        : (miscIds[miscIds.length-1] || null);
-      const nameLookup = (id)=>{
-        try {
-          const it = (_items||[]).find(x=>x.id===id);
-          return (it && it.name) ? it.name : id;
-        } catch { return id; }
-      };
-      if (adjItemLabel) {
-        adjItemLabel.textContent = curId
-          ? `Adjusting: ${nameLookup(curId)}${miscIds.length>1 ? ` (${miscIds.length} misc items equipped)` : ''}`
-          : 'No misc item equipped';
-      }
+      const miscId = (_wallet?.equipped && _wallet.equipped.misc) || null;
+      if (adjItemLabel) adjItemLabel.textContent = miscId ? `Adjusting: ${miscId}` : 'No misc item equipped';
     }
     // Adjust overlay logic
     (function(){
       let currentAdjId = null;
-      window.__currentAdjId = null;
       let adjCtl = null;
       let adjTarget = null;
       const ovAll = ()=>{ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } };
@@ -2194,17 +1730,6 @@
       };
       const anchorKeyFor = (obj)=>{
         const side = String(obj?.userData?.__side||obj?.name||'').toLowerCase();
-        if (/armorarm|amorarm/i.test(String(currentAdjId||''))) {
-          if (/right/.test(side)) return 'armorarmOffsetR';
-          if (/left/.test(side)) return 'armorarmOffsetL';
-          try {
-            const hasL = !!readArmorOffset('armorarmOffsetL');
-            const hasR = !!readArmorOffset('armorarmOffsetR');
-            if (hasL && !hasR) return 'armorarmOffsetL';
-            if (hasR && !hasL) return 'armorarmOffsetR';
-          } catch {}
-          return 'armorarmOffsetL';
-        }
         if (/left/.test(side)) return `${currentAdjId||''}-left`;
         if (/right/.test(side)) return `${currentAdjId||''}-right`;
         return currentAdjId;
@@ -2212,22 +1737,10 @@
       const saveAnchorFromObject = (obj)=>{
         if (!obj || !currentAdjId) return;
         const key = anchorKeyFor(obj);
-        if (/^armorarmOffset[LR]$/.test(key)) {
-          const bs = readBaseMeshScale();
-          const toStored = (v)=>[ (v.x||0)*bs, (v.y||0)*bs, (v.z||0)*bs ];
-          writeArmorOffset(key, {
-            pos: toStored(obj.position||{x:0,y:0,z:0}),
-            rot: [obj.rotation.x||0, obj.rotation.y||0, obj.rotation.z||0],
-            scl: [obj.scale.x||1, obj.scale.y||1, obj.scale.z||1]
-          });
-          return;
-        }
         const ov = ovAll();
         const prev = ov[key] || {};
-        const bs = readBaseMeshScale();
-        const toStored = (v)=>[ (v.x||0)*bs, (v.y||0)*bs, (v.z||0)*bs ];
         ov[key] = {
-          position: toStored(obj.position),
+          position:[obj.position.x, obj.position.y, obj.position.z],
           rotation:[obj.rotation.x, obj.rotation.y, obj.rotation.z],
           scale:[obj.scale.x, obj.scale.y, obj.scale.z],
           inflate: prev.inflate || 0
@@ -2271,7 +1784,7 @@
         if (!window.__useTV) return false;
         const ctl = ensureTransformControl();
         const tgt = ctl ? findTarget(currentAdjId) : null;
-        if (!ctl || !tgt || !tgt.parent) return false;
+        if (!ctl || !tgt) return false;
         try { ctl.attach(tgt); adjTarget = tgt; } catch { return false; }
         return true;
       };
@@ -2284,13 +1797,14 @@
             ? ['armorarmOffsetL','armorarmOffsetR']
             : [ isRight ? 'armorarmOffsetR' : 'armorarmOffsetL' ];
           targets.forEach(key=>{
-            let ov2 = readArmorOffset(key);
+            let ov2 = null;
+            try { ov2 = JSON.parse(localStorage.getItem(key)||'null'); } catch {}
             const pos = (ov2 && ov2.pos) || [0,0,0];
             const rot = (ov2 && ov2.rot) || [0,0,0];
             const scl = (ov2 && (ov2.scl || ov2.scale)) || [1,1,1];
             const sVal = Math.max(0.1, (scl?.[0]||1) + dScale);
             const next = { pos: [pos[0]+dPos[0], pos[1]+dPos[1], pos[2]+dPos[2]], rot: [rot[0]+dRot[0], rot[1]+dRot[1], rot[2]+dRot[2]], scl: [sVal,sVal,sVal] };
-            writeArmorOffset(key, next);
+            try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
           });
           if (targets.length===2) {
             nudgeLive('cos-amorarm-left', dPos, dRot, dScale);
@@ -2312,62 +1826,21 @@
           try { pushServerAnchorsSoon(); } catch {}
         }
       };
-        const resetCurrent = ()=>{
-          if (!currentAdjId) return;
-          if (/cos-amorarm/i.test(currentAdjId)) {
-            const isRight = /(-r\b|-right\b|_r\b|right)$/i.test(currentAdjId);
-            const key = isRight ? 'armorarmOffsetR' : 'armorarmOffsetL';
-          try { writeArmorOffset(key, null); } catch {}
-          } else {
-            const ov = ovAll();
-            delete ov[currentAdjId];
-            saveOv(ov);
-          }
+      const resetCurrent = ()=>{
+        if (!currentAdjId) return;
+        if (/cos-amorarm/i.test(currentAdjId)) {
+          const isRight = /(-r\b|-right\b|_r\b|right)$/i.test(currentAdjId);
+          const key = isRight ? 'armorarmOffsetR' : 'armorarmOffsetL';
+          try { localStorage.removeItem(key); } catch {}
+        } else {
+          const ov = ovAll();
+          delete ov[currentAdjId];
+          saveOv(ov);
+        }
         try { if (adjCtl) adjCtl.detach(); } catch {}
         try { renderPreview(); } catch {}
       };
-      const getMiscIds = ()=>{
-        try {
-          const miscVal = (_wallet?.equipped && _wallet.equipped.misc) || null;
-          return Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-        } catch { return []; }
-      };
-      const refreshItemPicker = ()=>{
-        if (!adjItemPicker) return;
-        const ids = getMiscIds();
-        while (adjItemPicker.firstChild) adjItemPicker.removeChild(adjItemPicker.firstChild);
-        if (ids.length <= 1) { adjItemPicker.style.display='none'; return; }
-        adjItemPicker.style.display='flex';
-        ids.forEach(id=>{
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-ghost btn-xs';
-          const it = (_items||[]).find(x=>x.id===id);
-          btn.textContent = (it && it.name) ? it.name : id;
-          btn.title = `Adjust ${btn.textContent}`;
-          if (id === currentAdjId) btn.classList.add('btn-primary');
-          btn.addEventListener('click', ()=>{
-            currentAdjId = id;
-            window.__currentAdjId = id;
-            updateAdjustOverlayLabel();
-            try { if (adjCtl) adjCtl.detach(); } catch {}
-            const ok = attachGizmo();
-            if (adjFallback) adjFallback.style.display = ok ? 'none' : 'block';
-            refreshItemPicker();
-          });
-          adjItemPicker.appendChild(btn);
-        });
-      };
-      const setCurrentAdjFromEquip = ()=>{
-        const ids = getMiscIds();
-        if (!ids.length) return null;
-        if (currentAdjId && ids.includes(currentAdjId)) return currentAdjId;
-        currentAdjId = ids[ids.length-1];
-        window.__currentAdjId = currentAdjId;
-        return currentAdjId;
-      };
       const openPanel = ()=>{
-        // If Three viewer is available but __useTV was off, force it on so gizmo can attach
-        try { if (!window.__useTV && window.TV && TV.getCamera && TV.init && TV.init()) { window.__useTV = true; } } catch {}
         const hasGizmo = attachGizmo();
         if (adjFallback) adjFallback.style.display = hasGizmo ? 'none' : 'block';
         if (hasGizmo) setMode('translate');
@@ -2375,11 +1848,9 @@
         if (adjPanel) adjPanel.style.pointerEvents='auto';
       };
       if (openAdjust) openAdjust.addEventListener('click', ()=>{
-        const ids = getMiscIds();
-        if (!ids.length) { alert('Equip a misc item first.'); return; }
-        if (!setCurrentAdjFromEquip()) { alert('Equip a misc item first.'); return; }
+        currentAdjId = (_wallet?.equipped && _wallet.equipped.misc) || null;
+        if (!currentAdjId) { alert('Equip a misc item first.'); return; }
         updateAdjustOverlayLabel();
-        refreshItemPicker();
         openPanel();
       });
       if (adjClose) adjClose.addEventListener('click', ()=>{ adjustOverlay.style.display='none'; try { if (adjCtl) adjCtl.detach(); } catch {}; });
@@ -2423,43 +1894,6 @@
       _items = cat.items||[];
       const safeWall = wall || { coins:0, owned:{}, equipped:{} };
       _wallet = safeWall;
-      // Keep local armor arm cache in sync with server state; only restore dual arms when at least one is equipped
-      try {
-        const miscVal = (_wallet?.equipped && _wallet.equipped.misc) || null;
-        const miscArr = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-        const serverArms = miscArr.filter(id=>isArmorArm(id));
-        if (!serverArms.length) {
-          saveArmorArmsLocal([]);
-        } else {
-          const savedArms = loadArmorArmsLocal().filter(id=>isArmorArm(id));
-          if (savedArms.length) {
-            const merged = [];
-            const pushUnique = (id)=>{ if (id && !merged.includes(id)) merged.push(id); };
-            serverArms.forEach(pushUnique);
-            savedArms.forEach(pushUnique);
-            _wallet.equipped = _wallet.equipped || {};
-            _wallet.equipped.misc = merged.length===1 ? merged[0] : merged;
-            saveArmorArmsLocal(merged);
-          }
-        }
-      } catch {}
-      // Restore dual armorarm equip (local only)
-      try {
-        const savedArms = loadArmorArmsLocal();
-        const miscVal = (_wallet?.equipped && _wallet.equipped.misc) || null;
-        const miscArr = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-        const hasServerArm = miscArr.some(id=>isArmorArm(id));
-        if (hasServerArm && Array.isArray(savedArms) && savedArms.length){
-          _wallet.equipped = _wallet.equipped || {};
-          const cur = _wallet.equipped.misc;
-          const merged = [];
-          const pushUnique = (id)=>{ if (id && !merged.includes(id)) merged.push(id); };
-          savedArms.forEach(pushUnique);
-          if (Array.isArray(cur)) cur.forEach(pushUnique);
-          else if (cur) pushUnique(cur);
-          if (merged.length) _wallet.equipped.misc = merged;
-        }
-      } catch {}
       // Ensure a default model is selected client-side if server view omitted it
       try {
         if (!_wallet.equipped || !_wallet.equipped.model) {
@@ -2490,7 +1924,7 @@
         const modelItem = equip.model && itemsMap.get(equip.model);
         try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
         if (modelItem && modelItem.model && mv) {
-          async function ensureThreeReady(ms=4000){
+          async function ensureThreeReady(ms=2000){
             const t0 = Date.now();
             return await new Promise(r=>{
               (function poll(){
@@ -2502,29 +1936,28 @@
               })();
             });
           }
-          await ensureThreeReady(4000);
+          await ensureThreeReady(2000);
           let usedTV = false;
-          if (!FORCE_MV_PREVIEW && TV && TV.init) {
+          const tvOk = (!FORCE_MV_PREVIEW) && TV && TV.init && TV.init();
+          if (tvOk) {
             try {
-              if (TV.init()) {
-                console.log('[shop] using TV preview');
-                window.__useTV = true;
-                const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
-                const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
-                const baseOk = await TV.loadBase(modelItem.model);
-                if (baseOk) {
-                  try { if (TV.resize) TV.resize(); } catch {}
-                  try { await applyEyeColorFromStorage(); } catch {}
-                  try { await applyHatColorFromStorage(); } catch {}
-                  try { await applyBootColorFromStorage(); } catch {}
-                  try { await applyBagColorFromStorage(); } catch {}
-                  const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
-                  const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
-                  try { await TV.attachAll(equip, itemsMap, anchors); } catch (errAttach) { console.warn('[shop] TV attachAll failed', errAttach); }
-                  usedTV = true;
-                } else {
-                  window.__useTV = false;
-                }
+              console.log('[shop] using TV preview');
+              window.__useTV = true;
+              const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
+              const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
+              await TV.loadBase(modelItem.model);
+              try { if (TV.resize) TV.resize(); } catch {}
+              try { await applyEyeColorFromStorage(); } catch {}
+              try { await applyHatColorFromStorage(); } catch {}
+              try { await applyBootColorFromStorage(); } catch {}
+              try { await applyBagColorFromStorage(); } catch {}
+              const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+              const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+              const attached = await TV.attachAll(equip, itemsMap, anchors);
+              if (attached) {
+                usedTV = true;
+              } else {
+                window.__useTV = false;
               }
             } catch (err){
               console.warn('[shop] TV preview failed', err);
@@ -2612,22 +2045,11 @@
                 if (Array.isArray(current)) {
                   _wallet.equipped[slot] = current.filter(x=>x!==id);
                   if (_wallet.equipped[slot].length===1) _wallet.equipped[slot] = _wallet.equipped[slot][0];
-                  if (slot==='misc') {
-                    const arr = Array.isArray(_wallet.equipped[slot]) ? _wallet.equipped[slot] : (_wallet.equipped[slot] ? [_wallet.equipped[slot]] : []);
-                    const arms = arr.filter(x=>isArmorArm(x));
-                    saveArmorArmsLocal(arms);
-                  }
                   renderPreview(); renderItems(); return;
                 }
                 const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ slot }) });
                 if (!res.ok && res.error) { alert(res.error); return; }
                 _wallet.equipped = res.equipped || _wallet.equipped || {};
-                if (slot==='misc') {
-                  const miscVal = (_wallet.equipped||{}).misc;
-                  const arr = Array.isArray(miscVal) ? miscVal : (miscVal ? [miscVal] : []);
-                  const arms = arr.filter(x=>isArmorArm(x));
-                  saveArmorArmsLocal(arms);
-                }
                 renderPreview();
                 renderItems();
               } catch (e) {}
@@ -2973,19 +2395,12 @@
           if ((e.shiftKey || e.altKey) && slot) {
             _wallet.equipped = _wallet.equipped || {};
             const cur = _wallet.equipped[slot];
-            if (slot==='misc' && isArmorArm(id)) {
-              const merged = Array.isArray(cur) ? cur.slice() : (cur ? [cur] : []);
-              if (!merged.includes(id)) merged.push(id);
-              _wallet.equipped[slot] = merged;
-              saveArmorArmsLocal(merged);
+            if (Array.isArray(cur)) {
+              if (!cur.includes(id)) cur.push(id);
+            } else if (cur) {
+              if (cur !== id) _wallet.equipped[slot] = [cur, id];
             } else {
-              if (Array.isArray(cur)) {
-                if (!cur.includes(id)) cur.push(id);
-              } else if (cur) {
-                if (cur !== id) _wallet.equipped[slot] = [cur, id];
-              } else {
-                _wallet.equipped[slot] = id;
-              }
+              _wallet.equipped[slot] = id;
             }
             renderPreview();
             renderItems();
@@ -3011,18 +2426,7 @@
               // Guest mode fallback: apply locally only
               if (it && it.slot) {
                 if (slot === 'model') { _wallet.equipped = { model: id }; }
-                else {
-                  _wallet.equipped = _wallet.equipped || {};
-                  if (slot==='misc' && isArmorArm(id)) {
-                    const cur = _wallet.equipped[it.slot];
-                    const merged = Array.isArray(cur) ? cur.slice() : (cur ? [cur] : []);
-                    if (!merged.includes(id)) merged.push(id);
-                    _wallet.equipped[it.slot] = merged;
-                    saveArmorArmsLocal(merged);
-                  } else {
-                    _wallet.equipped[it.slot] = id;
-                  }
-                }
+                else { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
               }
             } else {
               alert(res.error); return;
@@ -3031,20 +2435,9 @@
             // Optimistic UI update when server accepted
             if (it && it.slot) {
               if (slot === 'model') { _wallet.equipped = { model: id }; }
-              else {
-                _wallet.equipped = _wallet.equipped || {};
-                if (slot==='misc' && isArmorArm(id)) {
-                  const cur = _wallet.equipped[it.slot];
-                  const merged = Array.isArray(cur) ? cur.slice() : (cur ? [cur] : []);
-                  if (!merged.includes(id)) merged.push(id);
-                  _wallet.equipped[it.slot] = merged;
-                  saveArmorArmsLocal(merged);
-                } else {
-                  _wallet.equipped[it.slot] = id;
-                }
-              }
-            }
-          }
+              else { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+      }
+    }
     function showModelViewerPreview(mv, modelItem){
       try {
         window.__useTV = false;
@@ -3081,32 +2474,21 @@
           const slot = it && it.slot;
           if (slot && Array.isArray((_wallet.equipped||{})[slot])) {
             const arr = _wallet.equipped[slot];
-            const nextArr = arr.filter(x=>x!==id);
-            if (slot==='misc' && isArmorArm(id)) {
-              saveArmorArmsLocal(nextArr);
-              _wallet.equipped[slot] = nextArr;
-            } else {
-              _wallet.equipped[slot] = nextArr.length===1 ? nextArr[0] : nextArr;
-            }
+            _wallet.equipped[slot] = arr.filter(x=>x!==id);
+            if (_wallet.equipped[slot].length===1) _wallet.equipped[slot] = _wallet.equipped[slot][0];
           } else {
             const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
             if (res && res.error) {
               const err = String(res.error||'');
               if (/401|unauthor/i.test(err)) {
                 // Guest mode fallback: remove locally only
-                if (it && it.slot && _wallet.equipped) {
-                  delete _wallet.equipped[it.slot];
-                  if (slot==='misc' && isArmorArm(id)) saveArmorArmsLocal([]);
-                }
+                if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
               } else {
                 alert(res.error); return;
               }
             } else {
               // Optimistic UI update on success
-              if (it && it.slot && _wallet.equipped) {
-                delete _wallet.equipped[it.slot];
-                if (slot==='misc' && isArmorArm(id)) saveArmorArmsLocal([]);
-              }
+              if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
             }
           }
           renderPreview();
