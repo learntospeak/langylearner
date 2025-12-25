@@ -57,8 +57,7 @@
           "cos-amorarm-r": true
         },
         "equipped": {
-          "model": "model-basemesh",
-          "misc": "cos-amorarm-r"
+          "model": "model-allinone"
         },
         "anchors": {
           "cos-armorshoe": {

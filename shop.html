@@ -54,6 +54,10 @@
             <div id="tvWrap" class="inline-block relative" style="display:none; width:420px; height:520px; overflow:hidden; z-index:1; padding-top:60px; box-sizing:border-box;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
+            <div id="basemeshNotice" class="text-xs text-amber-700 mt-2 flex items-center justify-center gap-2" style="display:none;">
+              <span id="basemeshNoticeText"></span>
+              <button id="browseChars" class="btn btn-xs btn-dark">Change Character</button>
+            </div>
             <div id="colorControls" class="mt-3 w-full max-w-xs mx-auto text-left space-y-2">
               <div id="eyeColorRow" class="color-row">
                 <label for="eyeColorPick" class="color-label">Eye Color</label>
@@ -161,7 +165,7 @@
         return { ok:false, error: String(e) };
       }
     }
-    let SELECTED = 'upgrades';
+    let SELECTED = 'model';
     const FORCE_OVERLAY_SLOT = 'top';
     const SLOT_LABELS = {
       head:'Head',
@@ -443,6 +447,79 @@
     }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
     const DEFAULT_BASE_SCALE = 1.0;
+    const TARGET_CHARACTER_HEIGHT = 1.0; // target uniform height (world units) for every character
+    const PREVIEW_SHRINK = 0.1;          // shrink characters down to 10% of normalized height
+    const VIEW_PADDING_PX = 0;           // no extra bottom padding
+    const VIEW_PAD_SCALE = 1.0;          // no extra padding scale
+    function frameModelViewerCamera(mv, box){
+      try{
+        const THREE = getThree(); if (!THREE || !mv || !box) return;
+        const size = new THREE.Vector3(); box.getSize(size);
+        const w = mv.clientWidth || 420;
+        const h = mv.clientHeight || 520;
+        const fovDeg = 30;
+        const fov = fovDeg * Math.PI / 180;
+        const paddedY = size.y * VIEW_PAD_SCALE;
+        const paddedX = size.x * VIEW_PAD_SCALE;
+        const baseDistV = (paddedY*0.5)/Math.tan(fov/2);
+        const baseDistH = (paddedX*0.5)/Math.tan(fov/2);
+        const baseDist = Math.max(baseDistV, baseDistH);
+        const viewHeightBase = 2 * baseDist * Math.tan(fov/2);
+        const marginWorldBase = (h > 0) ? (VIEW_PADDING_PX / h) * viewHeightBase : 0;
+        const dist = baseDist + marginWorldBase;
+        mv.fieldOfView = `${fovDeg}deg`;
+        const viewHeight2 = 2 * dist * Math.tan(fov/2);
+        const marginWorld2 = (h > 0) ? (VIEW_PADDING_PX / h) * viewHeight2 : 0;
+        const targetY = box.min.y + marginWorld2;
+        const polarDeg = 80;
+        const radiusStr = `${dist.toFixed(3)}m`;
+        mv.cameraTarget = `0 ${targetY.toFixed(3)}m 0`;
+        mv.cameraOrbit = `0deg ${polarDeg}deg ${radiusStr}`;
+        try { mv.jumpCameraToGoal(); } catch {}
+      } catch {}
+    }
+    function recenterModelViewerRoot(root){
+      try {
+        const THREE = getThree(); if (!THREE || !root) return null;
+        const box = new THREE.Box3().setFromObject(root);
+        const center = box.getCenter(new THREE.Vector3());
+        root.position.x -= center.x;
+        root.position.z -= center.z;
+        root.position.y -= box.min.y;
+        return box;
+      } catch { return null; }
+    }
+    function recenterBaseToGround(root){
+      try{
+        const THREE = getThree(); if (!THREE || !root) return null;
+        const box = new THREE.Box3().setFromObject(root);
+        const center = box.getCenter(new THREE.Vector3());
+        root.position.x -= center.x;
+        root.position.z -= center.z;
+        root.position.y -= box.min.y;
+        return box;
+      } catch { return null; }
+    }
+    function normalizeCharacterRoot(root){
+      try {
+        const THREE = getThree(); if (!THREE || !root) return null;
+        const box = recenterBaseToGround(root) || new THREE.Box3().setFromObject(root);
+        // Apply only the shrink factor; no height normalization
+        if (isFinite(PREVIEW_SHRINK) && PREVIEW_SHRINK > 0) {
+          root.scale.set(PREVIEW_SHRINK, PREVIEW_SHRINK, PREVIEW_SHRINK);
+        }
+        return recenterBaseToGround(root) || box;
+      } catch { return null; }
+    }
+    function isBaseMeshSelected(){
+      try {
+        const modelId = (_wallet?.equipped && _wallet.equipped.model) ? String(_wallet.equipped.model) : '';
+        if (modelId === 'model-basemesh') return true;
+        const modelItem = (_items||[]).find(x=>x.id===modelId);
+        const url = modelItem && modelItem.model ? String(modelItem.model) : '';
+        return /basemeshpr\.glb$/i.test(url);
+      } catch { return false; }
+    }
     function readBaseMeshScale(){
       try{
         const raw = parseFloat(localStorage.getItem('baseMeshScale')||String(DEFAULT_BASE_SCALE));
@@ -492,6 +569,38 @@
         });
       } catch {}
     }
+    function frameBaseToView(box){
+      try{
+        const THREE = getThree(); if (!THREE || !camera) return;
+        const size = new THREE.Vector3(); box.getSize(size);
+        const canvasH = (renderer && renderer.domElement && renderer.domElement.clientHeight) || (document.getElementById('tvWrap')?.clientHeight) || 520;
+        const vFov = (camera.fov*Math.PI)/180;
+        const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+        const paddedY = size.y * VIEW_PAD_SCALE;
+        const paddedX = size.x * VIEW_PAD_SCALE;
+        const baseDistV = (paddedY*0.5)/Math.tan(vFov/2);
+        const baseDistH = (paddedX*0.5)/Math.tan(hFov/2);
+        const baseDist = Math.max(baseDistV, baseDistH);
+        const viewHeightBase = 2 * baseDist * Math.tan(vFov/2);
+        const marginWorldBase = (canvasH > 0) ? (VIEW_PADDING_PX / canvasH) * viewHeightBase : 0;
+        const dist = baseDist + marginWorldBase; // push back slightly for bottom padding
+        const viewHeight = 2 * dist * Math.tan(vFov/2);
+        const marginWorld = (canvasH > 0) ? (VIEW_PADDING_PX / canvasH) * viewHeight : 0;
+        const targetY = box.min.y + marginWorld;
+        const camY = targetY + paddedY * 0.65;
+        camera.position.set(0, camY, dist);
+        camera.near = Math.max(0.01, dist*0.05);
+        camera.far  = Math.max(camera.near+1, dist*25);
+        camera.updateProjectionMatrix();
+        if (window.__OrbitControls && controls) {
+          controls.target.set(0, targetY, 0);
+          controls.minDistance = dist*0.4;
+          controls.maxDistance = dist*2.5;
+          controls.enablePan = true;
+          controls.update();
+        }
+      }catch{}
+    }
     function updateColorControls(){
       try{
         const cur = SELECTED || '';
@@ -505,6 +614,21 @@
         const bagRow = document.getElementById('bagColorRow');
         if (bagRow) bagRow.style.display = showBag ? 'flex' : 'none';
       }catch{}
+    }
+    function toggleAccessoryUIVisibility(){
+      try {
+        const aside = catList ? (catList.closest('aside') || catList.parentElement) : null;
+        if (aside) { aside.style.visibility = ''; aside.style.pointerEvents = ''; }
+        if (catList) { catList.style.display = ''; }
+        const itemsPane = document.getElementById('itemsPane');
+        if (itemsPane) { itemsPane.style.visibility = ''; itemsPane.style.pointerEvents = ''; }
+        const notice = document.getElementById('basemeshNotice');
+        const noticeText = document.getElementById('basemeshNoticeText');
+        const browseBtn = document.getElementById('browseChars');
+        if (notice) notice.style.display = 'none';
+        if (noticeText) noticeText.textContent = '';
+        if (browseBtn) browseBtn.style.display = 'none';
+      } catch {}
     }
     function ensurePoseSnapshots(){
       try {
@@ -1463,33 +1587,10 @@
         _tvBaseUrlWanted = url;
         const mySeq = (++_tvLoadSeq);
         if (baseGroup && _tvBaseUrl === url) {
-          applyBaseScaleToRoot(baseGroup);
+          normalizeCharacterRoot(baseGroup);
           try {
-            const box = new THREE.Box3().setFromObject(baseGroup);
-            const center = box.getCenter(new THREE.Vector3());
-            baseGroup.position.sub(center);
-            // Fit to both width and height with margin
-            const size = new THREE.Vector3(); box.getSize(size);
-            const vFov = (camera.fov*Math.PI)/180;
-            const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
-            const distV = (size.y*0.5)/Math.tan(vFov/2);
-            const distH = (size.x*0.5)/Math.tan(hFov/2);
-            const baseDist = Math.max(distV, distH);
-            const VIEW_SCALE = (window.TV_VIEW_SCALE||2.34); // ~10% closer than before
-            const dist = baseDist * VIEW_SCALE;
-            camera.near = Math.max(0.01, dist*0.05);
-            camera.far  = Math.max(camera.near+1, dist*20);
-            camera.updateProjectionMatrix();
-            const CAMERA_Y = (window.TV_CAMERA_Y||0.06);   // fraction of model height
-            camera.position.set(0, size.y*CAMERA_Y, dist);
-            if (window.__OrbitControls && controls) {
-              const TARGET_Y = (window.TV_TARGET_Y||0.54); // drop character a bit more
-              controls.target.set(0, size.y*TARGET_Y, 0);
-              controls.minDistance = baseDist*0.4;
-              controls.maxDistance = baseDist*6.0;
-              controls.enablePan = true;
-              controls.update();
-            }
+            const box = recenterBaseToGround(baseGroup) || new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
+            frameBaseToView(box);
           } catch {}
           return true;
         }
@@ -1504,7 +1605,7 @@
         try { console.log('[TV] loaded clips', baseClips.map(c=>c.name)); } catch {}
         mixer = (baseClips.length && THREE && THREE.AnimationMixer) ? new THREE.AnimationMixer(baseGroup) : null;
         poseAction = null;
-        applyBaseScaleToRoot(baseGroup);
+        normalizeCharacterRoot(baseGroup);
         try {
           baseGroup.traverse(o=>{
             if (o && o.isMesh) {
@@ -1518,9 +1619,7 @@
             }
             if (o && o.isBone) { try { o.initialMatrix = o.matrix.clone(); } catch {} }
           });
-          const box = new THREE.Box3().setFromObject(baseGroup);
-          const center = box.getCenter(new THREE.Vector3());
-          baseGroup.position.sub(center);
+          const box = recenterBaseToGround(baseGroup) || new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
         } catch {}
         scene.add(baseGroup);
         try { window.__TVBaseRoot = baseGroup; } catch {}
@@ -1533,35 +1632,15 @@
           }
         } catch{}
         try {
-          const box = new THREE.Box3().setFromObject(baseGroup);
-          const center = box.getCenter(new THREE.Vector3());
-          baseGroup.position.sub(center);
-          // Fit to both width and height with margin
+          const box = recenterBaseToGround(baseGroup) || new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
           const size = new THREE.Vector3(); box.getSize(size);
-          const vFov = (camera.fov*Math.PI)/180;
-          const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
-          const distV = (size.y*0.5)/Math.tan(vFov/2);
-          const distH = (size.x*0.5)/Math.tan(hFov/2);
-          const baseDist = Math.max(distV, distH);
-          const VIEW_SCALE = (window.TV_VIEW_SCALE||2.34); // ~10% closer than before
-          const dist = baseDist * VIEW_SCALE;
-          camera.near = Math.max(0.01, dist*0.05);
-          camera.far  = Math.max(camera.near+1, dist*20);
-          camera.updateProjectionMatrix();
-          const CAMERA_Y = (window.TV_CAMERA_Y||0.06);   // fraction of model height
-          camera.position.set(0, size.y*CAMERA_Y, dist);
-          if (window.__OrbitControls && controls) {
-            const TARGET_Y = (window.TV_TARGET_Y||0.54); // drop character a bit more
-            controls.target.set(0, size.y*TARGET_Y, 0);
-            controls.minDistance = baseDist*0.4;
-            controls.maxDistance = baseDist*6.0;
-            controls.enablePan = true;
-            controls.update();
-            try {
+          frameBaseToView(box);
+          try {
+            if (window.__OrbitControls && controls) {
               controls.removeEventListener('change', __onCamChange);
               controls.addEventListener('change', __onCamChange);
-            } catch {}
-          }
+            }
+          } catch {}
           try {
             camHomePos = camera.position.clone();
             camHomeTarget = (controls && controls.target) ? controls.target.clone() : new THREE.Vector3(0, size.y*(window.TV_TARGET_Y||0.54), 0);
@@ -1612,7 +1691,12 @@
         } catch {}
         while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
         try { if (baseGroup) baseGroup.updateWorldMatrix(true, true); } catch {}
-        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        const modelId = String((equip||{}).model||'');
+        const modelItem = (itemsMap && typeof itemsMap.get==='function') ? itemsMap.get(modelId) : null;
+        const modelUrl = (modelItem && modelItem.model) ? String(modelItem.model) : '';
+        const skipAccessories = (modelId==='model-basemesh') || /basemeshpr\.glb$/i.test(modelUrl);
+        if (skipAccessories) { try { console.log('[TV] skipping accessories for basemesh', modelId, modelUrl); } catch {} }
+        const slots = skipAccessories ? [] : Object.keys(equip||{}).filter(s=>s!=='model');
         for (const slot of slots){
           const rawVal = equip[slot];
           const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
@@ -2036,36 +2120,10 @@
     }
     function categoriesFrom(items){
       const cats = [];
-      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
-      const compat = (it)=>{ try{ if(!it||it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} };
       const data = Array.isArray(items) ? items : [];
-      if (data.some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
-      if (data.some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
-      const slotCounts = {};
-      data.forEach(it=>{
-        if (it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it) && !isHiddenItem(it)){
-          slotCounts[it.slot] = (slotCounts[it.slot]||0)+1;
-        }
-      });
-      const used = new Set();
-      CATEGORY_GROUPS.forEach(group=>{
-        const slots = group.slots.filter(slot=>slotCounts[slot]);
-        if (slots.length){
-          cats.push({
-            id: group.id,
-            label: group.label,
-            filter:(it)=>it.kind==='cosmetic' && slots.includes(it.slot) && compat(it) && !isHiddenItem(it)
-          });
-          slots.forEach(s=>used.add(s));
-        }
-      });
-      Object.keys(slotCounts).filter(slot=>!used.has(slot)).sort().forEach(slot=>{
-        cats.push({
-          id: slot,
-          label: friendlySlotLabel(slot),
-          filter:(it)=>it.kind==='cosmetic' && it.slot===slot && compat(it) && !isHiddenItem(it)
-        });
-      });
+      if (data.some(it=>it.kind==='cosmetic' && it.slot==='model')) {
+        cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
+      }
       return cats;
     }
     function renderCats(cats){
@@ -2086,6 +2144,7 @@
       });
       const cur = cats.find(x=>x.id===SELECTED) || cats[0];
       if (cur) catTitle.textContent = cur.label;
+      toggleAccessoryUIVisibility();
     }
     // Accessory adjust UI (TransformControls, like Anchor Tool)
     const openAdjust = document.getElementById('openAdjust');
@@ -2899,7 +2958,7 @@
     function renderItems(){
       const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
-      const cat = cats.find(c=>c.id===SELECTED) || cats[0];
+      let cat = cats.find(c=>c.id===SELECTED) || cats[0];
       const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat).filter(it=>!isHiddenItem(it));
       catalogEl.innerHTML='';
       if (!list.length){
@@ -2917,6 +2976,7 @@
       try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch (e) {}
       bindActions();
       try { document.getElementById('itemsPane').scrollTop = 0; } catch (e) {}
+      toggleAccessoryUIVisibility();
     }
 
     // Apply button: persist current preview equipment to server (top-most per slot)
@@ -3057,7 +3117,17 @@
       mv.src = modelItem.model;
       try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
       try {
-        const once = ()=>{ try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {} };
+        const once = ()=>{
+          try {
+            const root = getBaseRoot(mv);
+            let box = null;
+            if (root) {
+              box = normalizeCharacterRoot(root);
+            }
+            if (box) frameModelViewerCamera(mv, box);
+          } catch {}
+          try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {}
+        };
         mv.addEventListener('load', once, { once:true });
         mv.addEventListener('scene-graph-ready', once, { once:true });
         const poseOnce = ()=>{ try { applyPoseSelection().catch(()=>{}); } catch {} };
