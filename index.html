@@ -1,235 +1,1134 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <title>KanaReader</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style type="text/tailwindcss">
-    .field { @apply border border-gray-300 rounded px-2 py-1 bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-400; }
-    .field.ok  { @apply border-green-400 ring-green-300; }
-    .field.bad { @apply border-red-400   ring-red-300; }
-    .btn-clearer { @apply font-bold tracking-wide; }
-  </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="anime-theme.css" />
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111111">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-</head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>KanaReader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One+SC&family=M+PLUS+Rounded+1c:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111111">
+<style>
+  :root {
+    --ink: #111827;
+    --paper: #fff7ef;
+    --paper-2: #fff1d6;
+    --accent: #e11d48;
+    --accent-2: #f59e0b;
+    --mint: #10b981;
+    --sky: #38bdf8;
+    --shadow: 0 10px 0 rgba(17,24,39,0.5), 0 20px 35px rgba(0,0,0,0.18);
+    --soft: 0 6px 0 rgba(17,24,39,0.35), 0 14px 24px rgba(0,0,0,0.12);
+    --outline: 3px;
+  }
 
-<body class="anime-bg min-h-screen">
-  <main class="max-w-3xl mx-auto p-6">
-    <header class="flex items-center justify-between mb-6">
-      <h1 class="site-title accent-underline text-3xl font-bold">KanaReader</h1>
-      <div id="authStatus" class="text-sm text-gray-600">Checking...</div>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 20% 10%, rgba(245,158,11,0.18), transparent 40%),
+      radial-gradient(circle at 80% 20%, rgba(14,165,233,0.18), transparent 45%),
+      radial-gradient(#ffd1dc 1.2px, transparent 1.2px),
+      radial-gradient(#ffe7bf 1.2px, transparent 1.2px);
+    background-size: auto, auto, 24px 24px, 24px 24px;
+    background-position: 0 0, 0 0, 0 0, 12px 12px;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .logo {
+    font-family: "Bowlby One SC", sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .auth-status {
+    font-size: 12px;
+    font-weight: 700;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 4px 10px;
+    box-shadow: var(--soft);
+  }
+  .nav a {
+    margin-left: 12px;
+    text-decoration: none;
+    color: var(--ink);
+    font-weight: 700;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { border-bottom-color: var(--accent); }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.9fr);
+    gap: 24px;
+  }
+
+  .cover {
+    position: relative;
+    background: var(--paper);
+    border: var(--outline) solid var(--ink);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-radial-gradient(circle at 30% 30%, rgba(0,0,0,0.08) 0 1.4px, transparent 1.4px 6px);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .vol {
+    display: inline-block;
+    font-weight: 700;
+    padding: 6px 10px;
+    border: var(--outline) solid var(--ink);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: var(--soft);
+  }
+  .stamp {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    padding: 6px 10px;
+    border: var(--outline) solid var(--ink);
+    border-radius: 10px;
+    transform: rotate(-6deg);
+    box-shadow: var(--soft);
+    animation: bob 2.6s ease-in-out infinite;
+  }
+
+  .title {
+    margin: 18px 0 6px;
+    font-family: "Bowlby One SC", sans-serif;
+    font-size: clamp(32px, 5vw, 56px);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .subtitle {
+    margin: 0 0 16px;
+    font-size: 16px;
+    max-width: 520px;
+  }
+
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .btn {
+    border: var(--outline) solid var(--ink);
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #fff;
+    box-shadow: var(--soft);
+    transition: transform 0.12s ease;
+    text-decoration: none;
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.primary {
+    background: linear-gradient(180deg, var(--accent) 0%, #fb7185 100%);
+    color: #fff;
+  }
+  .btn.alt {
+    background: linear-gradient(180deg, var(--accent-2) 0%, #fbbf24 100%);
+  }
+
+  .episode-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  .episode {
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    padding: 8px;
+    font-size: 12px;
+    box-shadow: var(--soft);
+    text-decoration: none;
+    color: var(--ink);
+    display: grid;
+    gap: 4px;
+    transition: transform 0.12s ease;
+  }
+  .episode:hover { transform: translateY(-2px); }
+  .episode small { color: #4b5563; }
+
+  .panel {
+    background: #fff;
+    border: var(--outline) solid var(--ink);
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    display: grid;
+    gap: 12px;
+  }
+
+  .sheet {
+    background: #fff;
+    border: var(--outline) solid var(--ink);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    display: grid;
+    gap: 12px;
+  }
+  .home-strip {
+    margin-top: 24px;
+    display: grid;
+    gap: 16px;
+  }
+  .auth-grid {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .form-actions {
+    display: grid;
+    gap: 10px;
+  }
+  .footer {
+    margin-top: 32px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .muted {
+    color: #4b5563;
+    font-size: 14px;
+  }
+  .msg {
+    font-size: 12px;
+    color: #dc2626;
+  }
+  .field {
+    width: 100%;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 14px;
+    background: #fff;
+    box-shadow: inset 0 2px 0 rgba(17,24,39,0.15);
+  }
+  .field:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.35);
+  }
+  .btn.full { width: 100%; }
+
+  .art {
+    position: relative;
+    height: 220px;
+    background: linear-gradient(135deg, #fff1d6 0%, #ffe0e8 100%);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    overflow: hidden;
+    padding: 12px;
+  }
+  .art .blob {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, var(--sky), transparent 60%);
+    top: -20px;
+    left: -10px;
+    z-index: 0;
+  }
+  .art .bolt {
+    position: absolute;
+    left: 14px;
+    top: 12px;
+    font-weight: 900;
+    font-size: 28px;
+    background: var(--mint);
+    color: #fff;
+    padding: 6px 10px;
+    border: 2px solid var(--ink);
+    transform: rotate(6deg);
+    box-shadow: var(--soft);
+    z-index: 2;
+  }
+
+  .rotator-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .rotator-slide.is-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .rotator-dots {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+  .rotator-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    background: #fff;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .rotator-dot.is-active {
+    background: var(--accent);
+    opacity: 1;
+  }
+
+  .art-label {
+    font-size: 11px;
+    font-weight: 700;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 4px 8px;
+    box-shadow: var(--soft);
+  }
+
+  .chibi-wrap {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    text-align: center;
+  }
+  .chibi-img {
+    width: 120px;
+    height: 150px;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 12px rgba(0,0,0,0.2));
+    opacity: 0.2;
+    transition: opacity 0.2s ease;
+  }
+  .chibi-img.is-loaded { opacity: 1; }
+  .chibi-placeholder {
+    font-size: 12px;
+    max-width: 160px;
+  }
+
+  .kana-window {
+    width: 100%;
+    max-width: 220px;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--soft);
+    display: grid;
+    gap: 8px;
+    text-align: center;
+  }
+  .kana-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--accent-2);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 3px 8px;
+    width: fit-content;
+    justify-self: center;
+  }
+  .kana-sub {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .kana-big {
+    font-size: 44px;
+    line-height: 1;
+    font-family: "Noto Sans JP", "M PLUS Rounded 1c", sans-serif;
+  }
+  .kana-romaji {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .kana-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .kana-row.kana-row-romaji {
+    font-size: 10px;
+    letter-spacing: 0.6px;
+  }
+  .kana-cell {
+    border: 2px solid var(--ink);
+    border-radius: 8px;
+    padding: 4px 0;
+    background: #fff;
+  }
+  .kana-cell.is-active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .focus-card {
+    width: 100%;
+    max-width: 210px;
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--soft);
+    display: grid;
+    gap: 8px;
+  }
+  .focus-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--accent-2);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 3px 8px;
+    width: fit-content;
+  }
+  .focus-title { font-size: 16px; font-weight: 700; }
+  .focus-desc { font-size: 12px; color: #111827; }
+  .focus-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .focus-link {
+    text-decoration: none;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: #fff;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 2px dashed var(--ink);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .bar {
+    flex: 1;
+    height: 8px;
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .bar span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--mint);
+  }
+  .stat a { color: inherit; text-decoration: none; }
+
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 50;
+  }
+  .modal-card {
+    position: relative;
+    max-width: 520px;
+    width: 100%;
+  }
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+  }
+  .hidden { display: none !important; }
+
+  .reveal {
+    animation: rise 420ms ease both;
+    animation-delay: var(--d, 0ms);
+  }
+  @keyframes rise {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes bob {
+    0%, 100% { transform: rotate(-6deg) translateY(0); }
+    50% { transform: rotate(-6deg) translateY(-4px); }
+  }
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .episode-strip { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+    .topbar-right { width: 100%; justify-content: space-between; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .stamp { animation: none; }
+    .rotator-slide { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="logo">Kana Reader</div>
+      <div class="topbar-right">
+        <nav class="nav">
+          <a href="lesson.html?lesson=greetings-001">Lessons</a>
+          <a href="reference.html">Practice</a>
+          <a href="shop.html">Shop</a>
+        </nav>
+        <div id="authStatus" class="auth-status">Checking...</div>
+      </div>
     </header>
 
-    <section id="guestSection" class="hidden">
-      <div class="manga-bubble p-5">
-        <h2 class="text-xl font-semibold mb-2">Welcome</h2>
-        <p class="text-gray-700 mb-4">Learn Japanese with bite-sized lessons. Log in to earn coins and unlock 3D chibi characters and outfits.</p>
-
-        <div class="flex flex-wrap gap-3">
-          <a id="continueBtn" href="lesson.html?lesson=greetings-001" class="btn btn-primary btn-clearer">Continue Learning</a>
-          <a href="#login" id="openLogin" class="btn btn-ghost btn-clearer">Log In</a>
-          <a href="#signup" id="openSignup" class="btn btn-ghost btn-clearer">Create Account</a>
-          <a id="shopBtn" href="shop.html" class="btn btn-dark btn-clearer">Go to Shop</a>
+    <section class="hero">
+      <div class="cover reveal" style="--d:0ms;">
+        <div class="vol">Vol 1</div>
+        <div class="stamp">NEW</div>
+        <h1 class="title">Kana Basics</h1>
+        <p class="subtitle">
+          A clean, manga-style guide to reading kana fast. Jump in, learn the rows, and unlock your first character.
+        </p>
+        <div class="cta">
+          <a class="btn primary" id="startLessonBtn" href="lesson.html?lesson=greetings-001">Start Lesson</a>
+          <a class="btn alt" id="quickKanaBtn" href="reference.html">Quick Kana</a>
+          <a class="btn" id="heroShopBtn" href="shop.html">Shop</a>
+        </div>
+        <div class="episode-strip" id="episodeStrip">
+          <a class="episode" href="lesson.html?lesson=greetings-001">
+            <strong>Ep 01: Vowels</strong>
+            <small>8 min</small>
+          </a>
+          <a class="episode" href="lesson.html?lesson=greetings-001">
+            <strong>Ep 02: K Row</strong>
+            <small>10 min</small>
+          </a>
+          <a class="episode" href="lesson.html?lesson=greetings-001">
+            <strong>Ep 03: S Row</strong>
+            <small>9 min</small>
+          </a>
         </div>
       </div>
-    </section>
 
-    <!-- Need Auth Modal -->
-    <div id="needAuthModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-      <div class="manga-bubble p-5 max-w-md w-full relative">
-        <h3 class="text-lg font-semibold mb-2">Sign in to continue</h3>
-        <p class="text-sm text-gray-700 mb-4">Log in to earn coins, save progress, and access your chibi character.</p>
-        <div class="flex flex-wrap gap-2">
-          <button id="modalLogin" class="btn btn-primary btn-clearer">Log In</button>
-          <button id="modalSignup" class="btn btn-amber btn-clearer">Create Account</button>
-          <button id="modalGuest" class="btn btn-ghost btn-clearer">Continue as Guest</button>
-        </div>
-        <button id="modalClose" class="absolute top-2 right-2 btn btn-ghost px-2 py-1">✕</button>
-      </div>
+      <aside class="panel reveal" style="--d:120ms;">
+        <div class="art rotator" data-rotator>
+          <div class="blob"></div>
+          <div class="bolt">POW</div>
+          <div class="rotator-slide is-active" data-rotator-slide="chibi">
+            <div class="chibi-wrap">
+              <img id="heroChibi" class="chibi-img" data-fallback-src="assets/chibi/2d/skin-student/body.svg" alt="Your chibi preview" />
+              <div id="chibiPlaceholder" class="chibi-placeholder">Customize your chibi in the shop to see it here.</div>
+              <div class="art-label">3D Chibi</div>
+            </div>
+          </div>
+          <div class="rotator-slide" data-rotator-slide="kana">
+  <div class="kana-window">
+    <div class="kana-tag">Kana Window</div>
+    <div class="kana-big" id="kanaBig">&#12354;</div>
+    <div class="kana-romaji" id="kanaRomaji">A</div>
+    <div class="kana-sub" id="kanaSub">Vowels</div>
+    <div class="kana-row" id="kanaRowKana">
+      <span class="kana-cell is-active">&#12354;</span>
+      <span class="kana-cell">&#12356;</span>
+      <span class="kana-cell">&#12358;</span>
+      <span class="kana-cell">&#12360;</span>
+      <span class="kana-cell">&#12362;</span>
     </div>
+    <div class="kana-row kana-row-romaji" id="kanaRowRomaji">
+      <span class="kana-cell is-active">a</span>
+      <span class="kana-cell">i</span>
+      <span class="kana-cell">u</span>
+      <span class="kana-cell">e</span>
+      <span class="kana-cell">o</span>
+    </div>
+  </div>
+</div>
+          </div>
+          <div class="rotator-slide" data-rotator-slide="focus">
+            <div class="focus-card">
+              <div class="focus-tag">Focus Card</div>
+              <div class="focus-title" id="focusTitle">Vowel Sprint</div>
+              <div class="focus-desc" id="focusDesc">Tap, read, and repeat the sounds out loud.</div>
+              <div class="focus-meta">
+                <span id="focusMinutes">8 min</span>
+                <span id="focusEpisode">Ep 01</span>
+              </div>
+              <a id="focusLink" class="focus-link" href="lesson.html?lesson=greetings-001">Jump in</a>
+            </div>
+          </div>
+          <div class="rotator-dots" role="tablist" aria-label="Hero panel rotation">
+            <button class="rotator-dot is-active" type="button" data-rotator-dot="0" aria-label="Show chibi" aria-selected="true"></button>
+            <button class="rotator-dot" type="button" data-rotator-dot="1" aria-label="Show kana window" aria-selected="false"></button>
+            <button class="rotator-dot" type="button" data-rotator-dot="2" aria-label="Show focus card" aria-selected="false"></button>
+          </div>
+        </div>
+        <div class="stat">
+          <div>Progress</div>
+          <div class="bar"><span id="progressBar" style="width:0%;"></span></div>
+          <div id="progressPercent">0%</div>
+        </div>
+        <div class="stat">
+          <div>Streak</div>
+          <strong id="streakValue">Start today</strong>
+        </div>
+        <div class="stat">
+          <div>Next</div>
+          <a id="nextLessonLink" href="lesson.html?lesson=greetings-001"><strong id="nextLessonTitle">Hiragana Rows</strong></a>
+        </div>
+      </aside>
+    </section>
+    <section class="home-strip">
+      <div id="guestSection" class="sheet hidden">
+        <h2 class="section-title">Welcome</h2>
+        <p class="muted">Learn Japanese with bite-sized lessons. Log in to earn coins and unlock 3D chibi characters and outfits.</p>
+        <div class="cta">
+          <a id="continueBtn" href="lesson.html?lesson=greetings-001" class="btn primary">Continue Learning</a>
+          <a href="#login" id="openLogin" class="btn">Log In</a>
+          <a href="#signup" id="openSignup" class="btn">Create Account</a>
+          <a id="shopBtn" href="shop.html" class="btn">Go to Shop</a>
+        </div>
+      </div>
 
-    <section id="userSection" class="hidden">
-      <div class="manga-bubble p-5">
-        <h2 class="text-xl font-semibold mb-2">Welcome back</h2>
-        <p class="text-gray-700 mb-4">You're signed in. Visit the shop to equip your character or jump straight into a lesson.</p>
-        <div class="flex flex-wrap gap-3 items-center">
-          <a href="lesson.html?lesson=greetings-001" class="btn btn-primary btn-clearer">Continue Learning</a>
-          <a href="shop.html" class="btn btn-dark btn-clearer">Go to Shop</a>
-          <button id="logoutBtn" class="btn btn-ghost btn-clearer">Log Out</button>
+      <div id="userSection" class="sheet hidden">
+        <h2 class="section-title">Welcome back</h2>
+        <p class="muted">You're signed in. Visit the shop to equip your character or jump straight into a lesson.</p>
+        <div class="cta">
+          <a href="lesson.html?lesson=greetings-001" class="btn primary">Continue Learning</a>
+          <a href="shop.html" class="btn">Go to Shop</a>
+          <button id="logoutBtn" class="btn">Log Out</button>
         </div>
       </div>
     </section>
 
-    <section id="authForms" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div id="loginCard" class="manga-bubble p-5">
-        <h3 class="text-lg font-semibold mb-3">Log In</h3>
-        <div class="space-y-3">
-          <input id="liUser" class="field w-full" type="text" placeholder="Username" autocomplete="username" />
-          <input id="liPass" class="field w-full" type="password" placeholder="Password" autocomplete="current-password" />
-          <button id="loginBtn" class="btn btn-primary btn-clearer w-full">Log In</button>
-          <div id="loginMsg" class="text-sm text-red-600"></div>
+    <section id="authForms" class="auth-grid">
+      <div id="loginCard" class="sheet">
+        <h3 class="section-title">Log In</h3>
+        <div class="form-actions">
+          <input id="liUser" class="field" type="text" placeholder="Username" autocomplete="username" />
+          <input id="liPass" class="field" type="password" placeholder="Password" autocomplete="current-password" />
+          <button id="loginBtn" class="btn primary full">Log In</button>
+          <div id="loginMsg" class="msg"></div>
         </div>
       </div>
 
-      <div id="signupCard" class="manga-bubble p-5">
-        <h3 class="text-lg font-semibold mb-3">Create Account</h3>
-        <div class="space-y-3">
-          <input id="suUser" class="field w-full" type="text" placeholder="Username (3-32 letters/numbers/_ )" autocomplete="username" />
-          <input id="suEmail" class="field w-full" type="email" placeholder="Email (optional)" autocomplete="email" />
-        
-          <input id="suPass" class="field w-full" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" />
-          <button id="signupBtn" class="btn btn-amber btn-clearer w-full">Sign Up</button>
-          <div id="signupMsg" class="text-sm text-red-600"></div>
+      <div id="signupCard" class="sheet">
+        <h3 class="section-title">Create Account</h3>
+        <div class="form-actions">
+          <input id="suUser" class="field" type="text" placeholder="Username (3-32 letters/numbers/_ )" autocomplete="username" />
+          <input id="suEmail" class="field" type="email" placeholder="Email (optional)" autocomplete="email" />
+          <input id="suPass" class="field" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" />
+          <button id="signupBtn" class="btn alt full">Sign Up</button>
+          <div id="signupMsg" class="msg"></div>
         </div>
       </div>
     </section>
 
-    <footer class="mt-8 text-xs text-gray-500">
+    <footer class="footer">
       <p>Copyright (c) 2025 &lt;Jellcap&gt;. All rights reserved. Unauthorized copying, modification, or distribution is prohibited.</p>
     </footer>
   </main>
+  <div id="needAuthModal" class="modal hidden">
+    <div class="sheet modal-card">
+      <h3 class="section-title">Sign in to continue</h3>
+      <p class="muted">Log in to earn coins, save progress, and access your chibi character.</p>
+      <div class="cta">
+        <button id="modalLogin" class="btn primary">Log In</button>
+        <button id="modalSignup" class="btn alt">Create Account</button>
+        <button id="modalGuest" class="btn">Continue as Guest</button>
+      </div>
+      <button id="modalClose" class="btn modal-close" aria-label="Close">&times;</button>
+    </div>
+  </div>
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+    const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-<script>
-  // Tiny helper
-  const $ = (s) => document.querySelector(s);
+    async function fetchJSON(url, opts) {
+      const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' }, credentials: 'include' }, opts));
+      let data = null; try { data = await r.json(); } catch {}
+      if (!r.ok) throw new Error((data && data.error) || (data && data.details) || r.statusText || 'Request failed');
+      return data;
+    }
 
-  async function fetchJSON(url, opts) {
-    const r = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' }, credentials: 'include' }, opts));
-    let data = null; try { data = await r.json(); } catch {}
-    if (!r.ok) throw new Error((data && data.error) || (data && data.details) || r.statusText || 'Request failed');
-    return data;
-  }
+    async function fetchLocalJSON(url) {
+      try {
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) return null;
+        return await r.json();
+      } catch {
+        return null;
+      }
+    }
 
-  async function refreshAuth() {
-    try {
-      const me = await fetchJSON('/api/me', { cache: 'no-store' });
-      const user = me && me.user;
-      if (user && user.username) {
-        $('#authStatus').textContent = `Signed in as ${user.username}`;
-        $('#userSection').classList.remove('hidden');
-        $('#guestSection').classList.add('hidden');
-        __isAuthed = true;
-        try { document.getElementById('authForms')?.classList.add('hidden'); } catch {}
-        try { document.getElementById('needAuthModal')?.classList.add('hidden'); document.getElementById('needAuthModal')?.classList.remove('flex'); } catch {}
-      } else {
+    function safeGet(key) {
+      try { return localStorage.getItem(key); } catch { return null; }
+    }
+
+    function buildLessonHref(id) {
+      return `lesson.html?lesson=${encodeURIComponent(id)}`;
+    }
+
+    function parseLessonId(href) {
+      if (!href) return null;
+      try {
+        const u = new URL(href, window.location.href);
+        return u.searchParams.get('lesson');
+      } catch {
+        return null;
+      }
+    }
+
+    function loadChibiPreview() {
+      const img = $('#heroChibi');
+      const placeholder = $('#chibiPlaceholder');
+      if (!img || !placeholder) return;
+      const data = safeGet('equippedPreviewPNG');
+      const fallback = img.getAttribute('data-fallback-src');
+      if (data && data.startsWith('data:image')) {
+        img.src = data;
+        img.classList.add('is-loaded');
+        placeholder.hidden = true;
+        return;
+      }
+      if (fallback) {
+        img.src = fallback;
+        img.classList.add('is-loaded');
+        placeholder.hidden = false;
+        return;
+      }
+      img.removeAttribute('src');
+      img.classList.remove('is-loaded');
+      placeholder.hidden = false;
+    }
+
+    function initRotator() {
+      const rotator = document.querySelector('[data-rotator]');
+      if (!rotator) return;
+      const slides = $$('[data-rotator-slide]', rotator);
+      const dots = $$('[data-rotator-dot]', rotator);
+      if (!slides.length) return;
+      let index = Math.max(0, slides.findIndex((s) => s.classList.contains('is-active')));
+      let timer = null;
+
+      const stopAuto = () => {
+        if (timer) {
+          window.clearInterval(timer);
+          timer = null;
+        }
+      };
+
+      const setActive = (next, userAction) => {
+        index = (next + slides.length) % slides.length;
+        slides.forEach((slide, i) => slide.classList.toggle('is-active', i === index));
+        dots.forEach((dot, i) => {
+          dot.classList.toggle('is-active', i === index);
+          dot.setAttribute('aria-selected', i === index ? 'true' : 'false');
+        });
+        if (userAction) {
+          stopAuto();
+          startAuto();
+        }
+      };
+
+      const startAuto = () => {
+        if (reduceMotion || slides.length < 2) return;
+        stopAuto();
+        timer = window.setInterval(() => setActive(index + 1), 5200);
+      };
+
+      dots.forEach((dot, i) => {
+        dot.addEventListener('click', () => setActive(i, true));
+      });
+
+      setActive(index || 0);
+      startAuto();
+    }
+
+    function updateProgressUI(pct) {
+      const bar = $('#progressBar');
+      const pctEl = $('#progressPercent');
+      const safePct = Math.max(0, Math.min(100, Math.round(pct)));
+      if (bar) bar.style.width = `${safePct}%`;
+      if (pctEl) pctEl.textContent = `${safePct}%`;
+    }
+
+    function calcStreak(progress) {
+      if (!progress) return 0;
+      const timestamps = Object.values(progress)
+        .map((p) => (p && (p.updatedAt || p.lastCompletedAt || (p.stats && p.stats.lastSeenAt))) || null)
+        .filter((v) => typeof v === 'number' && isFinite(v));
+      if (!timestamps.length) return 0;
+      const daySet = new Set(
+        timestamps.map((ts) => {
+          const d = new Date(ts);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        })
+      );
+      let streak = 0;
+      const today = new Date();
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!daySet.has(key)) break;
+        streak += 1;
+      }
+      return streak;
+    }
+
+    function updateStreakUI(days) {
+      const streakEl = $('#streakValue');
+      if (!streakEl) return;
+      if (!days || days <= 0) {
+        streakEl.textContent = 'Start today';
+        return;
+      }
+      streakEl.textContent = `${days} day${days === 1 ? '' : 's'}`;
+    }
+
+    function renderEpisodeStrip(lessons, startIndex) {
+      const strip = $('#episodeStrip');
+      if (!strip || !Array.isArray(lessons) || !lessons.length) return;
+      strip.innerHTML = '';
+      const count = Math.min(3, lessons.length);
+      for (let i = 0; i < count; i++) {
+        const lesson = lessons[(startIndex + i) % lessons.length];
+        const ep = document.createElement('a');
+        ep.className = 'episode';
+        ep.href = buildLessonHref(lesson.id);
+        const epNum = String(((startIndex + i) % lessons.length) + 1).padStart(2, '0');
+        const title = lesson.title || 'Lesson';
+        const minutes = lesson.est_minutes ? `${lesson.est_minutes} min` : 'Quick';
+        const strong = document.createElement('strong');
+        strong.textContent = `Ep ${epNum}: ${title}`;
+        const small = document.createElement('small');
+        small.textContent = minutes;
+        ep.append(strong, small);
+        strip.appendChild(ep);
+      }
+    }
+
+    function updateFocusCard(lesson, episodeIndex) {
+      if (!lesson) return;
+      const focusTitle = $('#focusTitle');
+      const focusDesc = $('#focusDesc');
+      const focusMinutes = $('#focusMinutes');
+      const focusEpisode = $('#focusEpisode');
+      const focusLink = $('#focusLink');
+      if (focusTitle) focusTitle.textContent = lesson.title || 'Next up';
+      if (focusDesc) {
+        const sentence = lesson.sentences && lesson.sentences[0];
+        const fallback = 'Tap, read, and repeat the sounds out loud.';
+        focusDesc.textContent = sentence && sentence.en ? `Practice: ${sentence.en}` : fallback;
+      }
+      if (focusMinutes) focusMinutes.textContent = lesson.est_minutes ? `${lesson.est_minutes} min` : 'Quick';
+      if (focusEpisode) focusEpisode.textContent = `Ep ${String(episodeIndex + 1).padStart(2, '0')}`;
+      if (focusLink) focusLink.href = buildLessonHref(lesson.id);
+    }
+
+    function updateNextLesson(lesson) {
+      const link = $('#nextLessonLink');
+      const title = $('#nextLessonTitle');
+      if (!lesson) return;
+      if (title) title.textContent = lesson.title || 'Next lesson';
+      if (link) link.href = buildLessonHref(lesson.id);
+    }
+
+    function updateKanaWindow(deck, focusIndex) {
+      if (!deck) return;
+      const kanaBig = $('#kanaBig');
+      const kanaRomaji = $('#kanaRomaji');
+      const kanaSub = $('#kanaSub');
+      const kanaRow = $('#kanaRowKana');
+      const romajiRow = $('#kanaRowRomaji');
+      if (!kanaBig || !kanaRomaji || !kanaRow || !romajiRow) return;
+      const kana = Array.isArray(deck.kana) ? deck.kana : [];
+      const romaji = Array.isArray(deck.romaji) ? deck.romaji : [];
+      const safeIndex = kana.length ? ((focusIndex || 0) % kana.length + kana.length) % kana.length : 0;
+      kanaBig.textContent = kana[safeIndex] || '';
+      kanaRomaji.textContent = romaji[safeIndex] || '';
+      if (kanaSub) kanaSub.textContent = deck.label || 'Kana';
+      kanaRow.innerHTML = '';
+      romajiRow.innerHTML = '';
+      for (let i = 0; i < kana.length; i++) {
+        const cell = document.createElement('span');
+        cell.className = `kana-cell${i === safeIndex ? ' is-active' : ''}`;
+        cell.textContent = kana[i];
+        kanaRow.appendChild(cell);
+        const roma = document.createElement('span');
+        roma.className = `kana-cell${i === safeIndex ? ' is-active' : ''}`;
+        roma.textContent = romaji[i] || '';
+        romajiRow.appendChild(roma);
+      }
+    }
+
+    async function initHomePanels() {
+      loadChibiPreview();
+      initRotator();
+
+      const lastLessonHref = safeGet('lastLessonHref');
+      const lastLessonId = parseLessonId(lastLessonHref);
+      const startBtn = $('#startLessonBtn');
+      const continueBtn = $('#continueBtn');
+      if (startBtn && lastLessonHref) startBtn.href = lastLessonHref;
+      if (continueBtn && lastLessonHref) continueBtn.href = lastLessonHref;
+
+      const stories = await fetchLocalJSON('stories.json');
+      const lessons = stories && Array.isArray(stories.lessons) ? stories.lessons : [];
+      const lastIndex = lastLessonId ? lessons.findIndex((l) => l.id === lastLessonId) : -1;
+      const baseIndex = lastIndex >= 0 ? lastIndex : 0;
+
+      if (lessons.length) {
+        if (!lastLessonHref) {
+          const firstHref = buildLessonHref(lessons[0].id);
+          if (startBtn) startBtn.href = firstHref;
+          if (continueBtn) continueBtn.href = firstHref;
+        }
+        const nextIndex = (baseIndex + 1) % lessons.length;
+        const nextLesson = lessons[nextIndex];
+        updateNextLesson(nextLesson);
+        updateFocusCard(nextLesson, nextIndex);
+        renderEpisodeStrip(lessons, baseIndex);
+      }
+
+      const kanaDeck = [
+  { label: 'Vowels', kana: ['\u3042','\u3044','\u3046','\u3048','\u304A'], romaji: ['a','i','u','e','o'] },
+  { label: 'K Row', kana: ['\u304B','\u304D','\u304F','\u3051','\u3053'], romaji: ['ka','ki','ku','ke','ko'] },
+  { label: 'S Row', kana: ['\u3055','\u3057','\u3059','\u305B','\u305D'], romaji: ['sa','shi','su','se','so'] }
+];
+      const deck = kanaDeck[baseIndex % kanaDeck.length];
+      updateKanaWindow(deck, baseIndex % deck.kana.length);
+
+      try {
+        const progressData = await fetchJSON('/api/progress', { cache: 'no-store' });
+        if (progressData && progressData.progress) {
+          const completed = Object.keys(progressData.progress).length;
+          const pct = lessons.length ? (completed / lessons.length) * 100 : 0;
+          updateProgressUI(pct);
+          updateStreakUI(calcStreak(progressData.progress));
+        }
+      } catch {}
+    }
+
+    async function refreshAuth() {
+      try {
+        const me = await fetchJSON('/api/me', { cache: 'no-store' });
+        const user = me && me.user;
+        if (user && user.username) {
+          $('#authStatus').textContent = `Signed in as ${user.username}`;
+          $('#userSection').classList.remove('hidden');
+          $('#guestSection').classList.add('hidden');
+          __isAuthed = true;
+          document.getElementById('authForms')?.classList.add('hidden');
+          document.getElementById('needAuthModal')?.classList.add('hidden');
+        } else {
+          $('#authStatus').textContent = 'Not signed in';
+          $('#userSection').classList.add('hidden');
+          $('#guestSection').classList.remove('hidden');
+          __isAuthed = false;
+          document.getElementById('authForms')?.classList.remove('hidden');
+        }
+      } catch (e) {
         $('#authStatus').textContent = 'Not signed in';
         $('#userSection').classList.add('hidden');
         $('#guestSection').classList.remove('hidden');
         __isAuthed = false;
-        try { document.getElementById('authForms')?.classList.remove('hidden'); } catch {}
+        document.getElementById('authForms')?.classList.remove('hidden');
       }
-    } catch (e) {
-      $('#authStatus').textContent = 'Not signed in';
-      $('#userSection').classList.add('hidden');
-      $('#guestSection').classList.remove('hidden');
-      __isAuthed = false;
-      try { document.getElementById('authForms')?.classList.remove('hidden'); } catch {}
     }
-  }
 
-  let __isAuthed = false; let __pendingNav = null;
+    let __isAuthed = false;
+    let __pendingNav = null;
 
-  // Wire buttons
-  window.addEventListener('DOMContentLoaded', () => {
-    refreshAuth();
+    window.addEventListener('DOMContentLoaded', () => {
+      refreshAuth();
+      initHomePanels();
 
-    const openLogin = $('#openLogin');
-    const openSignup = $('#openSignup');
-    if (openLogin) openLogin.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('liUser')?.focus(); window.scrollTo({ top: document.getElementById('loginCard').offsetTop - 16, behavior: 'smooth' }); });
-    if (openSignup) openSignup.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('suUser')?.focus(); window.scrollTo({ top: document.getElementById('signupCard').offsetTop - 16, behavior: 'smooth' }); });
+      const openLogin = $('#openLogin');
+      const openSignup = $('#openSignup');
+      if (openLogin) openLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('liUser')?.focus();
+        document.getElementById('loginCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      if (openSignup) openSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('suUser')?.focus();
+        document.getElementById('signupCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
 
-    const loginBtn = $('#loginBtn');
-    if (loginBtn) loginBtn.addEventListener('click', async () => {
-      const username = String($('#liUser').value || '').trim();
-      const password = String($('#liPass').value || '');
-      $('#loginMsg').textContent = '';
-      if (!username || !password) { $('#loginMsg').textContent = 'Enter your username and password.'; return; }
-      loginBtn.disabled = true; loginBtn.textContent = 'Signing in...';
-      try {
-        await fetchJSON('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-        await refreshAuth();
-        if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; }
-      } catch (e) {
-        $('#loginMsg').textContent = e.message || 'Login failed';
-      } finally {
-        loginBtn.disabled = false; loginBtn.textContent = 'Log In';
-      }
-    });
-
-    // Enter to submit
-    ;['liUser','liPass'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('keyup', (e)=>{ if (e.key==='Enter') loginBtn?.click(); }); });
-
-    const signupBtn = $('#signupBtn');
-    if (signupBtn) signupBtn.addEventListener('click', async () => {
-      const username = String($('#suUser').value || '').trim();
-      const email = String($('#suEmail').value || '').trim();
-      const password = String($('#suPass').value || '');
-      $('#signupMsg').textContent = '';
-      if (!username || !password) { $('#signupMsg').textContent = 'Username and password are required.'; return; }
-      signupBtn.disabled = true; signupBtn.textContent = 'Creating...';
-      try {
-        await fetchJSON('/api/auth/signup', { method: 'POST', body: JSON.stringify({ username, password, email }) });
-        await refreshAuth();
-        if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; }
-      } catch (e) {
-        $('#signupMsg').textContent = e.message || 'Signup failed';
-      } finally {
-        signupBtn.disabled = false; signupBtn.textContent = 'Sign Up';
-      }
-    });
-
-    const logoutBtn = $('#logoutBtn');
-    if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-      try { await fetchJSON('/api/auth/logout', { method: 'POST' }); } catch {}
-      await refreshAuth();
-    });
-
-    // Need-auth modal wiring
-    const modal = $('#needAuthModal');
-    const modalOpen = ()=>{ try { modal.classList.remove('hidden'); modal.classList.add('flex'); } catch {} };
-    const modalClose = ()=>{ try { modal.classList.add('hidden'); modal.classList.remove('flex'); } catch {} };
-    $('#modalClose')?.addEventListener('click', modalClose);
-    $('#modalLogin')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); document.getElementById('liUser')?.focus(); window.scrollTo({ top: document.getElementById('loginCard').offsetTop - 16, behavior: 'smooth' }); });
-    $('#modalSignup')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); document.getElementById('suUser')?.focus(); window.scrollTo({ top: document.getElementById('signupCard').offsetTop - 16, behavior: 'smooth' }); });
-    $('#modalGuest')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; } });
-
-    function guardNav(id){ const el = document.getElementById(id); if (!el) return; el.addEventListener('click', (e)=>{ if (__isAuthed) return; e.preventDefault(); __pendingNav = el.getAttribute('href'); modalOpen(); }); }
-    guardNav('continueBtn');
-    guardNav('shopBtn');
-  });
-
-  // Service worker for offline shell with auto-update/reload
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=6').then((reg)=>{
-        const ping = ()=> reg.update().catch(()=>{});
-        document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') ping(); });
-        navigator.serviceWorker.addEventListener('controllerchange', ()=>{ try{ location.reload(); }catch{} });
+      const loginBtn = $('#loginBtn');
+      if (loginBtn) loginBtn.addEventListener('click', async () => {
+        const username = String($('#liUser').value || '').trim();
+        const password = String($('#liPass').value || '');
+        $('#loginMsg').textContent = '';
+        if (!username || !password) { $('#loginMsg').textContent = 'Enter your username and password.'; return; }
+        loginBtn.disabled = true; loginBtn.textContent = 'Signing in...';
         try {
-          reg.addEventListener('updatefound', ()=>{
-            const worker = reg.installing;
-            worker?.addEventListener('statechange', ()=>{
-              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-                try { location.reload(); } catch {}
-              }
-            });
-          });
-        } catch {}
-      }).catch(console.error);
+          await fetchJSON('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+          await refreshAuth();
+          if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; }
+        } catch (e) {
+          $('#loginMsg').textContent = e.message || 'Login failed';
+        } finally {
+          loginBtn.disabled = false; loginBtn.textContent = 'Log In';
+        }
+      });
+
+      ['liUser','liPass'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('keyup', (e)=>{ if (e.key === 'Enter') loginBtn?.click(); });
+      });
+
+      const signupBtn = $('#signupBtn');
+      if (signupBtn) signupBtn.addEventListener('click', async () => {
+        const username = String($('#suUser').value || '').trim();
+        const email = String($('#suEmail').value || '').trim();
+        const password = String($('#suPass').value || '');
+        $('#signupMsg').textContent = '';
+        if (!username || !password) { $('#signupMsg').textContent = 'Username and password are required.'; return; }
+        signupBtn.disabled = true; signupBtn.textContent = 'Creating...';
+        try {
+          await fetchJSON('/api/auth/signup', { method: 'POST', body: JSON.stringify({ username, password, email }) });
+          await refreshAuth();
+          if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; }
+        } catch (e) {
+          $('#signupMsg').textContent = e.message || 'Signup failed';
+        } finally {
+          signupBtn.disabled = false; signupBtn.textContent = 'Sign Up';
+        }
+      });
+
+      const logoutBtn = $('#logoutBtn');
+      if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+        try { await fetchJSON('/api/auth/logout', { method: 'POST' }); } catch {}
+        await refreshAuth();
+      });
+
+      const modal = $('#needAuthModal');
+      const modalOpen = () => { modal?.classList.remove('hidden'); };
+      const modalClose = () => { modal?.classList.add('hidden'); };
+      $('#modalClose')?.addEventListener('click', modalClose);
+      $('#modalLogin')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); document.getElementById('liUser')?.focus(); document.getElementById('loginCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+      $('#modalSignup')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); document.getElementById('suUser')?.focus(); document.getElementById('signupCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+      $('#modalGuest')?.addEventListener('click', (e)=>{ e.preventDefault(); modalClose(); if (__pendingNav) { const href = __pendingNav; __pendingNav = null; location.href = href; } });
+
+      function guardNav(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('click', (e)=> {
+          if (__isAuthed) return;
+          e.preventDefault();
+          __pendingNav = el.getAttribute('href');
+          modalOpen();
+        });
+      }
+      ['continueBtn','shopBtn','startLessonBtn','heroShopBtn'].forEach(guardNav);
     });
-  }
-</script>
 
-
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js?v=6').then((reg)=>{
+          const ping = ()=> reg.update().catch(()=>{});
+          document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible') ping(); });
+          navigator.serviceWorker.addEventListener('controllerchange', ()=>{ try { location.reload(); } catch {} });
+          try {
+            reg.addEventListener('updatefound', ()=>{
+              const worker = reg.installing;
+              worker?.addEventListener('statechange', ()=>{
+                if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                  try { location.reload(); } catch {}
+                }
+              });
+            });
+          } catch {}
+        }).catch(console.error);
+      });
+    }
+  </script>
 </body>
-
 </html>
+
+

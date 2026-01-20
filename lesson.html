@@ -318,9 +318,14 @@
             <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;display:none;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:200px;height:260px;z-index:50;opacity:0;transition:opacity 150ms ease-out;"></div>
             <script>
-              (async function(){
-                try {
-                  const wrap = document.getElementById('lvWrap'); const mv = document.getElementById('mvLesson');
+              (function(){
+                const AIO_STORAGE_KEY = 'aioStateAllInOne';
+                async function renderLessonAvatar(){
+                  const token = Date.now() + Math.random();
+                  try { window.__lessonAvatarToken = token; } catch (e) {}
+                  try { if (window.__lessonAvatarRaf) cancelAnimationFrame(window.__lessonAvatarRaf); } catch (e) {}
+                  try {
+                    const wrap = document.getElementById('lvWrap'); const mv = document.getElementById('mvLesson');
                   if (!wrap) return; if (mv) mv.style.display='none';
                   // Wait for module scripts to define THREE + GLTFLoader
                   const waitReady = async(ms=5000)=>{ const t0=Date.now(); await new Promise(r=>{ (function poll(){ if (window.__THREE&&window.__GLTFLoader){ return r(); } if (Date.now()-t0>ms) return r(); try{ requestAnimationFrame(poll); }catch (e) { setTimeout(poll,16);} })(); }); };
@@ -338,7 +343,13 @@
                   renderer.setSize(w, h, false); renderer.setPixelRatio(1);
                   wrap.innerHTML=''; wrap.appendChild(renderer.domElement);
                   let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch (e) {}
-                  function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch (e) {} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                  function tick(){
+                    if (window.__lessonAvatarToken !== token) return;
+                    try{ if(controls) controls.update(); renderer.render(scene,camera);}catch (e) {}
+                    if (window.__lessonAvatarToken !== token) return;
+                    window.__lessonAvatarRaf = requestAnimationFrame(tick);
+                  }
+                  window.__lessonAvatarRaf = requestAnimationFrame(tick);
                   const loader = new GLTFLoader();
                   function getSavedEyeHex(){ try { const v=String(localStorage.getItem('eyeColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
                   function getSavedHatHex(){ try { const v=String(localStorage.getItem('hatColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
@@ -461,6 +472,250 @@
                       return changed;
                     } catch(e) { return false; }
                   }
+                  const AIO_ITEMS = [
+                    { key:'core_body', label:'Body', nodes:['character_low','tooth'], lockOn:true, defaultOn:true },
+                    { key:'armor_arm', label:'Armor Arm', nodes:['amorarm'] },
+                    { key:'armor_plastron', label:'Armor Plastron', nodes:['amorplastron'] },
+                    { key:'armor_thighs', label:'Armor Thighs', nodes:['armorceinturethighs','armorthigh'] },
+                    { key:'armor_helmet', label:'Armor Helmet', nodes:['armorhelmet'] },
+                    { key:'armor_knees', label:'Armor Knees', nodes:['armorknees'] },
+                    { key:'armor_legs', label:'Armor Legs', nodes:['armorlegs'] },
+                    { key:'armor_shoe', label:'Armor Shoe', nodes:['armorshoe'] },
+                    { key:'armor_skirt', label:'Armor Skirt', nodes:['armorskirt'] },
+                    { key:'bag', label:'Bag', nodes:['bag'] },
+                    { key:'belt', label:'Belt', nodes:['ceinture'] },
+                    { key:'school_shirt', label:'School Shirt', nodes:['shirt'] },
+                    { key:'school_skirt', label:'School Skirt', nodes:['skirt'] },
+                    { key:'school_shoe', label:'School Shoe', nodes:['shoe'] },
+                    { key:'third_pants', label:'Third Suit Pants', nodes:['pants'] },
+                    { key:'third_chemise', label:'Third Suit Chemise', nodes:['chemise'] },
+                    { key:'third_bottes', label:'Third Suit Boots', nodes:['bottes'] },
+                    { key:'third_hat', label:'Hat', nodes:['hat'] },
+                    { key:'green_outfit', label:'Green Outfit', nodes:['greenoutfit','greenoutfitbelt','greenoutfitneckless','bottesgreen'] },
+                    { key:'ninja_suit', label:'Ninja Suit', nodes:['ninjassuit','ninjassuitmask','ninjassuitshoe','ninjassuitthigh','ninjasuitshort'] },
+                    { key:'hair_one', label:'Hair One', nodes:['hairone'], defaultOn:true },
+                    { key:'hair_T', label:'Hair T', nodes:['hairT'] },
+                    { key:'hair_tail', label:'Hair Tail', nodes:['hairtail'] },
+                    { key:'hair_tail_knight', label:'Hair Tail Knight', nodes:['hairtailknight'] },
+                    { key:'hair_variant', label:'Hair Variant', nodes:['hairvariant'] },
+                    { key:'hair_variant_alt', label:'Hair Variant 2', nodes:['hairvariant.001'] },
+                    { key:'face', label:'Face', nodes:['eyes','eyelashes'], defaultOn:true }
+                  ];
+                  const AIO_HAIR_KEYS = AIO_ITEMS.filter(item=>item.key.startsWith('hair_')).map(item=>item.key);
+                  const AIO_NODE_MAP = new Map();
+                  AIO_ITEMS.forEach(item=>{
+                    (item.nodes||[]).forEach(nodeName=>{
+                      AIO_NODE_MAP.set(String(nodeName).toLowerCase(), item);
+                    });
+                  });
+                  const AIO_MATERIAL_HINTS = {
+                    hair_variant_alt: ['hairtvariant']
+                  };
+                  const AIO_NODE_NAMES = Array.from(AIO_NODE_MAP.keys()).sort((a,b)=>b.length-a.length);
+                  function loadAioState(){
+                    try {
+                      const raw = localStorage.getItem(AIO_STORAGE_KEY);
+                      if (!raw) return null;
+                      const parsed = JSON.parse(raw);
+                      return (parsed && typeof parsed === 'object') ? parsed : null;
+                    } catch { return null; }
+                  }
+                  function mergeAioState(state){
+                    const base = buildAioDefaultState();
+                    if (!state || typeof state !== 'object') return base;
+                    const out = Object.assign({}, base, state);
+                    if (state.__lastHairKey) out.__lastHairKey = state.__lastHairKey;
+                    return out;
+                  }
+                  function matchesNodeName(actual, target){
+                    try {
+                      if (!actual || !target) return false;
+                      if (actual === target) return true;
+                      if (!actual.startsWith(target)) return false;
+                      const next = actual.charAt(target.length);
+                      return next === '.' || next === '_' || next === '-';
+                    } catch { return false; }
+                  }
+                  function aioHairOff(state){
+                    try { return AIO_HAIR_KEYS.length > 0 && AIO_HAIR_KEYS.every(k=>!state[k]); } catch { return false; }
+                  }
+                  function collectAioHairMaterials(root){
+                    try {
+                      if (!root) return new Set();
+                      if (root.userData && root.userData.__aioHairMaterials instanceof Set) return root.userData.__aioHairMaterials;
+                      const out = new Set();
+                      root.traverse?.(o=>{
+                        try {
+                          if (!o || !o.material) return;
+                          const item = findAioItemForObject(o);
+                          const isHairNode = !!(item && AIO_HAIR_KEYS.includes(item.key));
+                          const mats = Array.isArray(o.material) ? o.material : [o.material];
+                          mats.forEach(m=>{
+                            if (!m) return;
+                            const nm = String(m.name||'').toLowerCase();
+                            if (isHairNode || (nm && nm.includes('hair'))) out.add(m);
+                          });
+                        } catch {}
+                      });
+                      root.userData = root.userData || {};
+                      root.userData.__aioHairMaterials = out;
+                      return out;
+                    } catch { return new Set(); }
+                  }
+                  function setHairMaterialHidden(mat, hide){
+                    try {
+                      if (!mat) return;
+                      mat.userData = mat.userData || {};
+                      if (hide) {
+                        if (!mat.userData.__aioHairRestore) {
+                          mat.userData.__aioHairRestore = {
+                            opacity: (typeof mat.opacity === 'number') ? mat.opacity : 1,
+                            transparent: !!mat.transparent,
+                            depthWrite: (typeof mat.depthWrite === 'boolean') ? mat.depthWrite : true
+                          };
+                        }
+                        mat.transparent = true;
+                        mat.opacity = 0;
+                        if (typeof mat.depthWrite === 'boolean') mat.depthWrite = false;
+                      } else {
+                        const prev = mat.userData.__aioHairRestore;
+                        if (prev) {
+                          mat.opacity = prev.opacity;
+                          mat.transparent = prev.transparent;
+                          mat.depthWrite = prev.depthWrite;
+                        } else {
+                          mat.opacity = 1;
+                          mat.transparent = false;
+                          if (typeof mat.depthWrite === 'boolean') mat.depthWrite = true;
+                        }
+                      }
+                      mat.needsUpdate = true;
+                    } catch {}
+                  }
+                  function applyAioHairMaterialMask(root, state){
+                    try {
+                      if (!root) return;
+                      const hide = aioHairOff(state);
+                      const mats = collectAioHairMaterials(root);
+                      mats.forEach(m=>setHairMaterialHidden(m, hide));
+                    } catch {}
+                  }
+                  function setNodeVisibility(root, nodeName, visible){
+                    try {
+                      const target = String(nodeName||'').toLowerCase();
+                      if (!root || !target) return;
+                      root.traverse?.(o=>{
+                        try {
+                          const nm = String(o.name||'').toLowerCase();
+                          if (matchesNodeName(nm, target)) o.visible = visible;
+                        } catch {}
+                      });
+                    } catch {}
+                  }
+                  function findAioItemForObject(obj){
+                    let cur = obj;
+                    while (cur) {
+                      const nm = String(cur.name||'').toLowerCase();
+                      if (nm && AIO_NODE_MAP.has(nm)) return AIO_NODE_MAP.get(nm);
+                      if (nm) {
+                        for (const key of AIO_NODE_NAMES){
+                          if (matchesNodeName(nm, key)) return AIO_NODE_MAP.get(key);
+                        }
+                      }
+                      cur = cur.parent || null;
+                    }
+                    return null;
+                  }
+                  function buildAioDefaultState(){
+                    const st = {};
+                    AIO_ITEMS.forEach(item=>{
+                      st[item.key] = !!item.defaultOn || !!item.lockOn;
+                    });
+                    if (AIO_HAIR_KEYS.length) {
+                      const anyHair = AIO_HAIR_KEYS.some(key=>st[key]);
+                      if (!anyHair) st[AIO_HAIR_KEYS[0]] = true;
+                    }
+                    return st;
+                  }
+                  function normalizeAioHairState(state){
+                    try {
+                      if (!state || !AIO_HAIR_KEYS.length) return null;
+                      const active = AIO_HAIR_KEYS.filter(k=>!!state[k]);
+                      if (active.length <= 1) return active[0] || null;
+                      const keep = (state.__lastHairKey && active.includes(state.__lastHairKey)) ? state.__lastHairKey : active[0];
+                      active.forEach(k=>{ if (k !== keep) state[k] = false; });
+                      return keep;
+                    } catch { return null; }
+                  }
+                  function enforceAioHairNodesVisibility(root, state){
+                    try {
+                      if (!root) return;
+                      const activeHairKeys = AIO_HAIR_KEYS.filter(k=>!!state[k]);
+                      const activeNodes = new Set();
+                      AIO_ITEMS.forEach(item=>{
+                        if (AIO_HAIR_KEYS.includes(item.key) && activeHairKeys.includes(item.key)) {
+                          (item.nodes||[]).forEach(nm=>activeNodes.add(String(nm).toLowerCase()));
+                        }
+                      });
+                      root.traverse?.(o=>{
+                        const nm = String(o?.name||'').toLowerCase();
+                        if (!nm || !nm.startsWith('hair')) return;
+                        if (!activeNodes.size) { o.visible = false; return; }
+                        for (const key of activeNodes){
+                          if (matchesNodeName(nm, key)) { o.visible = true; return; }
+                        }
+                        const item = findAioItemForObject(o);
+                        if (item && AIO_HAIR_KEYS.includes(item.key)) {
+                          o.visible = activeHairKeys.includes(item.key);
+                        } else {
+                          o.visible = false;
+                        }
+                      });
+                    } catch {}
+                  }
+                  function applyAioMaterialVisibilityHints(root, state){
+                    try {
+                      if (!root) return;
+                      const hints = AIO_MATERIAL_HINTS || {};
+                      const keys = Object.keys(hints);
+                      if (!keys.length) return;
+                      root.traverse?.(o=>{
+                        try {
+                          if (!o || !o.isMesh || !o.material) return;
+                          const mats = Array.isArray(o.material) ? o.material : [o.material];
+                          for (const key of keys){
+                            const list = hints[key] || [];
+                            if (!list.length) continue;
+                            const on = !!state[key];
+                            const hit = mats.some(m=>{
+                              const nm = String(m?.name||'').toLowerCase();
+                              return list.some(h=>nm.includes(String(h||'').toLowerCase()));
+                            });
+                            if (hit) { o.visible = on; return; }
+                          }
+                        } catch {}
+                      });
+                    } catch {}
+                  }
+                  function applyAllInOneVisibility(root, state){
+                    if (!root) return;
+                    normalizeAioHairState(state);
+                    AIO_ITEMS.forEach(item=>{
+                      const on = item.lockOn ? true : !!state[item.key];
+                      (item.nodes||[]).forEach(nm=>setNodeVisibility(root, nm, on));
+                    });
+                    root.traverse(o=>{
+                      try {
+                        const item = findAioItemForObject(o);
+                        if (!item) return;
+                        if (item.lockOn) { o.visible = true; return; }
+                        o.visible = !!state[item.key];
+                      } catch {}
+                    });
+                    enforceAioHairNodesVisibility(root, state);
+                    applyAioHairMaterialMask(root, state);
+                    applyAioMaterialVisibilityHints(root, state);
+                  }
                   const [wRes, catRes] = await Promise.all([
                     fetch('/api/wallet', { cache:'no-store' }).then(r=>r.json()).catch(()=>({})),
                     fetch('/api/shop/catalog').then(r=>r.json()).catch(()=>({ items:[] }))
@@ -536,6 +791,11 @@
                     } catch (e) {} });
                   } catch (e) {}
                   const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base); try { window.__LessonBaseRoot = base; } catch(e){}
+                  const isAllInOne = /allinonepr\.glb$/i.test(String(modelItem.model||''));
+                  if (isAllInOne) {
+                    const aioState = mergeAioState(loadAioState());
+                    applyAllInOneVisibility(base, aioState);
+                  }
                   try {
                     window.addEventListener('storage', function(e){
                       try {
@@ -634,8 +894,26 @@
                     }
                   } catch (e) {}
                   try { (document.getElementById('lvWrap')||{}).style.opacity='1'; } catch (e) {}
+                  try { window.__lessonAvatarSnapshot = safeSnapshot(); } catch (e) {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
-              })();
+              }
+              function safeSnapshot(){
+                try { return String(localStorage.getItem('equippedSnapshot') || ''); } catch (e) { return ''; }
+              }
+              function refreshLessonAvatar(force){
+                const snap = safeSnapshot();
+                if (!force && snap === window.__lessonAvatarSnapshot) return;
+                window.__lessonAvatarSnapshot = snap;
+                renderLessonAvatar();
+              }
+              window.__renderLessonAvatar = renderLessonAvatar;
+              renderLessonAvatar();
+              window.addEventListener('pageshow', (e) => { if (e.persisted) refreshLessonAvatar(true); });
+              window.addEventListener('storage', (e) => {
+                if (e.key === 'equippedSnapshot') refreshLessonAvatar(false);
+                if (e.key === AIO_STORAGE_KEY) refreshLessonAvatar(true);
+              });
+            })();
             </script>
             <div id="en-text" class="text-gray-700 mt-2"></div>
             <div id="full-romaji" class="text-gray-500 mt-1"></div>
@@ -700,225 +978,15 @@
         <div class="absolute inset-0 bg-black/50"></div>
 
         <!-- Dialog -->
-        <div role="dialog" arixmodal="true" arixlabelledby="kanaTitle"
+        <div role="dialog" aria-modal="true" aria-labelledby="kanaTitle"
             class="relative mx-auto my-8 w-[min(95vw,1000px)] max-h-[85vh] overflow-hidden rounded-xl bg-white shadow-xl">
             <header class="flex items-center justify-between px-4 py-3 border-b">
                 <h2 id="kanaTitle" class="text-lg font-semibold">Kana Reference</h2>
-                <button id="closeKanaModal" class="btn btn-ghost" arixlabel="Close">?</button>
+                <button id="closeKanaModal" class="btn btn-ghost" aria-label="Close">&times;</button>
             </header>
-
-            <!-- Tabs -->
-            <div class="px-4 pt-3">
-                <div class="inline-flex rounded bg-gray-100 p-1">
-                    <button datxtab="hira" class="tab-btn px-3 py-1 rounded bg-white shadow text-sm">Hiragana</button>
-                    <button datxtab="kata" class="tab-btn px-3 py-1 rounded text-sm">Katakana</button>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div class="p-4 overflow-auto max-h-[70vh]">
-                <!-- Hiragana -->
-                <div id="tab-hira">
-                    <table class="w-full table-fixed text-center text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="p-2 border"></th>
-                                <th class="p-2 border">a</th>
-                                <th class="p-2 border">i</th>
-                                <th class="p-2 border">u</th>
-                                <th class="p-2 border">e</th>
-                                <th class="p-2 border">o</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th class="p-2 border">-</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">k</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">s</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">t</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">h</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">m</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">y</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">r</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">w</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td colspan="5" class="p-2 border">?</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Katakana -->
-                <div id="tab-kata" class="hidden">
-                    <table class="w-full table-fixed text-center text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="p-2 border"></th>
-                                <th class="p-2 border">a</th>
-                                <th class="p-2 border">i</th>
-                                <th class="p-2 border">u</th>
-                                <th class="p-2 border">e</th>
-                                <th class="p-2 border">o</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th class="p-2 border">-</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">k</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">s</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">t</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">h</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">m</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">y</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">r</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">w</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td colspan="5" class="p-2 border">?</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="p-4">
+                <div class="rounded-xl overflow-hidden border-2 border-black bg-white shadow-lg">
+                    <iframe id="kanaReferenceFrame" src="reference.html" title="Japanese Basics" class="w-full h-[70vh] bg-white"></iframe>
                 </div>
             </div>
         </div>
@@ -928,9 +996,6 @@
             const modal = document.getElementById('kanaModal');
             const open = document.getElementById('openKanaModal');
             const close = document.getElementById('closeKanaModal');
-            const tabs = Array.from(document.querySelectorAll('.tab-btn'));
-            const hira = document.getElementById('tab-hira');
-            const kata = document.getElementById('tab-kata');
 
             function showModal(e) {
                 // allow Cmd/Ctrl-click to open reference.html in a new tab
@@ -943,19 +1008,11 @@
                 modal.classList.add('hidden');
                 document.body.classList.remove('overflow-hidden');
             }
-            function switchTab(which) {
-                tabs.forEach(b => b.classList.toggle('bg-white', b.dataset.tab === which));
-                hira.classList.toggle('hidden', which !== 'hira');
-                kata.classList.toggle('hidden', which !== 'kata');
-            }
 
             open?.addEventListener('click', showModal);
             close?.addEventListener('click', hideModal);
             modal?.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideModal(); });
-            tabs.forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-
-            switchTab('hira'); // default tab
         })();
     </script>
         <script>

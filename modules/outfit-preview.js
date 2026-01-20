@@ -48,6 +48,15 @@
     } catch { return null; }
   }
   function defaultScaleFor(slot){ return (slot==='top'||slot==='torso'||slot==='body') ? 0.25 : 0.2; }
+  function isItemCompatibleWithModel(it, modelId){
+    try {
+      if (!it) return false;
+      if (it.kind==='upgrade' || it.slot==='model') return true;
+      const list = it.compatibleWith;
+      if (!Array.isArray(list) || !list.length) return true;
+      return list.includes(modelId);
+    } catch { return true; }
+  }
 
   function create(opts){
     const state = { mv: opts.mv, equipped:{}, items:[], cache:new Map(), attached:[], overrides: (opts.overrides||{}) };
@@ -56,7 +65,7 @@
       try { (state.attached||[]).forEach(o=>{ try{ root.remove(o); }catch{} }); } catch {}
       state.attached = [];
       const eq = state.equipped||{}; const items = new Map((state.items||[]).map(i=>[i.id, i]));
-      const modelId = String(eq.model||'');
+      const modelId = String(eq.model||'model-basemesh');
       const modelItem = items.get(modelId);
       const modelUrl = (modelItem && modelItem.model) ? String(modelItem.model) : '';
       const skipAccessories = (modelId === 'model-basemesh') || /basemeshpr\.glb$/i.test(modelUrl);
@@ -70,7 +79,9 @@
         const raw = eq[slot];
         const ids = Array.isArray(raw) ? raw : [raw];
         for (const id of ids){
-          const it = items.get(id); if(!it || !it.model) { try{ console.warn('[ofp] missing item', slot, id); }catch{} continue; }
+          const it = items.get(id);
+          if (!isItemCompatibleWithModel(it, modelId)) { continue; }
+          if(!it || !it.model) { try{ console.warn('[ofp] missing item', slot, id); }catch{} continue; }
           try { console.log('[ofp] loading', slot, id, it.model); } catch {}
           // Avoid HEAD probe (causes duplicate network); rely on loader callbacks
           let rec = state.cache.get(it.id);

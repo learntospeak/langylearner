@@ -9,6 +9,43 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="anime-theme.css" />
+  <style>
+    /* Pose buttons: match pill styling, blue accent */
+    .pose-btn {
+      border: 1px solid #000;
+      background: #f2f8ff;
+      color: #0d3b66;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      transition: all 0.15s ease;
+      box-shadow: 2px 4px 0 rgba(0,0,0,0.35);
+    }
+    .pose-btn:hover {
+      border-color: #0d99ff;
+      color: #0d99ff;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.12);
+    }
+    .pose-btn.pose-active {
+      background: #0d99ff;
+      color: #fff;
+      border-color: #0d99ff;
+      box-shadow: 0 4px 10px rgba(13,153,255,0.35);
+    }
+    /* Keep long all-in-one toggle lists reachable without forcing page scroll */
+    #aioTogglePanel {
+      max-height: calc(100vh - 220px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    @media (max-width: 759px) {
+      #aioTogglePanel {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+      }
+    }
+  </style>
   <script src="./modules/outfit-preview.js"></script>
   <script type="importmap">
     {
@@ -40,18 +77,17 @@
       <!-- 3-column layout: categories (L) | preview (C) | items list (R) -->
       <div class="shop-grid items-start" style="grid-template-columns:200px 620px 1fr;">
         <!-- Categories -->
-        <aside class="max-h-[70vh] overflow-auto pr-3 w-full md:w-[190px] space-y-3">
-          <div class="font-medium">Categories</div>
+        <aside class="pr-3 w-full md:w-[190px] space-y-3">
           <div id="catList" class="flex flex-col gap-2"></div>
         </aside>
 
         <!-- Preview (sticky) -->
-        <div class="flex items-start justify-center sm:sticky top-2">
+        <div class="flex items-start justify-center" style="position:static;">
           <div class="text-center">
-            <div id="mvWrap" class="inline-block relative" style="display:none; width:420px; height:520px; overflow:hidden; z-index:1; padding-top:60px; box-sizing:border-box;">
+            <div id="mvWrap" class="inline-block relative" style="display:none; width:420px; height:520px; overflow:hidden; z-index:1; box-sizing:border-box;">
               <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
             </div>
-            <div id="tvWrap" class="inline-block relative" style="display:none; width:420px; height:520px; overflow:hidden; z-index:1; padding-top:60px; box-sizing:border-box;"></div>
+            <div id="tvWrap" class="inline-block relative" style="display:inline-block; width:420px; height:520px; overflow:hidden; z-index:1; box-sizing:border-box;"></div>
             <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
             <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
             <div id="basemeshNotice" class="text-xs text-amber-700 mt-2 flex items-center justify-center gap-2" style="display:none;">
@@ -76,9 +112,6 @@
                 <label for="bagColorPick" class="color-label">Bag</label>
                 <input id="bagColorPick" type="color" value="#5a4632" class="color-input flex-1" />
               </div>
-              <div class="flex justify-center mt-2">
-                <button id="openAdjust" class="btn btn-xs btn-primary">Adjust Accessory</button>
-              </div>
             </div>
             <div id="poseControls" class="mt-3">
               <div class="text-xs font-medium mb-1">Pose</div>
@@ -90,9 +123,9 @@
         </div>
 
         <!-- Items list -->
-        <div class="max-h-[70vh] overflow-auto pr-1 w-full self-start" id="itemsPane">
-          <div class="font-medium mb-2" id="catTitle">Items</div>
-          <div id="catalog" class="grid grid-cols-1 gap-3 md:grid-cols-2"></div>
+        <div class="pr-1 w-full self-start" id="itemsPane" style="max-height:none; overflow:visible;">
+          <div class="font-medium mb-2" id="catTitle"></div>
+          <div id="catalog" class="grid grid-cols-2 gap-3"></div>
         </div>
       </div>
     </section>
@@ -148,7 +181,12 @@
 
     // No 2D mascot fallback; preview shows only 3D models
 
-    const FORCE_MV_PREVIEW = (function(){ try { if (typeof window.__forceMVPreview !== 'undefined') return !!window.__forceMVPreview; return /[?&]forcemv=1/i.test((location.search||'')); } catch { return false; } })();
+    const FORCE_MV_PREVIEW = false; // prefer Three.js TV preview; model-viewer only if TV fails
+    // Clear user overrides so positioning isn’t influenced before framing
+    (function resetOverrides(){
+      try { localStorage.setItem('anchorOverrides','{}'); } catch {}
+      try { localStorage.setItem('baseMeshScale','1'); } catch {}
+    })();
     try { console.log('[shop] FORCE_MV_PREVIEW', FORCE_MV_PREVIEW); } catch {}
     async function api(path, opts){
       try {
@@ -166,6 +204,8 @@
       }
     }
     let SELECTED = 'model';
+    let LAST_MODEL_ID = null;
+    let MODEL_CHANGED = false;
     const FORCE_OVERLAY_SLOT = 'top';
     const SLOT_LABELS = {
       head:'Head',
@@ -288,10 +328,10 @@
     };
     const POSE_PRESETS = [
       { id:'neutral', label:'Neutral' },
-      { id:'idle', label:'Idle', animation:'anim_iddle', fraction:0.25, hold:true },
-      { id:'arms', label:'Arms Out', animation:'anim_push', fraction:0.45, hold:true },
-      { id:'walk', label:'Walk', animation:'anim_walk', fraction:0.5, hold:true },
-      { id:'run', label:'Run', animation:'anim_run', fraction:0.35, hold:true },
+      { id:'idle', label:'Idle', animation:'anim_iddle', fraction:0.25, hold:false },
+      { id:'arms', label:'Arms Out', animation:'anim_push', fraction:0.45, hold:false },
+      { id:'walk', label:'Walk', animation:'anim_walk', fraction:0.5, hold:false },
+      { id:'run', label:'Run', animation:'anim_run', fraction:0.35, hold:false },
       { id:'crouch', label:'Crouch', animation:'anim_crouch', fraction:0.95, hold:true }
     ];
     let CURRENT_POSE_ID = 'neutral';
@@ -307,13 +347,19 @@
         .replace(/\b\w/g,c=>c.toUpperCase());
     }
     function friendlySlotLabel(slot){
+      if (slot==='model') return '';
       return SLOT_LABELS[slot] || startCase(slot||'');
     }
     function formatItemName(it){
       if(!it) return '';
       const id = String(it.id||'');
       const raw = NAME_OVERRIDES[id] || NAME_OVERRIDES[it.name] || it.name || id;
-      return startCase(raw);
+      const cleaned = String(raw||'')
+        .replace(/\b3d\b/ig,'')
+        .replace(/\bmodel\b/ig,'')
+        .replace(/\s+/g,' ')
+        .trim();
+      return startCase(cleaned);
     }
     // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
     const SLOT_ANCHORS_DEFAULT = {
@@ -445,6 +491,29 @@
     function getSceneFromViewer(mv){
       try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
     }
+    async function ensureModelViewerReady(mv, timeout=4000){
+      try {
+        const root = getBaseRoot(mv);
+        if (root) return root;
+        return await new Promise(res=>{
+          let settled=false;
+          let attempts=0;
+          const done=async ()=>{ if (settled) return; settled=true; try{ await mv.updateComplete; }catch{} res(getBaseRoot(mv)); };
+          try { mv.addEventListener('scene-graph-ready', done, { once:true }); } catch {}
+          try { mv.addEventListener('load', done, { once:true }); } catch {}
+          const t0 = Date.now();
+          (function poll(){
+            try {
+              const r = getBaseRoot(mv);
+              if (r) { return done(); }
+            } catch {}
+            attempts++;
+            if (Date.now()-t0 > timeout) return done();
+            try { window.requestAnimationFrame(poll); } catch { setTimeout(poll, 50); }
+          })();
+        });
+      } catch { return null; }
+    }
     function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
     const DEFAULT_BASE_SCALE = 1.0;
     const TARGET_CHARACTER_HEIGHT = 1.0; // target uniform height (world units) for every character
@@ -481,15 +550,10 @@
     function recenterModelViewerRoot(root){
       try {
         const THREE = getThree(); if (!THREE || !root) return null;
-        const box = new THREE.Box3().setFromObject(root);
-        const center = box.getCenter(new THREE.Vector3());
-        root.position.x -= center.x;
-        root.position.z -= center.z;
-        root.position.y -= box.min.y;
-        return box;
+        return new THREE.Box3().setFromObject(root);
       } catch { return null; }
     }
-    function recenterBaseToGround(root){
+    function recenterToGround(root){
       try{
         const THREE = getThree(); if (!THREE || !root) return null;
         const box = new THREE.Box3().setFromObject(root);
@@ -497,18 +561,20 @@
         root.position.x -= center.x;
         root.position.z -= center.z;
         root.position.y -= box.min.y;
-        return box;
+        return new THREE.Box3().setFromObject(root);
       } catch { return null; }
     }
     function normalizeCharacterRoot(root){
       try {
         const THREE = getThree(); if (!THREE || !root) return null;
-        const box = recenterBaseToGround(root) || new THREE.Box3().setFromObject(root);
-        // Apply only the shrink factor; no height normalization
+        const box = new THREE.Box3().setFromObject(root);
+        // Apply only the shrink factor; no position/anchor changes
         if (isFinite(PREVIEW_SHRINK) && PREVIEW_SHRINK > 0) {
           root.scale.set(PREVIEW_SHRINK, PREVIEW_SHRINK, PREVIEW_SHRINK);
         }
-        return recenterBaseToGround(root) || box;
+        // Recenter only for basemesh so it shares the same ground as others
+        if (isBaseMeshSelected()) return recenterToGround(root) || new THREE.Box3().setFromObject(root);
+        return new THREE.Box3().setFromObject(root);
       } catch { return null; }
     }
     function isBaseMeshSelected(){
@@ -521,16 +587,10 @@
       } catch { return false; }
     }
     function readBaseMeshScale(){
-      try{
-        const raw = parseFloat(localStorage.getItem('baseMeshScale')||String(DEFAULT_BASE_SCALE));
-        return (isFinite(raw)&&raw>0)? raw : DEFAULT_BASE_SCALE;
-      }catch{
-        return DEFAULT_BASE_SCALE;
-      }
+      return DEFAULT_BASE_SCALE;
     }
     function readInvBaseMeshScale(){
-      const s = readBaseMeshScale();
-      return (s>0)?(1/s):1;
+      return 1;
     }
     function applyBaseScaleToRoot(root){
       try{
@@ -569,25 +629,30 @@
         });
       } catch {}
     }
+    // Lock all characters to the same framing: capture once from the first model and reuse.
+    let FIXED_CAM = null;
     function frameBaseToView(box){
       try{
         const THREE = getThree(); if (!THREE || !camera) return;
-        const size = new THREE.Vector3(); box.getSize(size);
-        const canvasH = (renderer && renderer.domElement && renderer.domElement.clientHeight) || (document.getElementById('tvWrap')?.clientHeight) || 520;
-        const vFov = (camera.fov*Math.PI)/180;
-        const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
-        const paddedY = size.y * VIEW_PAD_SCALE;
-        const paddedX = size.x * VIEW_PAD_SCALE;
-        const baseDistV = (paddedY*0.5)/Math.tan(vFov/2);
-        const baseDistH = (paddedX*0.5)/Math.tan(hFov/2);
-        const baseDist = Math.max(baseDistV, baseDistH);
-        const viewHeightBase = 2 * baseDist * Math.tan(vFov/2);
-        const marginWorldBase = (canvasH > 0) ? (VIEW_PADDING_PX / canvasH) * viewHeightBase : 0;
-        const dist = baseDist + marginWorldBase; // push back slightly for bottom padding
-        const viewHeight = 2 * dist * Math.tan(vFov/2);
-        const marginWorld = (canvasH > 0) ? (VIEW_PADDING_PX / canvasH) * viewHeight : 0;
-        const targetY = box.min.y + marginWorld;
-        const camY = targetY + paddedY * 0.65;
+        if (!FIXED_CAM) {
+          // Compute a reasonable framing once
+          const size = new THREE.Vector3(); box.getSize(size);
+          const canvasH = (renderer && renderer.domElement && renderer.domElement.clientHeight) || (document.getElementById('tvWrap')?.clientHeight) || 520;
+          const vFov = (camera.fov*Math.PI)/180;
+          const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+          const paddedY = size.y * VIEW_PAD_SCALE;
+          const paddedX = size.x * VIEW_PAD_SCALE;
+          const baseDistV = (paddedY*0.5)/Math.tan(vFov/2);
+          const baseDistH = (paddedX*0.5)/Math.tan(hFov/2);
+          const baseDist = Math.max(baseDistV, baseDistH);
+          const viewHeightBase = 2 * baseDist * Math.tan(vFov/2);
+          const marginWorldBase = (canvasH > 0) ? (VIEW_PADDING_PX / canvasH) * viewHeightBase : 0;
+          const dist = baseDist + marginWorldBase;
+          const targetY = box.min.y + ((canvasH > 0) ? (VIEW_PADDING_PX / canvasH) * (2 * dist * Math.tan(vFov/2)) : 0);
+          const camY = targetY + paddedY * 0.65;
+          FIXED_CAM = { dist, targetY, camY };
+        }
+        const { dist, targetY, camY } = FIXED_CAM;
         camera.position.set(0, camY, dist);
         camera.near = Math.max(0.01, dist*0.05);
         camera.far  = Math.max(camera.near+1, dist*25);
@@ -673,7 +738,7 @@
         btn.type = 'button';
         btn.dataset.poseId = p.id;
         btn.textContent = p.label;
-        btn.className = 'text-xs px-2 py-1 rounded border transition bg-white border-gray-200 hover:border-black';
+        btn.className = 'pose-btn';
         btn.addEventListener('click', ()=>{
           CURRENT_POSE_ID = p.id;
           refreshPoseButtons();
@@ -688,7 +753,7 @@
       if (!wrap) return;
       wrap.querySelectorAll('button').forEach(btn=>{
         const isActive = btn.dataset.poseId === CURRENT_POSE_ID;
-        btn.className = 'text-xs px-2 py-1 rounded border transition ' + (isActive ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
+        btn.className = 'pose-btn' + (isActive ? ' pose-active' : '');
       });
     }
     function applyPoseSnapshot(root, snapshot){
@@ -1275,7 +1340,27 @@
           try { console.log('[eyeColor] tinted iris_tint materials:', picks.map(r=>(r.mat&&r.mat.name)||'?')); } catch {}
           return changed;
         }
-        try { console.warn('[eyeColor] no iris_tint material found — skipping tint'); } catch {}
+        // Fallback: use detected eye parts (iris preferred, otherwise sclera/other)
+        const parts = findEyeParts(root);
+        const targets = (parts.iris && parts.iris.length) ? parts.iris :
+                        (parts.sclera && parts.sclera.length) ? parts.sclera :
+                        (parts.other && parts.other.length) ? parts.other : [];
+        if (targets.length){
+          let changed=false;
+          targets.forEach(rec=>{
+            try {
+              const m = ensureUniqueMaterial(rec.mesh, rec.mat);
+              if (m && m.color && m.color.set){
+                m.color.set(hex);
+                if (m.needsUpdate!==undefined) m.needsUpdate=true;
+                changed=true;
+              }
+            } catch {}
+          });
+          try { console.log('[eyeColor] tinted fallback materials:', targets.map(r=>(r.mat&&r.mat.name)||'?')); } catch {}
+          return changed;
+        }
+        try { console.warn('[eyeColor] no eye materials detected'); } catch {}
         return false;
       } catch { return false; }
     }async function applyEyeColorFromStorage(){
@@ -1306,20 +1391,14 @@
       try {
         let root = getBaseRoot(mv);
         if(!root){
-          // Wait for model-viewer to finish building the scene graph
-          await new Promise(res=>{
-            let done=false;
-            const finish=()=>{ if(done) return; done=true; res(); };
-            try { mv.addEventListener('scene-graph-ready', finish, { once:true }); } catch {}
-            try { mv.addEventListener('load', finish, { once:true }); } catch {}
-            setTimeout(finish, 3000);
-          });
+          root = await ensureModelViewerReady(mv, 8000);
           try{ await mv.updateComplete; }catch(e){}
-          root = getBaseRoot(mv);
-          if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root or add() missing'); }catch(_){} return false; }
+          root = root || getBaseRoot(mv);
         }
+        if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root yet'); }catch{} return false; }
         applyBaseScaleToRoot(root);
         clearAttachments(mv);
+        const modelId = String((equip||{}).model || 'model-basemesh');
         // Compute base center (without attachments) to match Anchor Tool's centered coordinates
         let baseCenter = null;
         try {
@@ -1358,6 +1437,7 @@
           const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
           for (const id of ids){
           const it = itemsMap.get(id); if (isHiddenItem && isHiddenItem(it)) { continue; }
+          if (!isItemCompatibleWithModel(it, modelId)) { continue; }
           if(!it || !it.model){ try{ console.warn('[attach] missing item for slot', slot, id); }catch(_){} continue; }
           try { console.log('[attach] loading', slot, it.id, it.model); } catch(_){ }
           // Removed HEAD probe to avoid double-requests; GLTFLoader/load will surface errors
@@ -1588,8 +1668,9 @@
         const mySeq = (++_tvLoadSeq);
         if (baseGroup && _tvBaseUrl === url) {
           normalizeCharacterRoot(baseGroup);
+          FIXED_CAM = null; // allow recompute once per session if needed
           try {
-            const box = recenterBaseToGround(baseGroup) || new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
+            const box = new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
             frameBaseToView(box);
           } catch {}
           return true;
@@ -1606,6 +1687,8 @@
         mixer = (baseClips.length && THREE && THREE.AnimationMixer) ? new THREE.AnimationMixer(baseGroup) : null;
         poseAction = null;
         normalizeCharacterRoot(baseGroup);
+        // Basemesh alignment: recentre to ground so it matches other characters
+        if (/basemeshpr\.glb$/i.test(url)) { try { recenterToGround(baseGroup); } catch {} }
         try {
           baseGroup.traverse(o=>{
             if (o && o.isMesh) {
@@ -1632,8 +1715,9 @@
           }
         } catch{}
         try {
-          const box = recenterBaseToGround(baseGroup) || new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
+          const box = new (getThree()||window.THREE).Box3().setFromObject(baseGroup);
           const size = new THREE.Vector3(); box.getSize(size);
+          FIXED_CAM = FIXED_CAM || null; // keep previous frame unless reset above
           frameBaseToView(box);
           try {
             if (window.__OrbitControls && controls) {
@@ -1662,6 +1746,331 @@
         } catch {}
       }
       function applyEyeColor(hex){ try { if (!baseGroup || !hex) return false; return applyEyeColorToRoot(baseGroup, hex); } catch { return false; } }
+      // ----- All-in-One visibility toggles (per item) -----
+      const AIO_ITEMS = [
+        { key:'core_body', label:'Body', nodes:['character_low','tooth'], lockOn:true, defaultOn:true },
+        { key:'armor_arm', label:'Armor Arm', nodes:['amorarm'] },
+        { key:'armor_plastron', label:'Armor Plastron', nodes:['amorplastron'] },
+        { key:'armor_thighs', label:'Armor Thighs', nodes:['armorceinturethighs','armorthigh'] },
+        { key:'armor_helmet', label:'Armor Helmet', nodes:['armorhelmet'] },
+        { key:'armor_knees', label:'Armor Knees', nodes:['armorknees'] },
+        { key:'armor_legs', label:'Armor Legs', nodes:['armorlegs'] },
+        { key:'armor_shoe', label:'Armor Shoe', nodes:['armorshoe'] },
+        { key:'armor_skirt', label:'Armor Skirt', nodes:['armorskirt'] },
+        { key:'bag', label:'Bag', nodes:['bag'] },
+        { key:'belt', label:'Belt', nodes:['ceinture'] },
+        { key:'school_shirt', label:'School Shirt', nodes:['shirt'] },
+        { key:'school_skirt', label:'School Skirt', nodes:['skirt'] },
+        { key:'school_shoe', label:'School Shoe', nodes:['shoe'] },
+        { key:'third_pants', label:'Third Suit Pants', nodes:['pants'] },
+        { key:'third_chemise', label:'Third Suit Chemise', nodes:['chemise'] },
+        { key:'third_bottes', label:'Third Suit Boots', nodes:['bottes'] },
+        { key:'third_hat', label:'Hat', nodes:['hat'] },
+        { key:'green_outfit', label:'Green Outfit', nodes:['greenoutfit','greenoutfitbelt','greenoutfitneckless','bottesgreen'] },
+        { key:'ninja_suit', label:'Ninja Suit', nodes:['ninjassuit','ninjassuitmask','ninjassuitshoe','ninjassuitthigh','ninjasuitshort'] },
+        { key:'hair_one', label:'Hair One', nodes:['hairone'], defaultOn:true },
+        { key:'hair_T', label:'Hair T', nodes:['hairT'] },
+        { key:'hair_tail', label:'Hair Tail', nodes:['hairtail'] },
+        { key:'hair_tail_knight', label:'Hair Tail Knight', nodes:['hairtailknight'] },
+        { key:'hair_variant', label:'Hair Variant', nodes:['hairvariant'] },
+        { key:'hair_variant_alt', label:'Hair Variant 2', nodes:['hairvariant.001'] },
+        { key:'face', label:'Face', nodes:['eyes','eyelashes'], defaultOn:true }
+      ];
+      const AIO_HAIR_KEYS = AIO_ITEMS.filter(item=>item.key.startsWith('hair_')).map(item=>item.key);
+      const AIO_LABELS = AIO_ITEMS.reduce((acc, item)=>{ acc[item.key] = item.label; return acc; }, {});
+      const AIO_NODE_MAP = new Map();
+      AIO_ITEMS.forEach(item=>{
+        (item.nodes||[]).forEach(nodeName=>{
+          AIO_NODE_MAP.set(String(nodeName).toLowerCase(), item);
+        });
+      });
+      const AIO_MATERIAL_HINTS = {
+        hair_variant_alt: ['hairtvariant']
+      };
+      const AIO_NODE_NAMES = Array.from(AIO_NODE_MAP.keys()).sort((a,b)=>b.length-a.length);
+      const AIO_STORAGE_KEY = 'aioStateAllInOne';
+      function loadAioState(){
+        try {
+          const raw = localStorage.getItem(AIO_STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return (parsed && typeof parsed === 'object') ? parsed : null;
+        } catch { return null; }
+      }
+      function saveAioState(state){
+        try {
+          if (!state || typeof state !== 'object') return;
+          localStorage.setItem(AIO_STORAGE_KEY, JSON.stringify(state));
+        } catch {}
+      }
+      function mergeAioState(state){
+        const base = buildAioDefaultState();
+        if (!state || typeof state !== 'object') return base;
+        const out = Object.assign({}, base, state);
+        if (state.__lastHairKey) out.__lastHairKey = state.__lastHairKey;
+        return out;
+      }
+      function matchesNodeName(actual, target){
+        try {
+          if (!actual || !target) return false;
+          if (actual === target) return true;
+          if (!actual.startsWith(target)) return false;
+          const next = actual.charAt(target.length);
+          return next === '.' || next === '_' || next === '-';
+        } catch { return false; }
+      }
+      function aioHairOff(state){
+        try { return AIO_HAIR_KEYS.length > 0 && AIO_HAIR_KEYS.every(k=>!state[k]); } catch { return false; }
+      }
+      function collectAioHairMaterials(root){
+        try {
+          if (!root) return new Set();
+          if (root.userData && root.userData.__aioHairMaterials instanceof Set) return root.userData.__aioHairMaterials;
+          const out = new Set();
+          root.traverse?.(o=>{
+            try {
+              if (!o || !o.material) return;
+              const item = findAioItemForObject(o);
+              const isHairNode = !!(item && AIO_HAIR_KEYS.includes(item.key));
+              const mats = Array.isArray(o.material) ? o.material : [o.material];
+              mats.forEach(m=>{
+                if (!m) return;
+                const nm = String(m.name||'').toLowerCase();
+                if (isHairNode || (nm && nm.includes('hair'))) out.add(m);
+              });
+            } catch {}
+          });
+          root.userData = root.userData || {};
+          root.userData.__aioHairMaterials = out;
+          return out;
+        } catch { return new Set(); }
+      }
+      function setHairMaterialHidden(mat, hide){
+        try {
+          if (!mat) return;
+          mat.userData = mat.userData || {};
+          if (hide) {
+            if (!mat.userData.__aioHairRestore) {
+              mat.userData.__aioHairRestore = {
+                opacity: (typeof mat.opacity === 'number') ? mat.opacity : 1,
+                transparent: !!mat.transparent,
+                depthWrite: (typeof mat.depthWrite === 'boolean') ? mat.depthWrite : true
+              };
+            }
+            mat.transparent = true;
+            mat.opacity = 0;
+            if (typeof mat.depthWrite === 'boolean') mat.depthWrite = false;
+          } else {
+            const prev = mat.userData.__aioHairRestore;
+            if (prev) {
+              mat.opacity = prev.opacity;
+              mat.transparent = prev.transparent;
+              mat.depthWrite = prev.depthWrite;
+            } else {
+              mat.opacity = 1;
+              mat.transparent = false;
+              if (typeof mat.depthWrite === 'boolean') mat.depthWrite = true;
+            }
+          }
+          mat.needsUpdate = true;
+        } catch {}
+      }
+      function applyAioHairMaterialMask(root, state){
+        try {
+          if (!root) return;
+          const hide = aioHairOff(state);
+          const mats = collectAioHairMaterials(root);
+          mats.forEach(m=>setHairMaterialHidden(m, hide));
+        } catch {}
+      }
+      function setNodeVisibility(root, nodeName, visible){
+        try {
+          const target = String(nodeName||'').toLowerCase();
+          if (!root || !target) return;
+          root.traverse?.(o=>{
+            try {
+              const nm = String(o.name||'').toLowerCase();
+              if (matchesNodeName(nm, target)) o.visible = visible;
+            } catch {}
+          });
+        } catch {}
+      }
+      function findAioItemForObject(obj){
+        let cur = obj;
+        while (cur) {
+          const nm = String(cur.name||'').toLowerCase();
+          if (nm && AIO_NODE_MAP.has(nm)) return AIO_NODE_MAP.get(nm);
+          if (nm) {
+            for (const key of AIO_NODE_NAMES){
+              if (matchesNodeName(nm, key)) return AIO_NODE_MAP.get(key);
+            }
+          }
+          cur = cur.parent || null;
+        }
+        return null;
+      }
+      function buildAioDefaultState(){
+        const st = {};
+        AIO_ITEMS.forEach(item=>{
+          st[item.key] = !!item.defaultOn || !!item.lockOn;
+        });
+        if (AIO_HAIR_KEYS.length) {
+          const anyHair = AIO_HAIR_KEYS.some(key=>st[key]);
+          if (!anyHair) st[AIO_HAIR_KEYS[0]] = true;
+        }
+        return st;
+      }
+      function normalizeAioHairState(state){
+        try {
+          if (!state || !AIO_HAIR_KEYS.length) return null;
+          const active = AIO_HAIR_KEYS.filter(k=>!!state[k]);
+          if (active.length <= 1) return active[0] || null;
+          const keep = (state.__lastHairKey && active.includes(state.__lastHairKey)) ? state.__lastHairKey : active[0];
+          active.forEach(k=>{ if (k !== keep) state[k] = false; });
+          return keep;
+        } catch { return null; }
+      }
+      function enforceAioHairNodesVisibility(root, state){
+        try {
+          if (!root) return;
+          const activeHairKeys = AIO_HAIR_KEYS.filter(k=>!!state[k]);
+          const activeNodes = new Set();
+          AIO_ITEMS.forEach(item=>{
+            if (AIO_HAIR_KEYS.includes(item.key) && activeHairKeys.includes(item.key)) {
+              (item.nodes||[]).forEach(nm=>activeNodes.add(String(nm).toLowerCase()));
+            }
+          });
+          root.traverse?.(o=>{
+            const nm = String(o?.name||'').toLowerCase();
+            if (!nm || !nm.startsWith('hair')) return;
+            if (!activeNodes.size) { o.visible = false; return; }
+            for (const key of activeNodes){
+              if (matchesNodeName(nm, key)) { o.visible = true; return; }
+            }
+            const item = findAioItemForObject(o);
+            if (item && AIO_HAIR_KEYS.includes(item.key)) {
+              o.visible = activeHairKeys.includes(item.key);
+            } else {
+              o.visible = false;
+            }
+          });
+        } catch {}
+      }
+      function applyAioMaterialVisibilityHints(root, state){
+        try {
+          if (!root) return;
+          const hints = AIO_MATERIAL_HINTS || {};
+          const keys = Object.keys(hints);
+          if (!keys.length) return;
+          root.traverse?.(o=>{
+            try {
+              if (!o || !o.isMesh || !o.material) return;
+              const mats = Array.isArray(o.material) ? o.material : [o.material];
+              for (const key of keys){
+                const list = hints[key] || [];
+                if (!list.length) continue;
+                const on = !!state[key];
+                const hit = mats.some(m=>{
+                  const nm = String(m?.name||'').toLowerCase();
+                  return list.some(h=>nm.includes(String(h||'').toLowerCase()));
+                });
+                if (hit) { o.visible = on; return; }
+              }
+            } catch {}
+          });
+        } catch {}
+      }
+      function getAllInOnePanel(){
+        let panel = document.getElementById('aioTogglePanel');
+        if (!panel){
+          const catList = document.getElementById('catList');
+          const host = (catList && catList.parentElement) ? catList.parentElement : (document.getElementById('itemsPane') || document.body);
+          panel = document.createElement('div');
+          panel.id = 'aioTogglePanel';
+          panel.style.marginTop = '8px';
+          panel.style.display = 'none';
+          const btnWrap = document.createElement('div');
+          btnWrap.id = 'aioToggleButtons';
+          btnWrap.style.display = 'flex';
+          btnWrap.style.flexDirection = 'column';
+          btnWrap.style.gap = '6px';
+          panel.appendChild(btnWrap);
+          // insert right after category list
+          if (catList && catList.nextSibling) {
+            host.insertBefore(panel, catList.nextSibling);
+          } else {
+            host.appendChild(panel);
+          }
+        }
+        return panel;
+      }
+      function setAllInOnePanelVisible(show){
+        const panel = document.getElementById('aioTogglePanel');
+        if (panel) panel.style.display = show ? 'block' : 'none';
+      }
+      function refreshAllInOneButtons(state){
+        const wrap = document.getElementById('aioToggleButtons');
+        if (!wrap) return;
+        wrap.querySelectorAll('button[data-aio-key]').forEach(btn=>{
+          const key = btn.dataset.aioKey;
+          const label = AIO_LABELS[key] || key;
+          btn.textContent = `${label} ${state[key]?'ON':'OFF'}`;
+        });
+      }
+      function updateAllInOneButtons(state){
+        const panel = getAllInOnePanel();
+        const wrap = document.getElementById('aioToggleButtons');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        AIO_ITEMS.forEach(item=>{
+          if (item.lockOn) return; // core stays on, no button
+          const key = item.key;
+          const btn = document.createElement('button');
+          const label = AIO_LABELS[key] || item.label || key;
+          btn.dataset.aioKey = key;
+          btn.textContent = `${label} ${state[key]?'ON':'OFF'}`;
+          btn.className = 'btn btn-ghost btn-xs text-[11px] px-2 py-1';
+          btn.addEventListener('click', ()=>{
+            const next = !state[key];
+            if (AIO_HAIR_KEYS.includes(key)) {
+              if (next) {
+                AIO_HAIR_KEYS.forEach(k=>{ if (k !== key) state[k] = false; });
+                state.__lastHairKey = key;
+              } else if (state.__lastHairKey === key) {
+                state.__lastHairKey = null;
+              }
+            }
+            state[key] = next;
+            applyAllInOneVisibility(baseGroup, state);
+            refreshAllInOneButtons(state);
+            saveAioState(state);
+          });
+          wrap.appendChild(btn);
+        });
+        setAllInOnePanelVisible(true);
+      }
+      function applyAllInOneVisibility(root, state){
+        if (!root) return;
+        normalizeAioHairState(state);
+        // First pass: explicitly set visibility by node name
+        AIO_ITEMS.forEach(item=>{
+          const on = item.lockOn ? true : !!state[item.key];
+          (item.nodes||[]).forEach(nm=>setNodeVisibility(root, nm, on));
+        });
+        // Second pass: handle child meshes that inherit names via parent chain
+        root.traverse(o=>{
+          try {
+            const item = findAioItemForObject(o);
+            if (!item) return;
+            if (item.lockOn) { o.visible = true; return; }
+            o.visible = !!state[item.key];
+          } catch {}
+        });
+        enforceAioHairNodesVisibility(root, state);
+        applyAioHairMaterialMask(root, state);
+        applyAioMaterialVisibilityHints(root, state);
+      }
+      let aioState = null;
       async function attachAll(equip, itemsMap, anchors){
         const THREE = getThree(); if (!THREE || !initialized) return false;
         // Preserve camera/target across reattach so the view doesn't jump when items change
@@ -1691,17 +2100,30 @@
         } catch {}
         while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
         try { if (baseGroup) baseGroup.updateWorldMatrix(true, true); } catch {}
-        const modelId = String((equip||{}).model||'');
+        const modelId = String((equip||{}).model || 'model-basemesh');
         const modelItem = (itemsMap && typeof itemsMap.get==='function') ? itemsMap.get(modelId) : null;
         const modelUrl = (modelItem && modelItem.model) ? String(modelItem.model) : '';
         const skipAccessories = (modelId==='model-basemesh') || /basemeshpr\.glb$/i.test(modelUrl);
         if (skipAccessories) { try { console.log('[TV] skipping accessories for basemesh', modelId, modelUrl); } catch {} }
+        // All-in-one: hide optional parts and show toggle panel
+        const isAllInOne = /allinonepr\.glb$/i.test(modelUrl);
+        if (isAllInOne){
+          const stored = loadAioState();
+          aioState = mergeAioState(stored || aioState);
+          applyAllInOneVisibility(baseGroup, aioState);
+          updateAllInOneButtons(aioState);
+          saveAioState(aioState);
+        } else {
+          setAllInOnePanelVisible(false);
+        }
         const slots = skipAccessories ? [] : Object.keys(equip||{}).filter(s=>s!=='model');
         for (const slot of slots){
           const rawVal = equip[slot];
           const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
           for (const id of ids){
-          const it = itemsMap.get(id); if (isHiddenItem && isHiddenItem(it)) { continue; } if (!it || !it.model) continue;
+          const it = itemsMap.get(id); if (isHiddenItem && isHiddenItem(it)) { continue; }
+          if (!isItemCompatibleWithModel(it, modelId)) { continue; }
+          if (!it || !it.model) continue;
           const loader = new window.__GLTFLoader();
           const gltf = await new Promise(res=>{ try{ loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
           if (!gltf || !gltf.scene) continue;
@@ -2049,9 +2471,19 @@
             if (direct) return direct;
             const want = String(name||'').toLowerCase();
             const strip = (s)=>String(s||'').toLowerCase().replace(/\\.\\d+$/,'');
+            const wantPlain = want.replace(/_/g,'');
+            const wantCore = want.replace(/^anim_/,'').replace(/_/g,'');
             return baseClips.find(c=>{
               const n = String(c?.name||'').toLowerCase();
-              return n===want || strip(n)===want || n.startsWith(want+'.');
+              const nStrip = strip(n);
+              const nPlain = n.replace(/_/g,'');
+              return (
+                n===want ||
+                nStrip===want ||
+                n.startsWith(want+'.') ||
+                nPlain===wantPlain ||
+                nPlain.includes(wantCore)
+              );
             }) || null;
           })(pose.animation);
           if (clip) {
@@ -2118,17 +2550,63 @@
         return false;
       } catch { return false; }
     }
+    function isItemCompatibleWithModel(it, modelId){
+      try {
+        if (!it) return false;
+        if (it.kind==='upgrade' || it.slot==='model') return true;
+        const list = it.compatibleWith;
+        if (!Array.isArray(list) || !list.length) return true;
+        return list.includes(modelId);
+      } catch { return true; }
+    }
     function categoriesFrom(items){
       const cats = [];
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
+      const compat = (it)=>{ try{ if(!it||it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} };
       const data = Array.isArray(items) ? items : [];
+      if (data.some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
       if (data.some(it=>it.kind==='cosmetic' && it.slot==='model')) {
         cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
       }
+      const slotCounts = {};
+      data.forEach(it=>{
+        if (it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it) && !isHiddenItem(it)){
+          slotCounts[it.slot] = (slotCounts[it.slot]||0)+1;
+        }
+      });
+      const used = new Set();
+      CATEGORY_GROUPS.forEach(group=>{
+        const slots = group.slots.filter(slot=>slotCounts[slot]);
+        if (slots.length){
+          cats.push({
+            id: group.id,
+            label: group.label,
+            filter:(it)=>it.kind==='cosmetic' && slots.includes(it.slot) && compat(it) && !isHiddenItem(it)
+          });
+          slots.forEach(s=>used.add(s));
+        }
+      });
+      Object.keys(slotCounts).filter(slot=>!used.has(slot)).sort().forEach(slot=>{
+        cats.push({
+          id: slot,
+          label: friendlySlotLabel(slot),
+          filter:(it)=>it.kind==='cosmetic' && it.slot===slot && compat(it) && !isHiddenItem(it)
+        });
+      });
       return cats;
     }
     function renderCats(cats){
+      const HIDDEN_CATEGORY_IDS = new Set(['upgrades']);
+      let visibleCats = cats.filter(c=>!HIDDEN_CATEGORY_IDS.has(c.id));
+      if (isBaseMeshSelected()) {
+        const modelOnly = visibleCats.filter(c=>c.id === 'model');
+        if (modelOnly.length) visibleCats = modelOnly;
+      }
+      const pick = visibleCats.length ? visibleCats : cats;
+      const active = pick.find(x=>x.id===SELECTED) || pick[0] || null;
+      if (active) SELECTED = active.id;
       catList.innerHTML = '';
-      cats.forEach(c=>{
+      visibleCats.forEach(c=>{
         const isActive = SELECTED===c.id;
         const b = document.createElement('button');
         b.className = 'text-sm px-3 py-2 rounded-xl border transition text-left w-full ' + (isActive ? 'bg-black text-white border-black shadow' : 'bg-white border-gray-200 hover:border-black');
@@ -2142,7 +2620,7 @@
         });
         catList.appendChild(b);
       });
-      const cur = cats.find(x=>x.id===SELECTED) || cats[0];
+      const cur = active;
       if (cur) catTitle.textContent = cur.label;
       toggleAccessoryUIVisibility();
     }
@@ -2537,6 +3015,57 @@
       updateColorControls();
     }
 
+    async function showModelViewerPreview(mv, modelItem){
+      try {
+        window.__useTV = false;
+        const tvWrap0 = document.getElementById('tvWrap'); if (tvWrap0) tvWrap0.style.display='none';
+        const mvWrap0 = document.getElementById('mvWrap'); if (mvWrap0) mvWrap0.style.display='inline-block';
+        mv.style.visibility = 'visible';
+        mv.style.opacity = '1';
+        mv.style.pointerEvents = 'auto';
+        try { mv.setAttribute('reveal','auto'); mv.removeAttribute('poster'); } catch {}
+        window.__mvPreviewCount = (window.__mvPreviewCount||0)+1;
+        console.log('[shop] using model-viewer preview', window.__mvPreviewCount);
+      } catch {}
+      if (!mv || !modelItem || !modelItem.model) return;
+      try { if (window.customElements && window.customElements.whenDefined) await window.customElements.whenDefined('model-viewer'); } catch {}
+      try {
+        mv.removeAttribute('reveal');
+        mv.setAttribute('camera-controls','');
+        mv.cameraOrbit = '0deg 90deg 2m';
+        mv.cameraTarget = '0 0 0';
+      } catch {}
+      mv.src = modelItem.model;
+      try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
+      try {
+        const once = ()=>{
+          try {
+            const root = getBaseRoot(mv);
+            let box = null;
+            if (root) {
+              box = normalizeCharacterRoot(root);
+            }
+            if (box) {
+              frameModelViewerCamera(mv, box);
+            } else {
+              mv.cameraOrbit = '0deg 90deg 2m';
+              mv.cameraTarget = '0 0 0';
+              try { mv.jumpCameraToGoal(); } catch {}
+            }
+            mv.style.visibility = 'visible';
+            mv.style.opacity = '1';
+          } catch {}
+          try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {}
+        };
+        mv.addEventListener('load', once, { once:true });
+        mv.addEventListener('scene-graph-ready', once, { once:true });
+        const poseOnce = ()=>{ try { applyPoseSelection().catch(()=>{}); } catch {} };
+        mv.addEventListener('load', poseOnce, { once:true });
+        mv.addEventListener('scene-graph-ready', poseOnce, { once:true });
+      } catch {}
+      try { applyPoseSelection().catch(()=>{}); } catch {}
+    }
+
     async function renderPreview(){
       const equip = _wallet.equipped||{};
       const itemsMap = new Map((_items||[]).map(x=>[x.id,x]));
@@ -2546,13 +3075,27 @@
       try { if (mv && !mv.__dbg) { mv.__dbg=true; mv.addEventListener('load', ()=>{ try { console.log('[shop] model-viewer load fired'); } catch(e){} }, { once:false }); } } catch(e){}
       // Prefer 3D model when available
       try {
+        const modelId = equip.model || 'model-basemesh';
+        if (modelId !== LAST_MODEL_ID) {
+          LAST_MODEL_ID = modelId;
+          CURRENT_POSE_ID = 'neutral';
+          try { refreshPoseButtons(); } catch {}
+          try { lastPoseMeta = null; lastPoseSeconds = 0; } catch {}
+        }
         const modelItem = equip.model && itemsMap.get(equip.model);
+        try {
+          const isAllInOneModel = !!(modelItem && modelItem.model && /allinonepr\.glb$/i.test(String(modelItem.model)));
+          if (!isAllInOneModel) {
+            const panel = document.getElementById('aioTogglePanel');
+            if (panel) panel.style.display = 'none';
+          }
+        } catch {}
         try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
-        if (modelItem && modelItem.model && mv) {
-          async function ensureThreeReady(ms=4000){
-            const t0 = Date.now();
-            return await new Promise(r=>{
-              (function poll(){
+      if (modelItem && modelItem.model && mv) {
+        async function ensureThreeReady(ms=4000){
+          const t0 = Date.now();
+          return await new Promise(r=>{
+            (function poll(){
                 try {
                   if (getThree() && window.__GLTFLoader) return r(true);
                 } catch {}
@@ -2561,39 +3104,35 @@
               })();
             });
           }
-          await ensureThreeReady(4000);
-          let usedTV = false;
-          if (!FORCE_MV_PREVIEW && TV && TV.init) {
-            try {
-              if (TV.init()) {
-                console.log('[shop] using TV preview');
-                window.__useTV = true;
-                const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
-                const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
-                const baseOk = await TV.loadBase(modelItem.model);
-                if (baseOk) {
-                  try { if (TV.resize) TV.resize(); } catch {}
-                  try { await applyEyeColorFromStorage(); } catch {}
-                  try { await applyHatColorFromStorage(); } catch {}
-                  try { await applyBootColorFromStorage(); } catch {}
-                  try { await applyBagColorFromStorage(); } catch {}
-                  const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
-                  const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
-                  try { await TV.attachAll(equip, itemsMap, anchors); } catch (errAttach) { console.warn('[shop] TV attachAll failed', errAttach); }
-                  usedTV = true;
-                } else {
-                  window.__useTV = false;
-                }
-              }
-            } catch (err){
-              console.warn('[shop] TV preview failed', err);
-              window.__useTV = false;
+        await ensureThreeReady(4000);
+        window.__useTV = true;
+        const tvWrap = document.getElementById('tvWrap'); if (tvWrap) tvWrap.style.display='inline-block';
+        const mvWrap = document.getElementById('mvWrap'); if (mvWrap) mvWrap.style.display='none';
+        try { mv.style.display='none'; mv.style.visibility='hidden'; mv.style.opacity='0'; } catch {}
+        if (TV && TV.init) {
+          const okInit = TV.init();
+          if (okInit) {
+            const baseOk = await TV.loadBase(modelItem.model);
+            if (baseOk) {
+              try { if (TV.resize) TV.resize(); } catch {}
+              try { await applyEyeColorFromStorage(); } catch {}
+              try { await applyHatColorFromStorage(); } catch {}
+              try { await applyBootColorFromStorage(); } catch {}
+              try { await applyBagColorFromStorage(); } catch {}
+              try { if (mixer) { mixer.stopAllAction(); mixer.update?.(0); } poseAction = null; lastPoseMeta = null; lastPoseSeconds = 0; } catch {}
+              try { await applyPoseSelection(); } catch {}
+              const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+              const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+              try { await TV.attachAll(equip, itemsMap, anchors); } catch (errAttach) { console.warn('[shop] TV attachAll failed', errAttach); }
+            } else {
+              console.warn('[shop] TV loadBase failed');
             }
+          } else {
+            console.warn('[shop] TV init failed');
           }
-          console.log('[shop] usedTV flag', usedTV);
-          if (!usedTV) {
-            showModelViewerPreview(mv, modelItem);
-          }
+        } else {
+          console.warn('[shop] TV unavailable');
+        }
           // 3D only
           try { mv.pause(); } catch (e) {}
           // Nudge animation to show change
@@ -2602,36 +3141,37 @@
       } catch (e) {}
       // Attach clothing via plugin (scene-graph) when NOT using TV
       try {
-        if (!window.__useTV) {
-          function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } }
-          const overrides = loadAnchorOverrides();
-          if (!window.__ofp || typeof window.__ofp.attachAll !== 'function' || typeof window.__ofp.setOverrides !== 'function') {
-            if (window.OutfitPreview) {
-              window.__ofp = window.OutfitPreview.create({ mv: mv, overrides });
-            } else {
-              console.warn('OutfitPreview plugin not found');
-              // Fallback: try local attach helper
-              try { await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
-            }
+        if (window.__useTV) return; // TV path handled above
+        const rootReady = await ensureModelViewerReady(mv, 8000);
+        if (!rootReady) { console.warn('[preview] model-viewer root not ready'); }
+        function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } }
+        const overrides = loadAnchorOverrides();
+        if (!window.__ofp || typeof window.__ofp.attachAll !== 'function' || typeof window.__ofp.setOverrides !== 'function') {
+          if (window.OutfitPreview) {
+            window.__ofp = window.OutfitPreview.create({ mv: mv, overrides });
           } else {
-            try { window.__ofp.state.mv = mv; } catch (e) {}
+            console.warn('OutfitPreview plugin not found');
+            // Fallback: try local attach helper
+            try { await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
           }
-          if (window.__ofp) {
-          try { window.__ofp.setOverrides(overrides); } catch (e) {}
-          window.__ofp.update(equip, _items||[]);
-          await window.__ofp.attachAll();
-            try {
-              const root = getBaseRoot(mv);
-              const hasAny = Array.isArray(mv.__attachments) ? mv.__attachments.length>0 : (root && root.children && root.children.length>0);
-              if (!hasAny) { await attachAccessoriesToBase(mv, equip, itemsMap); }
-            } catch (e) {}
-          }
-          // Only run local fallback if plugin unavailable or attached nothing
-          try {
-            const noneFromPlugin = (!window.__ofp || !window.__ofp.state || !Array.isArray(window.__ofp.state.attached) || window.__ofp.state.attached.length===0);
-            if (noneFromPlugin) await attachAccessoriesToBase(mv, equip, itemsMap);
-          } catch (e) { console.warn('fallback attach error', e); }
+        } else {
+          try { window.__ofp.state.mv = mv; } catch (e) {}
         }
+        if (window.__ofp) {
+        try { window.__ofp.setOverrides(overrides); } catch (e) {}
+        window.__ofp.update(equip, _items||[]);
+        await window.__ofp.attachAll();
+          try {
+            const root = getBaseRoot(mv);
+            const hasAny = Array.isArray(mv.__attachments) ? mv.__attachments.length>0 : (root && root.children && root.children.length>0);
+            if (!hasAny) { await attachAccessoriesToBase(mv, equip, itemsMap); }
+          } catch (e) {}
+        }
+        // Only run local fallback if plugin unavailable or attached nothing
+        try {
+          const noneFromPlugin = (!window.__ofp || !window.__ofp.state || !Array.isArray(window.__ofp.state.attached) || window.__ofp.state.attached.length===0);
+          if (noneFromPlugin) await attachAccessoriesToBase(mv, equip, itemsMap);
+        } catch (e) { console.warn('fallback attach error', e); }
       } catch (e) { console.warn('preview attach failed', e); }
         try {
           Object.keys(equip||{}).forEach(slot => {
@@ -2646,7 +3186,15 @@
           try { await applyHatColorFromStorage(); } catch {}
           try { await applyBootColorFromStorage(); } catch {}
           try { await applyBagColorFromStorage(); } catch {}
-          try { await applyPoseSelection(); } catch {}
+          try {
+            if (MODEL_CHANGED) {
+              CURRENT_POSE_ID = 'neutral';
+              await applyPoseSelection();
+              MODEL_CHANGED = false;
+            } else {
+              await applyPoseSelection();
+            }
+          } catch {}
           updateColorControls();
         } catch (e) {}
       // No fallback preview
@@ -2921,6 +3469,7 @@
         } catch {}
       });
     } catch {}
+    const HIDE_BUY_BTNS = new Set(['upgrade-tutor-basic','upgrade-tutor-pro','upgrade-hint-plus','upgrade-freeze-plus','upgrade-shield-start']);
     function cardHtml(it, owned, equipped){
       const curModel = (equipped||{}).model || 'model-basemesh';
       const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
@@ -2928,7 +3477,7 @@
       const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
       const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
       const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
-      let action = buyBtn;
+      let action = (HIDE_BUY_BTNS.has(it.id) ? '' : buyBtn);
       if (owned[it.id]) {
         if (it.kind==='cosmetic') {
           const slot = it.slot;
@@ -2939,7 +3488,9 @@
           action = ownedBadge;
         }
       }
-      const sub = it.kind==='upgrade' ? 'Upgrade' : (friendlySlotLabel(it.slot) || 'Cosmetic');
+      const sub = it.kind==='upgrade'
+        ? 'Upgrade'
+        : (it.slot==='model' ? '' : (friendlySlotLabel(it.slot) || ''));
       const ownerLabel = owned[it.id] ? ownedBadge : '';
       return `
         <div class="p-3 rounded-xl border border-black/40 bg-white shadow-sm space-y-3">
@@ -2959,7 +3510,13 @@
       const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
       const cats = _cats;
       let cat = cats.find(c=>c.id===SELECTED) || cats[0];
-      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat).filter(it=>!isHiddenItem(it));
+      const HIDE_ITEMS = new Set(['upgrade-tutor-basic','upgrade-tutor-pro','upgrade-hint-plus','upgrade-freeze-plus','upgrade-shield-start','upgrade-coin-boost']);
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
+      const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} };
+      const list = (cat ? _items.filter(cat.filter) : _items)
+        .filter(compat)
+        .filter(it=>!isHiddenItem(it))
+        .filter(it=>!HIDE_ITEMS.has(it.id));
       catalogEl.innerHTML='';
       if (!list.length){
         const empty = document.createElement('div');
@@ -3105,37 +3662,6 @@
               }
             }
           }
-    function showModelViewerPreview(mv, modelItem){
-      try {
-        window.__useTV = false;
-        const tvWrap0 = document.getElementById('tvWrap'); if (tvWrap0) tvWrap0.style.display='none';
-        const mvWrap0 = document.getElementById('mvWrap'); if (mvWrap0) mvWrap0.style.display='inline-block';
-        window.__mvPreviewCount = (window.__mvPreviewCount||0)+1;
-        console.log('[shop] using model-viewer preview', window.__mvPreviewCount);
-      } catch {}
-      if (!mv || !modelItem || !modelItem.model) return;
-      mv.src = modelItem.model;
-      try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
-      try {
-        const once = ()=>{
-          try {
-            const root = getBaseRoot(mv);
-            let box = null;
-            if (root) {
-              box = normalizeCharacterRoot(root);
-            }
-            if (box) frameModelViewerCamera(mv, box);
-          } catch {}
-          try { applyEyeColorFromStorage(); } catch {} try { applyHatColorFromStorage(); } catch {} try { applyBootColorFromStorage(); } catch {} try { applyBagColorFromStorage(); } catch {}
-        };
-        mv.addEventListener('load', once, { once:true });
-        mv.addEventListener('scene-graph-ready', once, { once:true });
-        const poseOnce = ()=>{ try { applyPoseSelection().catch(()=>{}); } catch {} };
-        mv.addEventListener('load', poseOnce, { once:true });
-        mv.addEventListener('scene-graph-ready', poseOnce, { once:true });
-      } catch {}
-      try { applyPoseSelection().catch(()=>{}); } catch {}
-    }
           renderPreview();
           // Rebuild categories after model change to ensure upgrades show correctly
           try { if (slot === 'model') { _cats = categoriesFrom(_items); renderCats(_cats); } } catch {}
