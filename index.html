@@ -763,21 +763,26 @@
       if (!img || !placeholder) return;
       const data = safeGet('equippedPreviewPNG');
       const fallback = img.getAttribute('data-fallback-src');
-      if (data && data.startsWith('data:image')) {
+      const showFallback = () => {
+        img.onerror = null;
+        if (fallback) {
+          img.src = fallback;
+          img.classList.add('is-loaded');
+          placeholder.hidden = false;
+          return;
+        }
+        img.removeAttribute('src');
+        img.classList.remove('is-loaded');
+        placeholder.hidden = false;
+      };
+      if (data && data.startsWith('data:image') && data.length > 200) {
+        img.onerror = () => showFallback();
         img.src = data;
         img.classList.add('is-loaded');
         placeholder.hidden = true;
         return;
       }
-      if (fallback) {
-        img.src = fallback;
-        img.classList.add('is-loaded');
-        placeholder.hidden = false;
-        return;
-      }
-      img.removeAttribute('src');
-      img.classList.remove('is-loaded');
-      placeholder.hidden = false;
+      showFallback();
     }
 
     function initRotator() {
