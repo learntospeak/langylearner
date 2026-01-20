@@ -361,7 +361,7 @@
     height: 150px;
     object-fit: contain;
     filter: drop-shadow(0 12px 12px rgba(0,0,0,0.2));
-    opacity: 0.2;
+    opacity: 1;
     transition: opacity 0.2s ease;
   }
   .chibi-img.is-loaded { opacity: 1; }
@@ -594,7 +594,7 @@
           <div class="bolt">POW</div>
           <div class="rotator-slide is-active" data-rotator-slide="chibi">
             <div class="chibi-wrap">
-              <img id="heroChibi" class="chibi-img" data-fallback-src="assets/chibi/2d/skin-student/body.svg" alt="Your chibi preview" />
+              <img id="heroChibi" class="chibi-img" src="assets/chibi/2d/skin-student/body.svg" data-fallback-src="assets/chibi/2d/skin-student/body.svg" alt="Your chibi preview" />
               <div id="chibiPlaceholder" class="chibi-placeholder">Customize your chibi in the shop to see it here.</div>
               <div class="art-label">3D Chibi</div>
             </div>
