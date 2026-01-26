@@ -85,6 +85,29 @@
       display: grid;
       gap: 12px;
     }
+    .chibi-card {
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      background: #fffaf2;
+      box-shadow: var(--shadow-soft);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .chibi-viewer {
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      background: #fff7ed;
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+    }
+    .chibi-viewer model-viewer {
+      width: 100%;
+      height: 220px;
+    }
     .path-list {
       display: grid;
       gap: 8px;
@@ -345,6 +368,15 @@
 
     <section class="flow-grid">
       <aside class="path-panel">
+        <div class="chibi-card">
+          <div class="badge vermillion">Your guide</div>
+          <div class="chibi-viewer">
+            <model-viewer id="sectionAChibi" src="assets/chibi/characters/ChibiCharacters/glb/basemeshpr.glb" alt="Chibi guide" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none" loading="eager"></model-viewer>
+          </div>
+          <div class="status-row">
+            <span class="token">Guide bonus: +1 charm on correct answers</span>
+          </div>
+        </div>
         <div class="info-card">
           <div class="badge moss">Quest flow</div>
           <div class="progress-bar">
@@ -502,7 +534,10 @@
     </section>
   </main>
 
+  <script type="module" src="./vendor/model-viewer.min.js"></script>
   <script>
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const vowels = [
       { kana: '\u3042', romaji: 'a', label: 'A' },
       { kana: '\u3044', romaji: 'i', label: 'I' },
@@ -519,6 +554,40 @@
       try { speechSynthesis.cancel(); } catch {}
       speechSynthesis.speak(u);
     };
+
+    const initChibiViewer = () => {
+      const mv = document.getElementById('sectionAChibi');
+      if (!mv) return;
+      const models = [
+        { id: 'model-basemesh', src: 'assets/chibi/characters/ChibiCharacters/glb/basemeshpr.glb' },
+        { id: 'model-student', src: 'assets/chibi/characters/ChibiCharacters/glb/studentpr.glb' },
+        { id: 'model-ninja', src: 'assets/chibi/characters/ChibiCharacters/glb/ninjapr.glb' },
+        { id: 'model-knight', src: 'assets/chibi/characters/ChibiCharacters/glb/knightpr.glb' },
+        { id: 'model-merchant', src: 'assets/chibi/characters/ChibiCharacters/glb/merchantpr.glb' },
+        { id: 'model-archer', src: 'assets/chibi/characters/ChibiCharacters/glb/archerpr.glb' },
+        { id: 'model-allinone', src: 'assets/chibi/characters/ChibiCharacters/glb/allinonepr.glb' }
+      ];
+      const modelMap = new Map(models.map((model) => [model.id, model]));
+      let equippedId = null;
+      try {
+        const snap = localStorage.getItem('equippedSnapshot');
+        if (snap) {
+          const data = JSON.parse(snap);
+          if (data && data.model) equippedId = String(data.model);
+        }
+      } catch {}
+      if (equippedId === 'model-allinone') equippedId = 'model-basemesh';
+      const active = modelMap.get(equippedId) || modelMap.get('model-basemesh') || models[0];
+      if (active) mv.setAttribute('src', active.src);
+      if (!reduceMotion) {
+        mv.setAttribute('auto-rotate', '');
+        mv.setAttribute('rotation-per-second', '20deg');
+      } else {
+        mv.removeAttribute('auto-rotate');
+      }
+    };
+
+    initChibiViewer();
 
     const steps = Array.from(document.querySelectorAll('.quest-step'));
     const pathSteps = Array.from(document.querySelectorAll('.path-step'));
