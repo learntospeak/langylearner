@@ -1,0 +1,242 @@
+Japanese Curriculum Outline (Kid to Adult Progression)
+=====================================================
+
+Purpose
+- Teach Japanese from zero to functional beginner/intermediate, mapped to 4 themed stages.
+- Each stage has a core focus, vocab goals, and grammar goals.
+- Spiral review: keep earlier content active in later stages.
+
+Stage Map (Backdrop -> Skill Level)
+1) Shrine Approach -> Stage 1: Beginner (Kid)
+2) Rooftop Town -> Stage 2: Early Learner (Child)
+3) Riverside Festival -> Stage 3: Intermediate (Teen)
+4) Modern Kyoto-ish -> Stage 4: Upper Beginner / Early Intermediate (Adult)
+
+Stage 0 (Orientation - Pre-Stage, optional)
+- Writing systems overview: hiragana, katakana, kanji, romaji.
+- Pronunciation basics: a i u e o, mora timing, long vowels.
+- How lessons work: input, feedback, streaks, and review.
+
+Here’s a detailed Stage 0 content map I’d cover before Stage 1. It keeps the reference page clean while giving learners a guided “how it all works” orientation.
+
+Stage 0 Coverage
+
+Outcomes: Learner can identify the 4 scripts by sight, pronounce the 5 vowels clearly, understand mora timing, and know how lessons, reviews, and streaks work.
+Writing Systems Overview: Hiragana = grammar/native words; Katakana = loanwords/emphasis; Kanji = meaning carriers; Romaji = training/typing only. Include one mixed‑script example sentence with labels (color‑coded or callouts) and a short “when you’ll see it” note for each.
+Pronunciation Basics: Five pure vowels (a i u e o) with mouth shape notes; key consonant quirks (r as light tap, “shi/chi/tsu/fu” note) without going deep. Include “romaji is a crutch” reminder.
+Mora Timing: Explain 1 kana = 1 beat; long vowels = 2 beats; final “n” counts as 1 beat; small tsu adds a silent beat (preview only, details later). Add a clap‑along mini demo using romaji (e.g., ka‑na, sa‑ku‑ra, to‑kyo‑o).
+Reading Conventions: No spaces between words in real text; punctuation basics; katakana long‑vowel dash preview; furigana meaning (small reading aid above/next to kanji).
+How Lessons Work: Flow (teach → practice → check → review), input types (tap, type, listen), feedback (hints, retries), streaks (daily short sessions), and review cadence (spaced repeat of older rows).
+Tools & Setup: Audio on/off, how to replay sounds, optional typing/IME note (romaji input converts to kana), and where to find reference charts.
+Suggested Activities (Stage 0)
+
+Script ID drill: Show 8–10 mixed symbols; learner tags “hira/kata/kanji/romaji.”
+Vowel clarity: Tap a/i/u/e/o and repeat out loud; compare short vs long (a vs aa).
+Mora clap: 5–6 romaji words; learner taps beats to match mora count.
+Lesson walkthrough: Short “fake lesson” with one correct and one mistake to show feedback loop.
+Mastery Checklist (Exit Stage 0)
+
+Script recognition: Can label the four scripts in a mixed row with 80–90% accuracy.
+Vowel clarity: Can say a/i/u/e/o cleanly without sliding.
+Mora sense: Can clap 1–2–3 beats correctly for sample words.
+Product understanding: Knows where to start lessons, how reviews work, and how to replay sounds.
+
+Here’s the visual direction I’d use for the Stage 0 Orientation page, aligned with the manga theme you already have:
+
+Theme
+
+“Starter kit / welcome briefing” vibe — clean, friendly, first‑time onboarding.
+Soft paper background with subtle screentone dots (reuse anime-theme.css).
+Manga speech‑bubble cards for each module (Writing Systems, Pronunciation, Mora Timing, How Lessons Work).
+Typography
+
+Title: bold display (same as home hero, “Bowlby One SC”).
+Body: “M PLUS Rounded 1c” + “Noto Sans JP” (already used).
+Big kana samples in Noto Sans JP for clarity.
+Color
+
+Warm paper base (off‑white + sakura dot texture).
+Accent chips per module:
+Writing Systems = ink + sakura
+Pronunciation = amber
+Mora Timing = aqua
+Lessons/Review = indigo
+Keep black outlines for the manga feel.
+Layout
+
+Top banner: “Stage 0: Orientation” with a progress checklist (4 items).
+Three big panels in a grid (2‑column desktop, stacked mobile).
+A “Try it now” strip with mini interactions (tap vowels, clap mora).
+Sticky footer CTA: “Start Stage 1: Hiragana”.
+Motion
+
+Gentle rise‑in on load (same as home).
+Flash/pulse on the mini demo buttons only (reduced motion respected).
+
+Stage 1 (Shrine Approach - Beginner)
+Purpose
+- Build a solid hiragana base and early speaking confidence.
+- Keep progress fast: 6-10 total hours so learners do not feel stuck.
+
+Time target
+- 6-10 hours total (about 18-28 short units).
+- Typical unit length: 10-15 minutes.
+- Every unit mixes learning + a short mini-game so it feels active.
+
+Rotation pattern (used in every unit)
+1) Teach (2-4 min) -> new sounds or pattern.
+2) Guided practice (2-4 min) -> tap, listen, or type.
+3) Mini-game (2-4 min) -> same skill with light pressure.
+4) Quick check (1-2 min) -> 6-10 items.
+5) Optional song (20-30 sec) -> chant or row song for memory.
+
+Section A - Entrance Basin (Vowels + Mora warmup)
+A1 Vowels intro: a i u e o, mouth shapes, no sliding.
+A2 Vowel clarity: short vs long, no diphthongs.
+A3 Mora timing basics: 1 kana = 1 beat, long vowels = 2 beats, final n = 1 beat, small tsu preview.
+A4 Mini-game: Vowel Wash (tap the spoken vowel).
+A5 Check: 10 items, pass at 80 percent.
+
+Section B - Torii Path (Hiragana rows)
+Row order: k, s, t, n, h, m, y, r, w.
+Each row uses a 2-unit cycle + a mixed review after every 2 rows.
+- Unit 1 (row intro): 5 kana shapes + sound + row chant + mini-game.
+- Unit 2 (row practice): listen and pick, then type romaji -> kana, end with quick check.
+- Mixed review gate: 12-15 items from all rows learned so far.
+
+Suggested row split (keeps pace fast)
+B1 K row intro
+B2 K row practice
+B3 S row intro
+B4 KS mixed review gate
+B5 T row intro
+B6 T row practice
+B7 KST mixed review gate
+B8 N row intro
+B9 N row practice
+B10 KSTN mixed review gate
+B11 H row intro
+B12 H row practice
+B13 KSTNH mixed review gate
+B14 M row intro
+B15 M row practice
+B16 KSTNHM mixed review gate
+B17 Y row intro
+B18 Y row practice
+B19 KSTNHMY mixed review gate
+B20 R row intro
+B21 R row practice
+B22 KSTNHMYR mixed review gate
+B23 W row intro
+B24 W row practice
+B25 Final row boss (all rows, 20 items)
+
+Section C - Shrine Greetings (simple speaking)
+C1 Greetings: konnichiwa, ohayo, konbanwa (listen and match).
+C2 Self intro: watashi wa X desu, hajimemashite.
+C3 Mini-game: Shrine Greeter (pick the right phrase for a situation).
+C4 Check: 8 prompts, build one sentence per prompt.
+
+Section D - Offerings Board (particles + sentence frame)
+D1 Particle wa (topic): highlight X wa Y desu.
+D2 Particle no (possession): X no Y.
+D3 Particle ka (question): turn a statement into a question.
+D4 Build sentences: mix wa/no/ka with X wa Y desu.
+D5 Mini-game: Ema Board (place the right particle to complete the wish).
+D6 Check: 10 items, include 3 questions with ka.
+
+Section E - Lantern Count (numbers 0-10)
+E1 Numbers 0-5 (listen + tap + chant).
+E2 Numbers 6-10 (listen + tap + chant).
+E3 Mini-game: Lantern Line (light the right number).
+E4 Check: 10 items, 80 percent pass.
+
+Section F - Short Reading Pack (hiragana only)
+F1 Short words (15-20 items, no romaji).
+F2 Short phrases (simple greetings + numbers).
+F3 Mini-game: Scroll Reader (gentle timed read, not a speed test).
+F4 Final check: 12-15 items, 85 percent accuracy.
+
+Outcomes
+- Read and write hiragana with confidence.
+- Hear and produce clean vowel sounds.
+- Use simple greetings and self introductions.
+- Use wa/no/ka and X wa Y desu to make simple sentences.
+- Read short hiragana words and numbers 0-10.
+
+Progress checks (exit criteria)
+- Hiragana: 85 percent accuracy across mixed rows, 2 seconds per item target.
+- Particles: 8 of 10 correct in a mixed exercise.
+- Sentence pattern: build 5 simple sentences without hints.
+- Listening: 80 percent correct on kana from audio.
+
+Optional modes (avoid over gamefying)
+- Focus mode: lesson list only, no shrine visuals.
+- Shrine mode: same content, with mini-game wrappers and station map.
+Stage 2 (Rooftop Town - Early Learner)
+Core goals
+- Read and write katakana.
+- Use small sounds and sound marks.
+Topics
+- Katakana set and loanword basics.
+- Dakuten/handakuten (voicing marks).
+- Small ya/yu/yo combinations (kya, ryu, etc).
+- Small tsu (double consonants).
+- Long vowels in kana and common spellings in romaji.
+- Simple adjectives (i-adjectives and na-adjectives, basic forms).
+- Verbs: dictionary form and polite form (masu) for common verbs.
+- Particles: o (object), ni (time/place), de (location of action).
+Outcomes
+- Read basic katakana loanwords.
+- Build and understand short polite sentences.
+
+Stage 3 (Riverside Festival - Intermediate)
+Core goals
+- Start kanji confidently.
+- Use basic verb conjugations.
+Topics
+- Kanji intro: radicals, stroke order, and first 100-200 kanji.
+- Time and dates: days of week, months, clock time.
+- Verb forms: past, negative, te-form (intro usage).
+- Counters: people, objects, days, and general counters.
+- Polite requests and permission basics (simple patterns).
+- Expanding sentence patterns with reasons (because), and contrast (but).
+Outcomes
+- Read short mixed-script sentences (kana + basic kanji).
+- Use past tense and simple requests.
+
+Stage 4 (Modern Kyoto-ish - Upper Beginner / Early Intermediate)
+Core goals
+- Use mixed scripts comfortably.
+- Build multi-clause sentences.
+Topics
+- More kanji (200-400 total) and common compounds.
+- Casual vs polite speech (when and how to switch).
+- Te-form combinations: ongoing, trying, linking actions.
+- Comparisons, preferences, and simple conditionals.
+- Direction, location, and motion patterns (go/come/return).
+- Short paragraph reading and writing with real-world topics.
+Outcomes
+- Read short passages with furigana support.
+- Hold short conversations on daily topics.
+
+Review and Progression Notes
+- Each stage should reuse 20-30 percent of prior content.
+- New content appears in small chunks and repeats for mastery.
+- Stage promotion occurs when accuracy and speed goals are met.
+
+Ninja Slice Integration Notes
+- Stage 1: spawn only hiragana + vowels.
+- Stage 2: add katakana + dakuten + small sounds.
+- Stage 3: mix kana + basic kanji, add verbs and time words.
+- Stage 4: add short phrases and multi-word prompts.
+
+
+// home page 
+
+Home landing page ideas
+- Manga cover hero: big title like a volume cover, "Vol. 1: Kana Basics" badge, bold Start / Quick Kana / Shop buttons, short episode strip.
+- Study desk layout: warm paper background, "Today's Goal" card, large Continue button, small kana tile grid teaser.
+- Dojo dashboard: signboard header, level + XP bar + streak, two big panels (Learn, Practice), "New lesson unlocked" callout.
+- Train map journey: scrollable route with stations (Hiragana, Katakana, Kanji), stamped cards with Start/Resume buttons.
+- Comic strip intro: 3-panel story (meet mascot, learn kana, win coins), final panel is the main CTA.

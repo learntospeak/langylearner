@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KanaReader - Shrine Approach - Section A Draft</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bowlby+One+SC&family=M+PLUS+Rounded+1c:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css" />
+  <style>
+    :root {
+      --ink: #121316;
+      --paper: #ffffff;
+      --paper-soft: #fffaf2;
+      --accent-vermillion: #f97316;
+      --accent-deep: #1f2937;
+      --accent-moss: #16a34a;
+      --accent-amber: #fbbf24;
+      --accent-teal: #14b8a6;
+    }
+
+    body.anime-bg { min-height: 100vh; }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      display: grid;
+      gap: 18px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(280px, 1.1fr) minmax(240px, 0.9fr);
+      gap: 16px;
+      align-items: center;
+    }
+    .title-block h1 {
+      font-family: "Bowlby One SC", system-ui, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 6px 0 10px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: var(--paper);
+      box-shadow: var(--shadow-soft);
+    }
+    .station-track {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .station {
+      appearance: none;
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      padding: 8px 10px;
+      background: #fff7ed;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: var(--shadow-soft);
+      cursor: pointer;
+      text-align: left;
+    }
+    .station.is-active { background: #fee2e2; }
+    .station.is-complete { background: #dcfce7; }
+    .station.is-locked { opacity: 0.5; cursor: not-allowed; }
+    .flow-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.55fr) minmax(320px, 1.25fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .path-panel {
+      display: grid;
+      gap: 12px;
+    }
+    .path-list {
+      display: grid;
+      gap: 8px;
+    }
+    .path-step {
+      appearance: none;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-soft);
+    }
+    .path-step.is-active { background: #fee2e2; }
+    .path-step.is-complete { background: #dcfce7; }
+    .path-step.is-locked { opacity: 0.5; cursor: not-allowed; }
+    .path-num {
+      width: 26px;
+      height: 26px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      background: #fff;
+    }
+    .step-panel {
+      display: grid;
+      gap: 16px;
+    }
+    .quest-step { display: none; }
+    .quest-step.is-active {
+      display: grid;
+      gap: 14px;
+    }
+    .step-header {
+      display: grid;
+      gap: 6px;
+    }
+    .step-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .progress-bar {
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: #fff;
+      height: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+      margin-top: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #fb923c 0%, #fbbf24 100%);
+      transition: width 0.2s ease;
+    }
+    .reward-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .seal {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px dashed var(--ink);
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+    .seal.is-earned {
+      background: #fef08a;
+      border-style: solid;
+    }
+    .token {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .reward-banner {
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      background: #fef9c3;
+      padding: 10px;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: var(--shadow-soft);
+      margin-top: 10px;
+      display: none;
+    }
+    .stack { display: grid; gap: 14px; }
+    .info-card {
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: var(--shadow-soft);
+      padding: 14px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: var(--paper);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .badge.vermillion { background: #ffedd5; }
+    .badge.moss { background: #dcfce7; }
+    .badge.teal { background: #ccfbf1; }
+    .badge.amber { background: #fef3c7; }
+    .text-sm { font-size: 14px; color: #374151; }
+    .vowel-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .vowel-chip {
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      padding: 8px 6px;
+      text-align: center;
+      background: #fff7ed;
+      font-weight: 700;
+      box-shadow: var(--shadow-soft);
+    }
+    .vowel-chip .kana {
+      font-size: 20px;
+      display: block;
+    }
+    .basin {
+      border: 2px dashed var(--ink);
+      border-radius: 16px;
+      padding: 14px;
+      background: linear-gradient(180deg, #fff7ed 0%, #fef2f2 100%);
+      display: grid;
+      gap: 10px;
+    }
+    .wash-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .wash-btn, .check-btn, .pulse-btn {
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      padding: 8px 6px;
+      background: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow-soft);
+      transition: transform .12s ease, background .12s ease;
+    }
+    .wash-btn:hover, .check-btn:hover, .pulse-btn:hover { transform: translateY(-1px); }
+    .wash-btn.is-correct { background: #dcfce7; }
+    .wash-btn.is-wrong { background: #fee2e2; }
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .beats-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .beat-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--ink);
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+    .beat-dot.is-on { background: #fde68a; }
+    .check-panel {
+      border: 2px dashed var(--ink);
+      border-radius: 16px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      background: #fff;
+    }
+    .options-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 6px;
+    }
+    .check-btn.is-correct { background: #dcfce7; }
+    .check-btn.is-wrong { background: #fee2e2; }
+    .note {
+      background: #fef3c7;
+      border: 2px dashed #b45309;
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #78350f;
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .flow-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="anime-bg">
+  <main class="page">
+    <header class="hero manga-bubble p-5">
+      <div class="title-block">
+        <div class="tag">Shrine Approach</div>
+        <h1>Section A: Entrance Basin</h1>
+        <p class="text-sm">Mini-quest flow: clear each task to unlock the next and earn a shrine seal.</p>
+        <div class="station-track" id="stationTrack">
+          <button class="station is-active" type="button" data-step="0">Vowel intro</button>
+          <button class="station" type="button" data-step="1">Vowel clarity</button>
+          <button class="station" type="button" data-step="2">Mora beats</button>
+          <button class="station" type="button" data-step="3">Vowel Wash</button>
+          <button class="station" type="button" data-step="4">Quick check</button>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="info-card">
+          <div class="badge vermillion">Goal</div>
+          <p class="text-sm" style="margin-top:8px;">Say the five vowels clearly, feel mora timing, and pass the quick check.</p>
+          <div class="note" style="margin-top:10px;">Target time: 15-20 minutes total.</div>
+        </div>
+        <div class="info-card">
+          <div class="badge moss">Actions</div>
+          <div class="status-row" style="margin-top:10px;">
+            <a class="btn btn-dark" href="lesson.html?lesson=greetings-001">Start lesson</a>
+            <a class="btn btn-ghost" href="orientation.html">Back to Orientation</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="flow-grid">
+      <aside class="path-panel">
+        <div class="info-card">
+          <div class="badge moss">Quest flow</div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="status-row" style="margin-top:10px;">
+            <span id="progressLabel">Step 1 of 5</span>
+            <span class="token">Charms: <strong id="charmCount">0</strong></span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="badge teal">Reward</div>
+          <p class="text-sm" style="margin-top:8px;">Earn a shrine seal by passing the quick check.</p>
+          <div class="reward-row" id="sealRow">
+            <span class="seal"></span>
+            <span class="seal"></span>
+            <span class="seal"></span>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="badge amber">Quest steps</div>
+          <div class="path-list" style="margin-top:8px;">
+            <button class="path-step is-active" type="button" data-step="0"><span class="path-num">1</span> Vowel intro</button>
+            <button class="path-step" type="button" data-step="1"><span class="path-num">2</span> Vowel clarity</button>
+            <button class="path-step" type="button" data-step="2"><span class="path-num">3</span> Mora beats</button>
+            <button class="path-step" type="button" data-step="3"><span class="path-num">4</span> Vowel Wash</button>
+            <button class="path-step" type="button" data-step="4"><span class="path-num">5</span> Quick check</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="step-panel">
+        <section class="quest-step is-active" data-step="0">
+          <div class="step-header">
+            <span class="badge vermillion">Step 1</span>
+            <h2 class="step-title">Vowel intro</h2>
+            <p class="text-sm">Say each vowel once, steady.</p>
+          </div>
+          <div class="info-card">
+            <p class="text-sm" style="margin-top:4px;">Five pure vowels. No sliding.</p>
+            <div class="vowel-strip">
+              <div class="vowel-chip"><span class="kana">&#12354;</span>A</div>
+              <div class="vowel-chip"><span class="kana">&#12356;</span>I</div>
+              <div class="vowel-chip"><span class="kana">&#12358;</span>U</div>
+              <div class="vowel-chip"><span class="kana">&#12360;</span>E</div>
+              <div class="vowel-chip"><span class="kana">&#12362;</span>O</div>
+            </div>
+            <div class="status-row" style="margin-top:10px;">
+              <button class="btn btn-ghost" id="vowelPlay" type="button">Play vowels</button>
+              <button class="btn btn-dark step-complete" type="button" data-step="0" data-reward="1">I practiced</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="quest-step" data-step="1">
+          <div class="step-header">
+            <span class="badge amber">Step 2</span>
+            <h2 class="step-title">Vowel clarity</h2>
+            <p class="text-sm">Long vowels are longer, not different sounds.</p>
+          </div>
+          <div class="info-card">
+            <p class="text-sm" style="margin-top:4px;">Short vs long changes meaning. Keep vowels pure with no diphthongs.</p>
+            <p class="text-sm" style="margin-top:8px;">Example: obaasan (grandmother) vs obasan (aunt).</p>
+            <div class="status-row" style="margin-top:10px;">
+              <button class="btn btn-ghost speak-btn" type="button" data-say="obaasan">Listen long</button>
+              <button class="btn btn-ghost speak-btn" type="button" data-say="obasan">Listen short</button>
+            </div>
+            <div class="note" style="margin-top:10px;">Tip: hold the vowel for an extra beat instead of changing the sound.</div>
+            <div class="status-row" style="margin-top:10px;">
+              <button class="btn btn-dark step-complete" type="button" data-step="1" data-reward="1">Continue</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="quest-step" data-step="2">
+          <div class="step-header">
+            <span class="badge teal">Step 3</span>
+            <h2 class="step-title">Mora beats</h2>
+            <p class="text-sm">Clap once per beat.</p>
+          </div>
+          <div class="info-card">
+            <p class="text-sm" style="margin-top:4px;">One kana = one beat. Long vowels add a beat. Final n adds a beat.</p>
+            <div class="status-row" style="margin-top:8px;">
+              <button class="pulse-btn" type="button" data-beats="2">ka-na (2)</button>
+              <button class="pulse-btn" type="button" data-beats="3">sa-ku-ra (3)</button>
+              <button class="pulse-btn" type="button" data-beats="2">to-o (2)</button>
+              <button class="pulse-btn" type="button" data-beats="2">ho-n (2)</button>
+            </div>
+            <div class="beats-bar" id="beatBar">
+              <span class="beat-dot"></span>
+              <span class="beat-dot"></span>
+              <span class="beat-dot"></span>
+              <span class="beat-dot"></span>
+            </div>
+            <div class="status-row" style="margin-top:10px;">
+              <button class="btn btn-dark step-complete" type="button" data-step="2" data-reward="1">Continue</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="quest-step" data-step="3">
+          <div class="step-header">
+            <span class="badge vermillion">Step 4</span>
+            <h2 class="step-title">Vowel Wash mini-game</h2>
+            <p class="text-sm">Clean 3 hits to unlock the next step.</p>
+          </div>
+          <div class="info-card">
+            <div class="basin">
+              <div class="status-row">
+                <button class="btn btn-dark" id="washListen" type="button">Listen</button>
+                <span id="washPrompt">Tap Listen to hear a vowel.</span>
+              </div>
+              <div class="wash-row" id="washRow">
+                <button class="wash-btn" type="button" data-vowel="a">&#12354;</button>
+                <button class="wash-btn" type="button" data-vowel="i">&#12356;</button>
+                <button class="wash-btn" type="button" data-vowel="u">&#12358;</button>
+                <button class="wash-btn" type="button" data-vowel="e">&#12360;</button>
+                <button class="wash-btn" type="button" data-vowel="o">&#12362;</button>
+              </div>
+              <div class="status-row">
+                <span id="washScore">Score: 0/3</span>
+                <span id="washStreak">Streak: 0</span>
+              </div>
+            </div>
+            <div class="status-row" style="margin-top:10px;">
+              <span class="note">Goal: 3 clean hits.</span>
+              <button class="btn btn-dark" id="washComplete" type="button" disabled>Unlock next</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="quest-step" data-step="4">
+          <div class="step-header">
+            <span class="badge amber">Step 5</span>
+            <h2 class="step-title">Quick check</h2>
+            <p class="text-sm">Pass 4 out of 5 to earn the seal.</p>
+          </div>
+          <div class="info-card">
+            <div class="check-panel" id="checkPanel">
+              <div class="status-row">
+                <span id="checkPrompt">Press Start to begin.</span>
+                <button class="btn btn-ghost" id="checkStart" type="button">Start</button>
+              </div>
+              <div class="options-row" id="checkOptions"></div>
+              <div class="status-row">
+                <span id="checkScore">Score: 0/5</span>
+                <button class="btn btn-dark" id="checkNext" type="button" disabled>Next</button>
+              </div>
+              <div class="note" id="checkFeedback" style="display:none;"></div>
+            </div>
+            <div class="reward-banner" id="sealReward">Seal earned! Section A complete.</div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const vowels = [
+      { kana: '\u3042', romaji: 'a', label: 'A' },
+      { kana: '\u3044', romaji: 'i', label: 'I' },
+      { kana: '\u3046', romaji: 'u', label: 'U' },
+      { kana: '\u3048', romaji: 'e', label: 'E' },
+      { kana: '\u304a', romaji: 'o', label: 'O' }
+    ];
+
+    const speakJa = (text) => {
+      if (!text || !('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP';
+      u.rate = 0.9;
+      try { speechSynthesis.cancel(); } catch {}
+      speechSynthesis.speak(u);
+    };
+
+    const steps = Array.from(document.querySelectorAll('.quest-step'));
+    const pathSteps = Array.from(document.querySelectorAll('.path-step'));
+    const stations = Array.from(document.querySelectorAll('.station'));
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    const charmCount = document.getElementById('charmCount');
+    const sealEls = Array.from(document.querySelectorAll('.seal'));
+    const completed = new Set();
+    let currentStep = 0;
+    let maxUnlocked = 0;
+    let charms = 0;
+
+    const updateProgress = () => {
+      if (progressFill) {
+        const pct = Math.round((completed.size / steps.length) * 100);
+        progressFill.style.width = `${pct}%`;
+      }
+      if (progressLabel) {
+        progressLabel.textContent = `Step ${currentStep + 1} of ${steps.length}`;
+      }
+      if (charmCount) charmCount.textContent = `${charms}`;
+    };
+
+    const addCharm = (amount = 1) => {
+      charms += amount;
+      updateProgress();
+    };
+
+    const updateStepState = () => {
+      steps.forEach((step, idx) => {
+        step.classList.toggle('is-active', idx === currentStep);
+      });
+      pathSteps.forEach((btn, idx) => {
+        const locked = idx > maxUnlocked;
+        btn.classList.toggle('is-active', idx === currentStep);
+        btn.classList.toggle('is-complete', completed.has(idx));
+        btn.classList.toggle('is-locked', locked);
+        btn.disabled = locked;
+      });
+      stations.forEach((btn, idx) => {
+        const locked = idx > maxUnlocked;
+        btn.classList.toggle('is-active', idx === currentStep);
+        btn.classList.toggle('is-complete', completed.has(idx));
+        btn.classList.toggle('is-locked', locked);
+        btn.disabled = locked;
+      });
+      updateProgress();
+    };
+
+    const setActiveStep = (index) => {
+      if (index > maxUnlocked) return;
+      currentStep = index;
+      updateStepState();
+    };
+
+    const awardSeal = () => {
+      const nextSeal = sealEls.find(seal => !seal.classList.contains('is-earned'));
+      if (nextSeal) nextSeal.classList.add('is-earned');
+    };
+
+    const completeStep = (index, reward = 1) => {
+      if (!completed.has(index)) {
+        completed.add(index);
+        addCharm(reward);
+      }
+      if (index + 1 > maxUnlocked) maxUnlocked = index + 1;
+      updateProgress();
+      if (index + 1 < steps.length) {
+        currentStep = index + 1;
+      }
+      updateStepState();
+    };
+
+    pathSteps.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const step = Number(btn.getAttribute('data-step') || 0);
+        setActiveStep(step);
+      });
+    });
+    stations.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const step = Number(btn.getAttribute('data-step') || 0);
+        setActiveStep(step);
+      });
+    });
+    document.querySelectorAll('.step-complete').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const step = Number(btn.getAttribute('data-step') || 0);
+        const reward = Number(btn.getAttribute('data-reward') || 1);
+        completeStep(step, reward);
+      });
+    });
+    updateStepState();
+
+    (function () {
+      const beatDots = Array.from(document.querySelectorAll('#beatBar .beat-dot'));
+      const pulseButtons = Array.from(document.querySelectorAll('.pulse-btn'));
+      const setBeats = (count) => {
+        beatDots.forEach((dot, idx) => {
+          dot.classList.toggle('is-on', idx < count);
+        });
+      };
+      pulseButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const beats = Number(btn.getAttribute('data-beats') || 0);
+          setBeats(beats);
+        });
+      });
+      setBeats(2);
+    })();
+
+    (function () {
+      const listenBtn = document.getElementById('washListen');
+      const washPrompt = document.getElementById('washPrompt');
+      const scoreEl = document.getElementById('washScore');
+      const streakEl = document.getElementById('washStreak');
+      const completeBtn = document.getElementById('washComplete');
+      const washButtons = Array.from(document.querySelectorAll('.wash-btn'));
+      let target = null;
+      let score = 0;
+      let streak = 0;
+      const goal = 3;
+
+      const pickTarget = () => {
+        target = vowels[Math.floor(Math.random() * vowels.length)];
+        if (washPrompt) washPrompt.textContent = 'Tap the vowel you hear.';
+        speakJa(target.kana);
+      };
+
+      listenBtn.addEventListener('click', pickTarget);
+
+      washButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          washButtons.forEach(b => b.classList.remove('is-correct', 'is-wrong'));
+          if (!target) {
+            if (washPrompt) washPrompt.textContent = 'Press Listen first.';
+            return;
+          }
+          const guess = btn.getAttribute('data-vowel') || '';
+          if (guess === target.romaji) {
+            btn.classList.add('is-correct');
+            score += 1;
+            streak += 1;
+            addCharm(1);
+            if (washPrompt) washPrompt.textContent = 'Clean hit! Listen again.';
+          } else {
+            btn.classList.add('is-wrong');
+            streak = 0;
+            if (washPrompt) washPrompt.textContent = `Not quite. It was ${target.romaji}.`;
+          }
+          if (scoreEl) scoreEl.textContent = `Score: ${score}/${goal}`;
+          if (streakEl) streakEl.textContent = `Streak: ${streak}`;
+          if (completeBtn && score >= goal) {
+            completeBtn.disabled = false;
+            if (washPrompt) washPrompt.textContent = 'Goal met. Unlock the next step.';
+          }
+          target = null;
+        });
+      });
+
+      if (completeBtn) {
+        completeBtn.addEventListener('click', () => {
+          completeStep(3, 2);
+        });
+      }
+    })();
+
+    (function () {
+      const promptEl = document.getElementById('checkPrompt');
+      const startBtn = document.getElementById('checkStart');
+      const nextBtn = document.getElementById('checkNext');
+      const optionsEl = document.getElementById('checkOptions');
+      const scoreEl = document.getElementById('checkScore');
+      const feedbackEl = document.getElementById('checkFeedback');
+      const sealReward = document.getElementById('sealReward');
+      let index = 0;
+      let score = 0;
+      const total = 5;
+      const passScore = 4;
+      let current = null;
+      let answered = false;
+
+      const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+
+      const renderOptions = () => {
+        if (!optionsEl) return;
+        optionsEl.innerHTML = '';
+        const pool = shuffle([...vowels]);
+        pool.forEach((item) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'check-btn';
+          btn.textContent = item.kana;
+          btn.setAttribute('data-romaji', item.romaji);
+          btn.addEventListener('click', () => handleAnswer(btn));
+          optionsEl.appendChild(btn);
+        });
+      };
+
+      const nextQuestion = () => {
+        answered = false;
+        current = vowels[Math.floor(Math.random() * vowels.length)];
+        if (promptEl) promptEl.textContent = `Pick the kana for "${current.romaji}".`;
+        if (feedbackEl) feedbackEl.style.display = 'none';
+        renderOptions();
+        if (nextBtn) nextBtn.disabled = true;
+      };
+
+      const handleAnswer = (btn) => {
+        if (answered || !current) return;
+        answered = true;
+        const guess = btn.getAttribute('data-romaji') || '';
+        const all = Array.from(optionsEl.querySelectorAll('.check-btn'));
+        all.forEach(b => b.classList.remove('is-correct', 'is-wrong'));
+        if (guess === current.romaji) {
+          btn.classList.add('is-correct');
+          score += 1;
+          addCharm(1);
+          if (feedbackEl) {
+            feedbackEl.textContent = 'Correct.';
+            feedbackEl.style.display = 'block';
+          }
+        } else {
+          btn.classList.add('is-wrong');
+          const correct = all.find(b => b.getAttribute('data-romaji') === current.romaji);
+          if (correct) correct.classList.add('is-correct');
+          if (feedbackEl) {
+            feedbackEl.textContent = `Not quite. The answer was ${current.romaji}.`;
+            feedbackEl.style.display = 'block';
+          }
+        }
+        if (scoreEl) scoreEl.textContent = `Score: ${score}/${index + 1}`;
+        if (nextBtn) nextBtn.disabled = false;
+      };
+
+      const start = () => {
+        index = 0;
+        score = 0;
+        if (scoreEl) scoreEl.textContent = `Score: 0/${total}`;
+        if (sealReward) sealReward.style.display = 'none';
+        nextQuestion();
+      };
+
+      startBtn.addEventListener('click', start);
+      nextBtn.addEventListener('click', () => {
+        index += 1;
+        if (index >= total) {
+          const passed = score >= passScore;
+          if (promptEl) {
+            promptEl.textContent = passed
+              ? `Check done. Score: ${score}/${total}.`
+              : `Not quite. Score: ${score}/${total}. Try again.`;
+          }
+          if (passed) {
+            if (sealReward) sealReward.style.display = 'block';
+            awardSeal();
+            completeStep(4, 3);
+          }
+          if (nextBtn) nextBtn.disabled = true;
+          return;
+        }
+        nextQuestion();
+      });
+    })();
+
+    (function () {
+      const vowelPlay = document.getElementById('vowelPlay');
+      if (vowelPlay) {
+        vowelPlay.addEventListener('click', () => {
+          let idx = 0;
+          const playNext = () => {
+            if (idx >= vowels.length) return;
+            speakJa(vowels[idx].kana);
+            idx += 1;
+            window.setTimeout(playNext, 650);
+          };
+          playNext();
+        });
+      }
+      document.querySelectorAll('.speak-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const text = btn.getAttribute('data-say') || '';
+          speakJa(text);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
