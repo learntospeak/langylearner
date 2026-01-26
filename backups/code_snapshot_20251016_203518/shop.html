@@ -1,0 +1,1077 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KanaReader - Shop</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.x/dist/tailwind.min.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css" />
+  <script src="./modules/outfit-preview.js"></script>
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+    window.__THREE = THREE; window.THREE = window.THREE || THREE; window.__GLTFLoader = GLTFLoader; window.__OrbitControls = OrbitControls;
+  </script>
+  <script type="module">
+    import { Line2 } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/Line2.js';
+    import { LineMaterial } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/LineMaterial.js';
+    import { LineSegmentsGeometry } from 'https://unpkg.com/three@0.159.0/examples/jsm/lines/LineSegmentsGeometry.js';
+    window.__Line2 = Line2; window.__LineMaterial = LineMaterial; window.__LineSegmentsGeometry = LineSegmentsGeometry;
+  </script>
+  <script type="module">
+    import { EffectComposer } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/RenderPass.js';
+    import { OutlinePass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/OutlinePass.js';
+    import { SMAAPass } from 'https://unpkg.com/three@0.159.0/examples/jsm/postprocessing/SMAAPass.js';
+    window.__EffectComposer = EffectComposer; window.__RenderPass = RenderPass; window.__OutlinePass = OutlinePass; window.__SMAAPass = SMAAPass;
+  </script>
+  
+  <script>
+    // Cleanup any stray text nodes accidentally inserted (defensive)
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const rm = [];
+        document.body.childNodes.forEach(n => {
+          if (n && n.nodeType === 3) {
+            const t = (n.textContent||'').trim();
+            if (/^<\s*function\s+toonifyGroup|applyAnimeToMV\(|toonifyGroup\(/i.test(t)) rm.push(n);
+          }
+        });
+        rm.forEach(n => { try { n.remove(); } catch {} });
+        const mvWrap = document.getElementById('mvWrap');
+        if (mvWrap) {
+          const rm2 = [];
+          mvWrap.childNodes.forEach(n => {
+            if (n && n.nodeType === 3 && /<script>/.test(n.textContent||'')) rm2.push(n);
+          });
+          rm2.forEach(n => { try { n.remove(); } catch {} });
+        }
+      } catch {}
+    });
+  </script>
+  <script>
+    // Flatten shading to manga-style: use unlit materials for non-skinned meshes
+function applyFlatPbrToThree(root){
+  try {
+    const THREE = (window.__THREE || window.THREE || null);
+    if (!THREE || !root) return;
+    root.traverse(o => {
+      try {
+        if (!o || !o.isMesh) return;
+        const mat = o.material; if (!mat) return;
+        const hasMap = !!mat.map;
+        const isSkinned = !!o.isSkinnedMesh || !!o.skeleton;
+        if (!isSkinned && THREE && THREE.MeshBasicMaterial) {
+          const opts = {};
+          try { if (hasMap) opts.map = mat.map; } catch {}
+          try { if (mat.color) opts.color = mat.color; } catch {}
+          const basic = new THREE.MeshBasicMaterial(opts);
+          try { if (mat.transparent) basic.transparent = true; } catch {}
+          try { if (typeof mat.opacity === "number") basic.opacity = mat.opacity; } catch {}
+          try { if (typeof mat.alphaTest === "number") basic.alphaTest = mat.alphaTest; } catch {}
+          try { if (typeof mat.side !== "undefined") basic.side = mat.side; } catch {}
+          try { if (o.isSkinnedMesh || o.skeleton) basic.skinning = true; } catch {}
+          o.material = basic;
+        } else {
+          try { if ("metalness" in mat) mat.metalness = 0; } catch {}
+          try { if ("roughness" in mat) mat.roughness = 1; } catch {}
+          try { if ("envMap" in mat) mat.envMap = null; } catch {}
+          try { mat.needsUpdate = true; } catch {}
+        }
+      } catch {}
+    });
+  } catch {}
+}
+            // Apply to <model-viewer> base once ready
+    function applyAnimeToMV(mv){
+      try {
+        try { mv.environmentImage = null; mv.exposure = 1.0; } catch {}
+        const scene = (mv && mv.model && mv.model.scene) || mv.scene || null;
+        if (scene) applyFlatPbrToThree(scene);
+      } catch {}
+    }
+  </script>
+</head>
+<body class="anime-bg min-h-screen p-5">
+  <main class="max-w-7xl mx-auto">
+    <header class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <a href="#" id="backBtn" class="btn btn-ghost text-sm">Back</a>
+        <h1 class="site-title text-2xl font-bold accent-underline">Shop</h1>
+      </div>
+      <div class="text-sm flex items-center gap-3">Coins: <strong id="coins">0</strong></div>
+    </header>
+
+    <section class="manga-bubble p-3">
+      <!-- 3-column layout: categories (L) | preview (C) | items list (R) -->
+      <div class="shop-grid items-start">
+        <!-- Categories -->
+        <aside class="max-h-[70vh] overflow-auto pr-1">
+          <div class="font-medium mb-2">Categories</div>
+          <div id="catList" class="flex md:flex-col gap-2 overflow-x-auto pb-1"></div>
+        </aside>
+
+        <!-- Preview (sticky) -->
+        <div class="flex items-start justify-center sm:sticky top-2">
+          <div class="text-center">
+            <div id="mvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;">
+              <model-viewer id="mvShop" class="float-slow absolute inset-0" style="width:100%; height:100%;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none" reveal="interaction" loading="lazy"></model-viewer>
+            </div>
+            <div id="tvWrap" class="inline-block relative" style="display:none; width:360px; height:420px; overflow:hidden; z-index:1;"></div>
+            <div id="equipSummary" class="text-xs text-gray-700 mt-1"></div>
+            <div id="equipChips" class="flex flex-wrap gap-1 justify-center mt-1"></div>
+            <!-- Anchor Debug removed -->
+            <div class="text-xs text-gray-600 mt-2">Tap a category and equip/buy to preview.</div>
+          </div>
+        </div>
+
+        <!-- Items list -->
+        <div class="max-h-[70vh] overflow-auto pr-1" id="itemsPane">
+          <div class="font-medium mb-2" id="catTitle">Items</div>
+          <div id="catalog" class="grid grid-cols-1 gap-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="mt-3 flex items-center gap-2">
+      <button id="applyBtn" class="btn btn-primary">Apply Changes</button>
+      <button id="applyNavBtn" class="btn btn-dark">Apply & Continue to Lessons</button>
+      <span id="applyStatus" class="text-xs text-gray-600"></span>
+    </div>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const catalogEl = $('#catalog');
+    // Ensure model-viewer scene is flattened when ready
+    try {
+      document.addEventListener('DOMContentLoaded', () => {
+        try {
+          const mv = document.getElementById('mvShop');
+          if (mv && !mv.__flatWire) {
+            mv.__flatWire = true;
+            mv.addEventListener('scene-graph-ready', () => applyAnimeToMV(mv), { once: false });
+            mv.addEventListener('load', () => applyAnimeToMV(mv), { once: false });
+          }
+        } catch {}
+      });
+    } catch {}
+
+    const coinsEl = $('#coins');
+    const tutorLink = $('#tutorLink');
+    const catList = $('#catList');
+    const catTitle = $('#catTitle');
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        try { if (history.length > 1) history.back(); else location.href = 'lesson.html'; }
+        catch (e) { location.href = 'lesson.html'; }
+      });
+    }
+
+    // Anchor Debug toggle + Log wiring
+
+    (function(){
+      const anchorToggle = document.getElementById('anchorDebugToggle');
+      if (anchorToggle && !anchorToggle.__wired) {
+        anchorToggle.__wired = true;
+        anchorToggle.addEventListener('click', ()=>{
+          const panel = document.getElementById('anchorDebug');
+          if (!panel) return;
+          if (panel.classList.contains('hidden')) panel.classList.remove('hidden'); else panel.classList.add('hidden');
+        });
+      }
+      const adLog = document.getElementById('adLog');
+      if (adLog && !adLog.__wired) {
+        adLog.__wired = true;
+        adLog.addEventListener('click', ()=>{
+          try {
+            let names = [];
+            if (window.__useTV && window.TV && typeof window.TV.getNodeNames === 'function') {
+              names = window.TV.getNodeNames()||[];
+            } else if (window.__ofp && typeof window.__ofp.getNodeNames === 'function') {
+              names = window.__ofp.getNodeNames()||[];
+            }
+            const info = document.getElementById('adInfo');
+            if (info) info.textContent = (names && names.length) ? ('Nodes: ' + names.join(', ')) : 'No nodes or model not loaded yet.';
+            console.log('[Anchor Debug] Model nodes:', names);
+          } catch (e) {}
+        });
+      }
+    })();
+
+    // No 2D mascot fallback; preview shows only 3D models
+
+    async function api(path, opts){
+      try {
+        const url = (typeof path === 'string')
+          ? (path.startsWith('http') ? path : new URL(path, location.origin).toString())
+          : String(path||'');
+        const r = await fetch(url, opts||{});
+        let data = null;
+        try { data = await r.json(); } catch (e) { data = null; }
+        if (!r.ok) return data || { ok:false, error: `HTTP ${r.status}` };
+        return data;
+      } catch (e) {
+        console.warn('api failed', path, e);
+        return { ok:false, error: String(e) };
+      }
+    }
+    let SELECTED = 'upgrades';
+    const FORCE_OVERLAY_SLOT = 'top';
+    // Scene-graph attachment: slot anchors (approximate). Adjust as needed.
+    const SLOT_ANCHORS_DEFAULT = {
+      // General body regions
+      head:  { position:[0, 0.16, 0], rotation:[0,0,0], scale:[1,1,1] },
+      torso: { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      body:  { position:[0, 0.00, 0], rotation:[0,0,0], scale:[1,1,1] },
+      legs:  { position:[0, -0.06, 0], rotation:[0,0,0], scale:[1,1,1] },
+      feet:  { position:[0, -0.18, 0], rotation:[0,0,0], scale:[1,1,1] },
+      arms:  { position:[0.02, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      hands: { position:[0.04, -0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      // Clothing synonyms
+      hat:   { position:[0, 0.16, 0], rotation:[0,0,0], scale:[1,1,1] },
+      hair:  { position:[0, 0.12, 0], rotation:[0,0,0], scale:[1,1,1] },
+      mask:  { position:[0, 0.08, 0.06], rotation:[0,0,0], scale:[1,1,1] },
+      top:   { position:[0, 0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      outfit:{ position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] },
+      boots: { position:[0, -0.18, 0], rotation:[0,0,0], scale:[1,1,1] },
+      skirt: { position:[0, -0.02, 0], rotation:[0,0,0], scale:[1,1,1] },
+      belt:  { position:[0, -0.01, 0.01], rotation:[0,0,0], scale:[1,1,1] },
+      bag:   { position:[-0.05, 0.02, -0.03], rotation:[0,0,0], scale:[1,1,1] },
+      misc:  { position:[0, 0, 0], rotation:[0,0,0], scale:[1,1,1] }
+    };
+    // Accessory pool (offscreen model-viewers) to load GLBs for scene-graph cloning
+    const accPool = document.createElement('div'); accPool.id = 'accPool';
+    accPool.style.position = 'absolute'; accPool.style.left = '-9999px'; accPool.style.top = '0'; accPool.style.width = '1px'; accPool.style.height = '1px'; accPool.style.overflow = 'hidden';
+    document.body.appendChild(accPool);
+    const accCache = new Map(); // id -> { mv, ready:Promise }
+    async function accessoryViewerFor(id, src){
+      let rec = accCache.get(id);
+      if (rec && rec.mv && rec.mv.getAttribute('src') === src) return rec;
+      // Ensure custom element is defined
+      try { if (window.customElements && window.customElements.whenDefined) await window.customElements.whenDefined('model-viewer'); } catch {}
+      const mv = document.createElement('model-viewer');
+      mv.setAttribute('src', src);
+      mv.setAttribute('reveal','auto');
+      mv.setAttribute('preload','true');
+      mv.style.width = '1px'; mv.style.height = '1px';
+      accPool.appendChild(mv);
+      const ready = new Promise(res=>{
+        const done = ()=>{ try { res(mv); } catch { res(mv); } };
+        let settled = false;
+        const mark = (label)=>{ try { console.log('[attach] event', label, src); } catch(_){} };
+        const tryDone = ()=>{
+          try {
+            if (settled) return;
+            if (mv && mv.model && (mv.model.scene || mv.scene)) { settled = true; return setTimeout(done, 0); }
+          } catch {}
+        };
+        try { if (mv && (mv.model && (mv.model.scene || mv.scene))) { settled=true; return done(); } } catch {}
+        try { mv.addEventListener('load', ()=>{ mark('load'); tryDone(); }, { once: true }); } catch {}
+        try { mv.addEventListener('scene-graph-ready', ()=>{ mark('scene-graph-ready'); tryDone(); }, { once: true }); } catch {}
+        // Fallback poll
+        let t0 = Date.now();
+        (function poll(){
+          tryDone();
+          if (settled) return;
+          if (Date.now() - t0 > 7000) { settled=true; return done(); }
+          try { window.requestAnimationFrame(poll); } catch { setTimeout(poll, 50); }
+        })();
+      });
+      rec = { mv, ready }; accCache.set(id, rec); return rec;
+    }
+    function getBaseRoot(mv){
+      try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
+    }
+    function getSceneFromViewer(mv){
+      try { return (mv && mv.model && mv.model.scene) ? mv.model.scene : (mv && mv.scene ? mv.scene : null); } catch (e) { return null; }
+    }
+    function getThree(){ try { return (window.__THREE||window.THREE||null); } catch (e) { return null; } }
+    function computeBounds(root){
+      try {
+        const THREE = getThree(); if(!THREE||!root) return null;
+        const box = new THREE.Box3(); let has=false;
+        root.updateWorldMatrix?.(true,true);
+        root.traverse?.(o=>{
+          try{
+            if (!o || !o.isMesh) return;
+            if (o.userData && (o.userData.__flatOutline || o.userData.__flatOutlineSrc)) return; // ignore outline clones
+            if (o.geometry) {
+              if(!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox();
+              const bb = o.geometry.boundingBox && o.geometry.boundingBox.clone();
+              if (bb){ bb.applyMatrix4(o.matrixWorld); if(has) box.union(bb); else { box.copy(bb); has=true; } }
+            }
+          } catch(_){ }
+        });
+        return has?box:null;
+      } catch (e) { return null; }
+    }
+    function clearAttachments(mv){ try { (mv.__attachments||[]).forEach(obj=>{ try { const root=getBaseRoot(mv); if(root && obj && obj.parent===root) root.remove(obj); } catch (e) {} }); mv.__attachments=[]; } catch (e) { mv.__attachments=[]; } }
+    async function attachAccessoriesToBase(mv, equip, itemsMap){
+      try {
+        let root = getBaseRoot(mv);
+        if(!root){
+          // Wait for model-viewer to finish building the scene graph
+          await new Promise(res=>{
+            let done=false;
+            const finish=()=>{ if(done) return; done=true; res(); };
+            try { mv.addEventListener('scene-graph-ready', finish, { once:true }); } catch {}
+            try { mv.addEventListener('load', finish, { once:true }); } catch {}
+            setTimeout(finish, 3000);
+          });
+          try{ await mv.updateComplete; }catch(e){}
+          root = getBaseRoot(mv);
+          if(!root || typeof root.add !== 'function') { try{ console.warn('[attach] no root or add() missing'); }catch(_){} return false; }
+        }
+        clearAttachments(mv);
+        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        try { console.log('[attach] slots', slots); } catch(_){ }
+        const added = [];
+        // Helper: load accessory GLB via Three.js if available
+        async function loadWithThree(url){
+          try {
+            const THREE = getThree(); if (!THREE || !window.__GLTFLoader) return null;
+            const loader = new window.__GLTFLoader();
+            return await new Promise((resolve) => {
+              try {
+                loader.load(url, (gltf)=>{ try { console.log('[attach] three loaded', url); resolve(gltf && gltf.scene ? gltf.scene : null); } catch { resolve(null); } }, undefined, (err)=>{ console.warn('[attach] three load error', url, err); resolve(null); });
+              } catch { resolve(null); }
+            });
+          } catch { return null; }
+        }
+        for (const slot of slots){
+          const rawVal = equip[slot];
+          const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
+          for (const id of ids){
+          const it = itemsMap.get(id);
+          if(!it || !it.model){ try{ console.warn('[attach] missing item for slot', slot, id); }catch(_){} continue; }
+          try { console.log('[attach] loading', slot, it.id, it.model); } catch(_){ }
+          // Removed HEAD probe to avoid double-requests; GLTFLoader/load will surface errors
+          try {
+            // Try Three.js loader first
+            let srcScene = await loadWithThree(it.model);
+            if (!srcScene) {
+              const rec = await accessoryViewerFor(it.id, it.model);
+              await rec.ready;
+              srcScene = getSceneFromViewer(rec.mv);
+            }
+            if(!srcScene){ console.warn('[attach] no srcScene', it.id); continue; }
+            let obj = null;
+            try {
+              if (typeof srcScene.clone === 'function') obj = srcScene.clone(true);
+            } catch (err) {
+              console.warn('[attach] clone failed', err);
+              obj = null;
+            }
+            if (!obj) {
+              try {
+                const first = (srcScene.children && srcScene.children[0]) || null;
+                if (first && typeof first.clone === 'function') obj = first.clone(true);
+              } catch (e) { obj = null; }
+            }
+            if (!obj) { console.warn('[attach] nothing cloneable for', it.id); continue; }
+            const anchors = (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT);
+            const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })();
+            let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+            try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
+            // Wrap and center like the Anchor Tool
+            const THREE = getThree();
+            const wrap = new (THREE?.Group||function(){})();
+            try { const boxObj = new (THREE||window.THREE).Box3().setFromObject(obj); const cObj = boxObj.getCenter(new (THREE||window.THREE).Vector3()); obj.position.sub(cObj); } catch {}
+            try { wrap.add(obj); } catch {}
+            // Attach first so world matrices are valid
+            try { root.add(wrap); } catch (e) { console.warn('[attach] add failed', e); continue; }
+            // Auto-scale with override support
+            try {
+              const baseBox = computeBounds(root);
+              const accBox0 = computeBounds(obj);
+              let target = (slot==='top'||slot==='torso'||slot==='body') ? 0.35 : ((slot==='boots'||slot==='feet')?0.12:0.25);
+              let s = target;
+              if (baseBox && accBox0) {
+                const baseH = Math.max(1e-6, baseBox.max.y - baseBox.min.y);
+                const accH  = Math.max(1e-6, accBox0.max.y - accBox0.min.y);
+                const sAuto = (target * baseH) / accH;
+                s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto) && sAuto>0 && sAuto<10 ? sAuto : target);
+              } else {
+                s = (a.scale && a.scale[0]) ? a.scale[0] : target;
+              }
+              try { wrap.scale.set(s,s,s); } catch {}
+            } catch {}
+            // Apply anchor position/rotation on wrapper (base is already centered in TV)
+            try { wrap.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0); } catch{}
+            try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0); } catch{}
+            try { console.log('[attach] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
+            added.push(wrap);
+          } catch (e) { console.warn('[attach] slot failed', slot, e); }
+          }
+        }
+        mv.__attachments = added;
+        try { console.log('[attach] attached count', added.length); } catch(_){ }
+        return added.length > 0;
+      } catch (e) { return false; }
+    }
+
+    // ---------- Lightweight Three.js viewer fallback ----------
+    const TV = (function(){
+      let initialized = false, scene=null, camera=null, renderer=null, baseGroup=null, attachGroup=null, controls=null;
+      function init(){
+        if (initialized) return true;
+        const THREE = getThree(); if (!THREE) return false;
+        const wrap = document.getElementById('tvWrap'); if(!wrap) return false;
+        const w = Math.max(1, wrap.clientWidth||0) || 200, h = Math.max(1, wrap.clientHeight||0) || 220;
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
+        camera.position.set(0, 0.35, 1.0);
+        // Flat lighting: ambient-only to remove per-pixel shading/contrast
+        // Flat, bright lighting: ambient-only (no directional shading)
+        const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
+        renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:false, powerPreference:'low-power' });
+        renderer.setSize(w, h, false);
+        renderer.setPixelRatio(1);
+        try {
+          renderer.setClearColor(0x000000, 0);
+          if ((THREE||window.THREE).SRGBColorSpace) {
+            renderer.outputColorSpace = (THREE||window.THREE).SRGBColorSpace;
+          } else if (renderer.outputEncoding !== undefined) {
+            renderer.outputEncoding = (THREE||window.THREE).sRGBEncoding;
+          }
+          renderer.toneMapping = (THREE||window.THREE).ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1.0;
+        } catch {}
+        wrap.innerHTML = '';
+        wrap.appendChild(renderer.domElement);
+        try { renderer.domElement.style.display = 'block'; } catch {}
+        attachGroup = new THREE.Group(); scene.add(attachGroup);
+        try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.1,0); } } catch(_){ }
+        let composer=null, outlinePass=null;
+        try {
+          if (window.__EffectComposer && window.__RenderPass) {
+            const __sz=(function(){ try{ const el=document.getElementById('tvWrap'); return [el.clientWidth||renderer.domElement.width||360, el.clientHeight||renderer.domElement.height||420]; } catch { return [360,420]; } })(); const w=__sz[0], h=__sz[1]; composer = new window.__EffectComposer(renderer);
+            composer.addPass(new window.__RenderPass(scene, camera));
+            if (window.__OutlinePass) {
+              outlinePass = new window.__OutlinePass(new (THREE.Vector2)(w, h), scene, camera);
+              try { outlinePass.visibleEdgeColor.set(0x000000); outlinePass.hiddenEdgeColor.set(0x000000); } catch {}
+              // Approximate 0.1mm line in screen space
+              try {
+                const mm = parseFloat(localStorage.getItem('outlineMM') || '0.1');
+                const dpi = 96 * (window.devicePixelRatio || 1);
+                const px = Math.max(1, Math.round(dpi * (mm / 25.4)));
+                outlinePass.edgeThickness = px; // use px-equivalent
+                outlinePass.edgeStrength = Number(localStorage.getItem('outlineStrength') || 8.0);
+              } catch {}
+              composer.addPass(outlinePass);
+              window.__OutlinePassActive = true;
+            }
+            if (window.__SMAAPass) {
+              const smaa = new window.__SMAAPass(w*renderer.getPixelRatio(), h*renderer.getPixelRatio());
+              composer.addPass(smaa);
+            }
+          }
+        } catch {}
+        function updateOutlineTargets(){ try{ if(!outlinePass) return; const targets=[]; scene.traverse(o=>{ if(o&&o.isMesh) targets.push(o); }); outlinePass.selectedObjects = targets; } catch {} }
+        updateOutlineTargets();
+        function tick(){ try { if(controls) controls.update(); if (composer) composer.render(); else renderer.render(scene, camera); } catch (_) {} requestAnimationFrame(tick); }
+        requestAnimationFrame(tick);
+        initialized = true; return true;
+      }
+      function resize(){
+        try {
+          const THREE = getThree(); if (!THREE || !renderer) return;
+          const wrap = document.getElementById('tvWrap'); if (!wrap) return;
+          const w = wrap.clientWidth||0, h = wrap.clientHeight||0;
+          if (w && h) {
+            renderer.setSize(w, h, false);
+            if (typeof composer?.setSize === 'function') { try { composer.setSize(w, h, false); } catch {} }
+            try { if (outlinePass && outlinePass.resolution) outlinePass.resolution.set(w, h); } catch {}
+            camera.aspect = w/h; camera.updateProjectionMatrix();
+          }
+        } catch {}
+      }
+      function clear(){
+        try {
+          const THREE = getThree(); if(!THREE) return;
+          if (baseGroup) { scene.remove(baseGroup); baseGroup=null; }
+          while(attachGroup && attachGroup.children.length){ attachGroup.remove(attachGroup.children[0]); }
+        } catch {} 
+      }
+      let _tvBaseUrl = null; async function loadBase(url){
+        const THREE = getThree(); if (!THREE) return false;
+        if (!init()) return false;
+        if (baseGroup && _tvBaseUrl === url) {
+          try {
+            const box = (function(){ const b=computeBounds(baseGroup); return b||new THREE.Box3().setFromObject(baseGroup); })();
+            const center = box.getCenter(new THREE.Vector3());
+            baseGroup.position.sub(center);
+            // Fit to both width and height with margin
+            const size = new THREE.Vector3(); box.getSize(size);
+            const vFov = (camera.fov*Math.PI)/180;
+            const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+            const distV = (size.y*0.5)/Math.tan(vFov/2);
+            const distH = (size.x*0.5)/Math.tan(hFov/2);
+            const baseDist = Math.max(distV, distH);
+            const VIEW_SCALE = (window.TV_VIEW_SCALE||1.40); // +25% closer than previous
+            const dist = baseDist * VIEW_SCALE;
+            camera.near = Math.max(0.01, dist*0.05);
+            camera.far  = Math.max(camera.near+1, dist*20);
+            camera.updateProjectionMatrix();
+            const CAMERA_Y = (window.TV_CAMERA_Y||0.08);   // fraction of model height
+            camera.position.set(0, size.y*CAMERA_Y, dist);
+            if (window.__OrbitControls && controls) {
+              const TARGET_Y = (window.TV_TARGET_Y ?? 0.48);
+              const TARGET_OFFSET = (window.TV_TARGET_OFFSET ?? -0.5); // shift by half body height upward (negative lowers aim)
+              controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0);
+              controls.minDistance = baseDist*0.4;
+              controls.maxDistance = baseDist*6.0;
+              controls.enablePan = true;
+              controls.update();
+            }
+          } catch {}
+          return true;
+        }
+        clear();
+        const loader = new window.__GLTFLoader();
+        const gltf = await new Promise(res=>{ try{ loader.load(url, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+        if (!gltf || !gltf.scene) return false;
+        baseGroup = gltf.scene; scene.add(baseGroup);
+        try { updateOutlineTargets(); } catch {}
+          try { applyFlatPbrToThree(baseGroup); } catch {}
+        try {
+          if (!attachGroup) attachGroup = new THREE.Group();
+          // Keep attachments in world space (scene), matching Anchor Tool coordinates
+          if (attachGroup.parent !== scene) {
+            try { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); } catch{}
+            scene.add(attachGroup);
+          }
+        } catch{}
+        try {
+          const box = (function(){ const b=computeBounds(baseGroup); return b||new THREE.Box3().setFromObject(baseGroup); })();
+          const center = box.getCenter(new THREE.Vector3());
+          baseGroup.position.sub(center);
+          // Fit to both width and height with margin
+          const size = new THREE.Vector3(); box.getSize(size);
+          const vFov = (camera.fov*Math.PI)/180;
+          const hFov = 2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+          const distV = (size.y*0.5)/Math.tan(vFov/2);
+          const distH = (size.x*0.5)/Math.tan(hFov/2);
+          const baseDist = Math.max(distV, distH);
+          const VIEW_SCALE = (window.TV_VIEW_SCALE||1.40); // +25% closer than previous
+          const dist = baseDist * VIEW_SCALE;
+          camera.near = Math.max(0.01, dist*0.05);
+          camera.far  = Math.max(camera.near+1, dist*20);
+          camera.updateProjectionMatrix();
+          const CAMERA_Y = (window.TV_CAMERA_Y||0.08);   // fraction of model height
+          camera.position.set(0, size.y*CAMERA_Y, dist);
+          if (window.__OrbitControls && controls) {
+            const TARGET_Y = (window.TV_TARGET_Y ?? 0.48);
+            const TARGET_OFFSET = (window.TV_TARGET_OFFSET ?? -0.5); // shift by half body height upward (negative lowers aim)
+            controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0);
+            controls.minDistance = baseDist*0.4;
+            controls.maxDistance = baseDist*6.0;
+            controls.enablePan = true;
+            controls.update();
+          }
+        } catch {}
+        _tvBaseUrl = url;
+         try { updateOutlineTargets(); } catch {}
+         return true;
+      }
+      async function attachAll(equip, itemsMap, anchors){
+        const THREE = getThree(); if (!THREE || !initialized) return false;
+        if (!attachGroup) { attachGroup = new THREE.Group(); }
+        try { if (attachGroup.parent !== scene) { if (attachGroup.parent) attachGroup.parent.remove(attachGroup); scene.add(attachGroup); } } catch {}
+        while (attachGroup.children.length) attachGroup.remove(attachGroup.children[0]);
+        const slots = Object.keys(equip||{}).filter(s=>s!=='model');
+        for (const slot of slots){
+          const rawVal = equip[slot];
+          const ids = Array.isArray(rawVal) ? rawVal : [rawVal];
+          for (const id of ids){
+          const it = itemsMap.get(id); if (!it || !it.model) continue;
+          const loader = new window.__GLTFLoader();
+          const gltf = await new Promise(res=>{ try{ loader.load(it.model, (g)=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+          if (!gltf || !gltf.scene) continue;
+          const src = gltf.scene.clone(true);
+          const wrap = new THREE.Group();
+          try { const boxObj = new THREE.Box3().setFromObject(src); const centerObj = boxObj.getCenter(new THREE.Vector3()); src.position.sub(centerObj); } catch {}
+          wrap.add(src);
+          try { applyFlatPbrToThree(src); } catch {}
+          const __ov=(function(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch(e){ return {}; } })(); let a = __ov[it.id] || __ov[slot] || (anchors[slot]||anchors.misc);
+          try { if (!__ov[it.id] && slot==='boots' && /(shoe|bottes)/i.test(String(it.id||''))) { a = { position:[a.position?.[0]||0, (a.position?.[1]||0) - 0.03, a.position?.[2]||0], rotation:a.rotation||[0,0,0], scale:a.scale||[1,1,1] }; } } catch {}
+          try { console.log('[TV] used anchor for', slot, it.id, ( __ov[it.id] ? 'item' : (__ov[slot] ? 'slot' : 'default') ), a); } catch{}
+          try {
+            const boxBase = (function(){ const b=computeBounds(baseGroup); return b||new (window.__THREE||window.THREE).Box3().setFromObject(baseGroup); })();
+            const boxObj  = (function(){ const b=computeBounds(src); return b||new (window.__THREE||window.THREE).Box3().setFromObject(src); })();
+            const baseH = Math.max(1e-6, boxBase.max.y - boxBase.min.y);
+            const objH  = Math.max(1e-6, boxObj.max.y - boxObj.min.y);
+            let target = (slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25);
+            let sAuto = (target*baseH)/objH;
+            const s = (a.scale && a.scale[0]) ? a.scale[0] : (isFinite(sAuto)&&sAuto>0&&sAuto<10 ? sAuto : target);
+            wrap.scale.set(s,s,s);
+          } catch { let def=(slot==='top'||slot==='torso'||slot==='body')?0.35:0.25; wrap.scale.set(def,def,def); }
+          try { wrap.position.set(a.position[0]||0, a.position[1]||0.05, a.position[2]||0); } catch {}
+          try { wrap.rotation.order='XYZ'; wrap.rotation.set(a.rotation[0], a.rotation[1], a.rotation[2]); } catch {}
+          attachGroup.add(wrap);
+          }
+        }
+        return true;
+      }
+      function getNodeNames(){ try { const out=[]; const THREE=getThree(); if(!THREE||!baseGroup) return []; baseGroup.traverse?.(o=>{ if(o && o.name) out.push(o.name); }); return out; } catch { return []; } }
+      try { window.addEventListener('resize', ()=>resize()); } catch {}
+      function snapshot(){ try { return renderer && renderer.domElement ? renderer.domElement.toDataURL('image/png') : null; } catch { return null; } }
+      return { init, loadBase, attachAll, getNodeNames, resize, snapshot };
+    })();
+    function categoriesFrom(items){
+      const cats = [];
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh';
+      const compat = (it)=>{ try{ if(!it||it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} };
+      if ((items||[]).some(it=>it.kind==='upgrade')) cats.push({ id:'upgrades', label:'Upgrades', filter:(it)=>it.kind==='upgrade' });
+      // Characters category
+      if ((items||[]).some(it=>it.kind==='cosmetic' && it.slot==='model')) cats.push({ id:'model', label:'Characters', filter:(it)=>it.kind==='cosmetic' && it.slot==='model' });
+      // Dynamic clothing categories by slot
+      const slots = Array.from(new Set((items||[]).filter(it=>it.kind==='cosmetic' && it.slot && it.slot!=='model' && compat(it)).map(it=>it.slot)));
+      const names = { outfit:'Outfits', hat:'Hats', hair:'Hair', mask:'Masks', top:'Tops', legs:'Legwear', boots:'Boots', skirt:'Skirts', belt:'Belts', bag:'Bags', misc:'Accessories' };
+      const labelFor = (s)=> names[s] || (s.charAt(0).toUpperCase()+s.slice(1));
+      slots.forEach(s=> cats.push({ id:s, label:labelFor(s), filter:(it)=>it.kind==='cosmetic' && it.slot===s && compat(it) }));
+      return cats;
+    }
+    function renderCats(cats){
+      catList.innerHTML = '';
+      cats.forEach(c=>{
+        const b = document.createElement('button');
+        b.className = 'btn btn-ghost text-sm whitespace-nowrap ' + (SELECTED===c.id ? 'ring-2' : '');
+        b.textContent = c.label; b.dataset.id = c.id;
+        b.addEventListener('click', ()=>{ SELECTED = c.id; catTitle.textContent = c.label; renderItems(); });
+        catList.appendChild(b);
+      });
+      const cur = cats.find(x=>x.id===SELECTED) || cats[0];
+      if (cur) catTitle.textContent = cur.label;
+    }
+    let _items = [], _wallet = { coins:0, owned:{}, equipped:{} }, _cats = [];
+    async function loadAll(){
+      const [cat, wall] = await Promise.all([
+        api('/api/shop/catalog'),
+        api('/api/wallet')
+      ]).catch(()=>[{items:[]},{coins:0,owned:{},equipped:{}}]);
+      _items = cat.items||[];
+      const safeWall = (wall && !wall.error) ? wall : { coins:0, owned:{}, equipped:{} };
+      _wallet = safeWall;
+      // Ensure a default model is selected client-side if server view omitted it
+      try {
+        if (!_wallet.equipped || !_wallet.equipped.model) {
+          const hasStudent = (_items||[]).some(x=>x.id==='model-student');
+          if (hasStudent) {
+            _wallet.equipped = Object.assign({}, _wallet.equipped||{}, { model:'model-student' });
+          }
+        }
+      } catch (e) {}
+      coinsEl.textContent = String(_wallet.coins||0);
+      renderPreview();
+      _cats = categoriesFrom(_items);
+      renderCats(_cats);
+      renderItems();
+    }
+
+    async function renderPreview(){
+      const equip = _wallet.equipped||{};
+      const itemsMap = new Map((_items||[]).map(x=>[x.id,x]));
+      const mv = document.getElementById('mvShop');
+      // Build summary list safely
+      const eqList = [];
+      try { if (mv && !mv.__dbg) { mv.__dbg=true; mv.addEventListener('load', ()=>{ try { console.log('[shop] model-viewer load fired'); } catch(e){} }, { once:false }); } } catch(e){}
+      // Prefer 3D model when available
+      try {
+        const modelItem = equip.model && itemsMap.get(equip.model);
+        try { console.log('[shop] equip.model =', equip.model, 'modelItem:', !!modelItem && modelItem.model); } catch(e){}
+        if (modelItem && modelItem.model && mv) {
+          // Use Three.js fallback viewer (preferred)
+    // Global helper: load anchor overrides saved by Anchor Tool
+    function loadAnchorOverrides(){ try { return JSON.parse(localStorage.getItem("anchorOverrides")||"{}")||{}; } catch (e) { return {}; } }
+          // Ensure TV wrapper is visible before measuring size
+          try {
+            const tvWrap0 = document.getElementById('tvWrap'); if (tvWrap0) tvWrap0.style.display='inline-block';
+            const mvWrap0 = document.getElementById('mvWrap'); if (mvWrap0) mvWrap0.style.display='none';
+          } catch {}
+          async function ensureThreeReady(ms=2000){
+            const t0 = Date.now();
+            return await new Promise(r=>{
+              (function poll(){
+                try {
+                  if (getThree() && window.__GLTFLoader) return r(true);
+                } catch {}
+                if (Date.now()-t0>ms) return r(false);
+                try { requestAnimationFrame(poll); } catch { setTimeout(poll, 16); }
+              })();
+            });
+          }
+           await ensureThreeReady(2000);
+           const tvOk = TV && TV.init && TV.init();
+           if (tvOk) {
+             try {
+               window.__useTV = true;
+               const tvWrap = document.getElementById('tvWrap');
+               const mvWrap = document.getElementById('mvWrap');
+               await TV.loadBase(modelItem.model);
+               try { if (TV.resize) TV.resize(); } catch {}
+               const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(_){ return {}; } })();
+               const anchors = Object.assign({}, (window.SLOT_ANCHORS || SLOT_ANCHORS_DEFAULT), ov);
+               await TV.attachAll(equip, itemsMap, anchors);
+             } catch (_){ }
+           } else {
+             mv.src = modelItem.model;
+             try { console.log('[shop] set mv.src =', modelItem.model); } catch(e){}
+             (function(){ const wrap=document.getElementById('mvWrap'); if(wrap) wrap.style.display='inline-block'; })();
+           }
+          const overrides = loadAnchorOverrides();
+          if (!window.__ofp || typeof window.__ofp.attachAll !== 'function' || typeof window.__ofp.setOverrides !== 'function') {
+            if (window.OutfitPreview) {
+              window.__ofp = window.OutfitPreview.create({ mv: mv, overrides });
+            } else {
+              console.warn('OutfitPreview plugin not found');
+              // Fallback: try local attach helper
+              try { await attachAccessoriesToBase(mv, equip, itemsMap); } catch (e) {}
+            }
+          } else {
+            try { window.__ofp.state.mv = mv; } catch (e) {}
+          }
+          if (window.__ofp) {
+          try { window.__ofp.setOverrides(overrides); } catch (e) {}
+          window.__ofp.update(equip, _items||[]);
+          await window.__ofp.attachAll();
+            try {
+              const root = getBaseRoot(mv);
+              const hasAny = Array.isArray(mv.__attachments) ? mv.__attachments.length>0 : (root && root.children && root.children.length>0);
+              if (!hasAny) { await attachAccessoriesToBase(mv, equip, itemsMap); }
+            } catch (e) {}
+          }
+          // Only run local fallback if plugin unavailable or attached nothing
+          try {
+            const noneFromPlugin = (!window.__ofp || !window.__ofp.state || !Array.isArray(window.__ofp.state.attached) || window.__ofp.state.attached.length===0);
+            if (noneFromPlugin) await attachAccessoriesToBase(mv, equip, itemsMap);
+          } catch (e) { console.warn('fallback attach error', e); }
+        }
+      } catch (e) { console.warn('preview attach failed', e); }
+        try {
+          Object.keys(equip||{}).forEach(slot => {
+           if (slot==='model') return;
+           const it = itemsMap.get(equip[slot]);
+           if (it) eqList.push(`${slot}: ${it.name}`);
+          });
+          const sum = document.getElementById('equipSummary');
+          if (sum) sum.textContent = eqList.length ? ('Equipped: ' + eqList.join(' | ')) : '';
+        } catch (e) {}
+      // No fallback preview
+      // Render equipped chips with quick remove buttons + refresh Anchor panel slots
+      try {
+        const chips = document.getElementById('equipChips');
+        while (chips.firstChild) chips.removeChild(chips.firstChild);
+        const slotsEquipped = Object.keys(equip||{}).filter(s=>s!=='model');
+        slotsEquipped.forEach(slot => {
+          if (slot==='model') return;
+          const val = equip[slot];
+          const ids = Array.isArray(val) ? val : [val];
+          ids.forEach(id=>{
+            const it = itemsMap.get(id);
+            if (!it) return;
+            const b = document.createElement('button');
+            b.className = 'btn btn-ghost text-xs';
+            b.innerHTML = `${it.name} <span aria-hidden="true">x</span>`;
+            b.title = `Remove ${it.name}`;
+            b.addEventListener('click', async ()=>{
+              try {
+                const current = (_wallet.equipped||{})[slot];
+                if (Array.isArray(current)) {
+                  _wallet.equipped[slot] = current.filter(x=>x!==id);
+                  if (_wallet.equipped[slot].length===1) _wallet.equipped[slot] = _wallet.equipped[slot][0];
+                  renderPreview(); renderItems(); return;
+                }
+                const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ slot }) });
+                if (!res.ok && res.error) { alert(res.error); return; }
+                _wallet.equipped = res.equipped || _wallet.equipped || {};
+                renderPreview();
+                renderItems();
+              } catch (e) {}
+            });
+            chips.appendChild(b);
+          });
+        });
+        // Anchor Debug: populate slot list
+        try {
+          const sel = document.getElementById('adSlot');
+          const posX = document.getElementById('adPosX');
+          const posY = document.getElementById('adPosY');
+          const posZ = document.getElementById('adPosZ');
+          const rotX = document.getElementById('adRotX');
+          const rotY = document.getElementById('adRotY');
+          const rotZ = document.getElementById('adRotZ');
+          const scale = document.getElementById('adScale');
+          const applyBtn = document.getElementById('adApply');
+          const resetBtn = document.getElementById('adReset');
+          if (sel) {
+            const prev = sel.value;
+            sel.innerHTML='';
+            slotsEquipped.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+            if (prev && slotsEquipped.includes(prev)) sel.value = prev; else if (slotsEquipped[0]) sel.value = slotsEquipped[0];
+            const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+            const slot = sel.value;
+            const a = ov[slot] || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+            if (posX) posX.value = a.position[0]||0;
+            if (posY) posY.value = a.position[1]||0.05;
+            if (posZ) posZ.value = a.position[2]||0;
+            if (rotX) rotX.value = Math.round((a.rotation[0]||0)*180/Math.PI);
+            if (rotY) rotY.value = Math.round((a.rotation[1]||0)*180/Math.PI);
+            if (rotZ) rotZ.value = Math.round((a.rotation[2]||0)*180/Math.PI);
+            if (scale) scale.value = (a.scale && a.scale[0]) || 1;
+            sel.onchange = ()=>{ try { const ov2 = JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; const slot2 = sel.value; const a2 = ov2[slot2] || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; if(posX) posX.value=a2.position[0]||0; if(posY) posY.value=a2.position[1]||0.05; if(posZ) posZ.value=a2.position[2]||0; if(rotX) rotX.value=Math.round((a2.rotation[0]||0)*180/Math.PI); if(rotY) rotY.value=Math.round((a2.rotation[1]||0)*180/Math.PI); if(rotZ) rotZ.value=Math.round((a2.rotation[2]||0)*180/Math.PI); if(scale) scale.value=(a2.scale && a2.scale[0])||1; } catch(e){} };
+            if (applyBtn && !applyBtn.__wired) {
+              applyBtn.__wired = true;
+              applyBtn.addEventListener('click', async ()=>{
+                try {
+                  const slot3 = sel.value; if(!slot3) return;
+                  const ov3 = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+                  const rx = Number(rotX?.value||0)*Math.PI/180, ry=Number(rotY?.value||0)*Math.PI/180, rz=Number(rotZ?.value||0)*Math.PI/180;
+                  const s = Number(scale?.value||1) || 1;
+                  ov3[slot3] = { position:[Number(posX?.value)||0, Number(posY?.value)||0.05, Number(posZ?.value)||0], rotation:[rx,ry,rz], scale:[s,s,s] };
+                  localStorage.setItem('anchorOverrides', JSON.stringify(ov3));
+                  if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov3); await window.__ofp.attachAll(); }
+                  try {
+                    if (window.__useTV && TV && TV.attachAll) {
+                      const map = new Map((_items||[]).map(x=>[x.id,x]));
+                      const anchors = Object.assign({}, (window.SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT), ov3);
+                      await TV.attachAll(_wallet.equipped||{}, map, anchors);
+                    }
+                  } catch(_){}
+                } catch(e){ console.warn('apply failed', e); }
+              });
+            }
+            if (resetBtn && !resetBtn.__wired) {
+              resetBtn.__wired = true;
+              resetBtn.addEventListener('click', async ()=>{
+                try {
+                  const slot4 = sel.value; if(!slot4) return;
+                  const ov4 = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
+                  delete ov4[slot4]; localStorage.setItem('anchorOverrides', JSON.stringify(ov4));
+                  if (window.__ofp && window.__ofp.setOverrides) { window.__ofp.setOverrides(ov4); await window.__ofp.attachAll(); }
+                  try {
+                    if (window.__useTV && TV && TV.attachAll) {
+                      const map = new Map((_items||[]).map(x=>[x.id,x]));
+                      const anchors = Object.assign({}, (window.SLOT_ANCHORS||SLOT_ANCHORS_DEFAULT), ov4);
+                      await TV.attachAll(_wallet.equipped||{}, map, anchors);
+                    }
+                  } catch(_){}
+                  sel.onchange();
+                } catch(e){ console.warn('reset failed', e); }
+              });
+            }
+          }
+        } catch (e) {}
+      } catch (e) {}
+    }
+      function cardHtml(it, owned, equipped){
+        const curModel = (equipped||{}).model || 'model-basemesh';
+        const isCompat = (function(){ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} })();
+        const ownedBadge = '<span class="text-green-700 text-xs">Owned</span>';
+        const equipBtn = (disabled=false)=>`<button data-equip="${it.id}" class="btn btn-ghost btn-equip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Equip</button>`;
+        const unequipBtn = (disabled=false)=>`<button data-unequip="${it.id}" class="btn btn-amber btn-unequip ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>Unequip</button>`;
+        const buyBtn = `<button data-buy="${it.id}" class="btn btn-primary btn-buy">Buy</button>`;
+        let action = buyBtn;
+        if (owned[it.id]) {
+          if (it.kind==='cosmetic') {
+            const slot = it.slot;
+            const val = equipped && equipped[slot];
+            const isEquipped = Array.isArray(val) ? val.includes(it.id) : (val === it.id);
+            action = isCompat ? `${equipBtn(false)} ${unequipBtn(!isEquipped)}` : '<span class="text-xs text-gray-500">Not compatible</span>';
+          } else {
+            action = ownedBadge;
+          }
+        }
+      const sub = it.kind==='upgrade' ? 'Upgrade' : (it.slot ? it.slot : 'Cosmetic');
+      return `
+        <div class="p-3 rounded-xl border-2 border-black bg-white shadow">
+          <div class="font-semibold">${it.name}</div>
+          <div class="text-xs text-gray-600 mb-2">${sub}</div>
+          <div class="flex items-center justify-between">
+            <div class="text-sm">Price: <strong>${it.price}</strong></div>
+            <div class="flex items-center gap-2">${action}</div>
+          </div>
+        </div>`;
+    }
+    function renderItems(){
+      const owned = _wallet.owned||{}; const equipped = _wallet.equipped||{};
+      const cats = _cats;
+      const cat = cats.find(c=>c.id===SELECTED) || cats[0];
+      const curModel = ((_wallet||{}).equipped||{}).model || 'model-basemesh'; const compat = (it)=>{ try{ if(it.kind==='upgrade'||it.slot==='model') return true; const list=it.compatibleWith; if(!Array.isArray(list)||!list.length) return true; return list.includes(curModel);}catch{return true;} }; const list = (cat ? _items.filter(cat.filter) : _items).filter(compat);
+      catalogEl.innerHTML='';
+      list.forEach(it=>{
+        const wrap = document.createElement('div');
+        wrap.innerHTML = cardHtml(it, owned, equipped);
+        const node = wrap.firstElementChild; catalogEl.appendChild(node);
+      });
+      try { if (owned['upgrade-tutor-basic'] && tutorLink) tutorLink.classList.remove('hidden'); else if (tutorLink) tutorLink.classList.add('hidden'); } catch (e) {}
+      bindActions();
+      try { document.getElementById('itemsPane').scrollTop = 0; } catch (e) {}
+    }
+
+    // Apply button: persist current preview equipment to server (top-most per slot)
+    (function(){
+      const btn = document.getElementById('applyBtn'); const btnNav = document.getElementById('applyNavBtn'); const status = document.getElementById('applyStatus');
+      async function applyEquip(navigateAfter=false){
+        if (btn) btn.disabled = true; if (btnNav) btnNav.disabled = true; if (status) status.textContent = 'Applying...';
+        try {
+          const want = (function flatten(eq){ const out={}; Object.keys(eq||{}).forEach(k=>{ if(k==='model'){ out.model=eq.model; return; } const v=eq[k]; if (Array.isArray(v)) { if (v.length) out[k]=v[v.length-1]; } else if (v) out[k]=v; }); return out; })(_wallet.equipped||{});
+          const cur = await api('/api/wallet') || {equipped:{}}; const serverEq = (cur&&cur.equipped)||{};
+          // Model first
+          if (want.model && serverEq.model !== want.model) {
+            const r = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId: want.model }) });
+            if (r && r.error) throw new Error(r.error);
+          }
+          // Unequip removed slots
+          const allSlots = new Set([...Object.keys(serverEq||{}), ...Object.keys(want||{})]); allSlots.delete('model');
+          for (const slot of allSlots){
+            const a = want[slot]; const b = serverEq[slot];
+            if (!a && b) { await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ slot }) }); }
+          }
+          // Equip desired per slot
+          for (const [slot,id] of Object.entries(want)){ if (slot==='model') continue; if (!id) continue; const r = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) }); if (r && r.error) throw new Error(r.error); }
+          const wall = await api('/api/wallet'); const safe = (wall && !wall.error) ? wall : null; if (safe) _wallet = safe;
+          try { localStorage.setItem('equippedSnapshot', JSON.stringify(want)); } catch {}
+          renderPreview(); renderItems(); if (status) status.textContent = 'Applied ?'; try { let png=null; if (window.__useTV && window.TV && TV.snapshot) png = TV.snapshot(); const mv=document.getElementById('mvShop'); if(!png && mv && mv.toBlob){ const blob=await mv.toBlob({ mimeType:'image/png' }); png = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); }); } if (png) localStorage.setItem('equippedPreviewPNG', png); } catch {}
+          if (navigateAfter) { try{ location.href = 'lesson.html?lesson=greetings-001'; }catch{} }
+        } catch (e) { if (status) status.textContent = 'Apply failed'; alert('Apply failed: ' + (e&&e.message?e.message:String(e))); }
+        finally { if (btn) btn.disabled = false; if (btnNav) btnNav.disabled = false; setTimeout(()=>{ try{ if (status) status.textContent=''; }catch{} }, 1200); }
+      }
+      if (btn && !btn.__wired) { btn.__wired=true; btn.addEventListener('click', applyEquip); }
+      if (btnNav && !btnNav.__wired) { btnNav.__wired=true; btnNav.addEventListener('click', ()=>applyEquip(true)); }
+    })();
+    function bindActions(){
+      catalogEl.querySelectorAll('[data-buy]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.getAttribute('data-buy');
+        const res = await api('/api/shop/purchase', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+        if (!res.ok && res.error) { alert(res.error); return; }
+        // Auto-equip cosmetics on purchase for preview
+        if (id.startsWith('cos-')) {
+          await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+        }
+        loadAll();
+      }));
+      catalogEl.querySelectorAll('[data-equip]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.getAttribute('data-equip');
+        if (e.currentTarget.disabled) return;
+        try {
+          const it = (_items||[]).find(x=>x.id===id);
+          const slot = it && it.slot;
+          // Shift/Alt-click: layer in preview only (no server call)
+          if ((e.shiftKey || e.altKey) && slot) {
+            _wallet.equipped = _wallet.equipped || {};
+            const cur = _wallet.equipped[slot];
+            if (Array.isArray(cur)) {
+              if (!cur.includes(id)) cur.push(id);
+            } else if (cur) {
+              if (cur !== id) _wallet.equipped[slot] = [cur, id];
+            } else {
+              _wallet.equipped[slot] = id;
+            }
+            renderPreview();
+            renderItems();
+            return;
+          }
+          // Auto-buy if not owned
+          const ownedMap = _wallet.owned || {};
+          if (!ownedMap[id]) {
+            const buy = await api('/api/shop/purchase', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+            if (buy && buy.error) { alert(buy.error); return; }
+            _wallet.owned = buy?.owned || _wallet.owned || {};
+          }
+          const res = await api('/api/shop/equip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+          if (res && res.error) { alert(res.error); return; }
+          // Optimistic UI update
+          if (it && it.slot) { _wallet.equipped = _wallet.equipped || {}; _wallet.equipped[it.slot] = id; }
+          renderPreview();
+          renderItems();
+          // Avoid full reload to prevent flicker
+        } catch (err) { console.error('Equip failed', err); }
+      }));
+      catalogEl.querySelectorAll('[data-unequip]')?.forEach(btn => btn.addEventListener('click', async (e)=>{
+        const id = e.currentTarget.getAttribute('data-unequip');
+        if (e.currentTarget.disabled) return;
+        try {
+          const it = (_items||[]).find(x=>x.id===id);
+          const slot = it && it.slot;
+          if (slot && Array.isArray((_wallet.equipped||{})[slot])) {
+            const arr = _wallet.equipped[slot];
+            _wallet.equipped[slot] = arr.filter(x=>x!==id);
+            if (_wallet.equipped[slot].length===1) _wallet.equipped[slot] = _wallet.equipped[slot][0];
+          } else {
+            const res = await api('/api/shop/unequip', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ itemId:id }) });
+            if (res && res.error) { alert(res.error); return; }
+            // Optimistic UI update
+            if (it && it.slot && _wallet.equipped) delete _wallet.equipped[it.slot];
+          }
+          renderPreview();
+          renderItems();
+          // Avoid full reload to prevent flicker
+        } catch (err) { console.error('Unequip failed', err); }
+      }));
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

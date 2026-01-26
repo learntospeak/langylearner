@@ -13,15 +13,15 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "/vendor/three.module.js"
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
       }
     }
   </script>
   <script type="module">
-    import * as THREE from '/vendor/three.module.js';
-    import { GLTFLoader } from '/vendor/GLTFLoader.js';
-    import { OrbitControls } from '/vendor/OrbitControls.js';
-    import { TransformControls } from '/vendor/TransformControls.js';
+    import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+    import { TransformControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/TransformControls.js';
 
     const $ = (s)=>document.querySelector(s);
     const wrap = $('#canvas');
@@ -31,12 +31,30 @@
     const posX=$('#posX'), posY=$('#posY'), posZ=$('#posZ');
     const rotX=$('#rotX'), rotY=$('#rotY'), rotZ=$('#rotZ');
     const scaleF=$('#scaleF');
+    const inflateF=$('#inflateF');
     const saveBtn=$('#saveBtn');
     const copyBtn=$('#copyBtn');
     const resetBtn=$('#resetBtn');
+    const scopeItem = $('#scopeItem');
+    const scopeSlot = $('#scopeSlot');
+    const parityNote = $('#matchShopNote');
+    const baseScaleRange = $('#baseScaleRange');
+    const baseScaleInput = $('#baseScaleInput');
+    const baseScaleReset = $('#baseScaleReset');
+    const baseScaleLabel = $('#baseScaleLabel');
 
     let scene, camera, renderer, orbit, tctl, baseGroup=null, accWrap=null;
     const loader = new GLTFLoader();
+    window.__THREE = window.__THREE || THREE;
+    window.THREE = window.THREE || THREE;
+
+    const DEFAULT_BASE_SCALE = 0.92;
+    const BASE_SCALE_KEY = 'baseMeshScale';
+    const BASE_SCALE_MIN = 0.6;
+    const BASE_SCALE_MAX = 1.3;
+    const ANCHOR_KEY = 'anchorOverrides';
+    const LOCK_KEY = 'anchorLocks';
+    let __anchorPushTimer = null;
 
     const SLOT_ANCHORS_DEFAULT = {
       head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
@@ -55,10 +73,308 @@
       bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
       misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
     };
+    let accSourceScene=null, accSourceSlot=null, accSourceId=null;
+
+    function isHiddenItem(it){
+      try{
+        const id = String(it?.id||'').toLowerCase();
+        const nm = String(it?.name||'').toLowerCase();
+        const mdl = String(it?.model||'').toLowerCase();
+        if (id==='cos-armorlegs' || id==='cos-armorlegsx') return true;
+        if (id.includes('original') || nm.includes('original') || mdl.includes('original')) return true;
+        return false;
+      }catch{
+        return false;
+      }
+    }
+
+    function getBaseScale(){
+      try{
+        const raw = parseFloat(localStorage.getItem(BASE_SCALE_KEY)||String(DEFAULT_BASE_SCALE));
+        return (isFinite(raw)&&raw>0)? raw : DEFAULT_BASE_SCALE;
+      }catch{
+        return DEFAULT_BASE_SCALE;
+      }
+    }
+
+    function clampBaseScale(v){
+      const num = parseFloat(v);
+      if(!isFinite(num) || num<=0) return DEFAULT_BASE_SCALE;
+      return Math.min(BASE_SCALE_MAX, Math.max(BASE_SCALE_MIN, num));
+    }
+
+    function clampInflate(v){
+      const num = parseFloat(v);
+      if(!isFinite(num)) return 0;
+      return Math.max(-0.03, Math.min(0.05, num));
+    }
+
+    function currentInflate(){
+      return clampInflate(inflateF?.value||0);
+    }
+
+    function toWorldPosition(pos=[]){
+      const base = Array.isArray(pos)? pos : [0,0,0];
+      const inv = 1/getBaseScale();
+      return [
+        (base[0]||0)*inv,
+        (base[1]||0)*inv,
+        (base[2]||0)*inv
+      ];
+    }
+
+    function toStoredPosition(world=[]){
+      const base = Array.isArray(world)? world : [0,0,0];
+      const scale = getBaseScale();
+      return [
+        (base[0]||0)*scale,
+        (base[1]||0)*scale,
+        (base[2]||0)*scale
+      ];
+    }
+
+    function inflateScene(root, amount){
+      try{
+        const THREE = window.THREE || window.__THREE;
+        if(!THREE || !root || !amount || !isFinite(amount) || amount===0) return;
+        root.traverse?.(o=>{
+          try{
+            if (!o || !o.isMesh || !o.geometry) return;
+            const g0=o.geometry;
+            const g=g0.clone();
+            o.geometry=g;
+            if(!g.attributes || !g.attributes.position) return;
+            if(!g.attributes.normal){ try{ g.computeVertexNormals(); }catch{} }
+            const pos=g.attributes.position;
+            const nor=g.attributes.normal;
+            const pa=pos.array;
+            const na=nor.array;
+            const len=Math.min(pa.length, na.length);
+            for(let i=0;i<len;i+=3){
+              pa[i]+= (na[i]||0)*amount;
+              pa[i+1]+= (na[i+1]||0)*amount;
+              pa[i+2]+= (na[i+2]||0)*amount;
+            }
+            pos.needsUpdate=true;
+            try{ g.computeBoundingBox(); g.computeBoundingSphere(); }catch{}
+          }catch{}
+        });
+      }catch{}
+    }
+
+    function getOverrides(){
+      try{
+        return JSON.parse(localStorage.getItem(ANCHOR_KEY)||'{}')||{};
+      }catch{
+        return {};
+      }
+    }
+
+    function setOverrides(next){
+      try{
+        localStorage.setItem(ANCHOR_KEY, JSON.stringify(next||{}));
+      }catch{}
+    }
+
+    function getLocks(){
+      try{
+        return JSON.parse(localStorage.getItem(LOCK_KEY)||'{}')||{};
+      }catch{
+        return {};
+      }
+    }
+
+    function mergeLocks(next){
+      try{
+        const cur = getLocks();
+        localStorage.setItem(LOCK_KEY, JSON.stringify(Object.assign({}, next||{}, cur)));
+      }catch{}
+    }
+
+    async function pullServerAnchors(){
+      try{
+        const res = await fetch('/api/anchors', { cache:'no-store' });
+        if (!res.ok) return false;
+        const data = await res.json();
+        const cur = getOverrides();
+        const merged = Object.assign({}, data.anchors||{}, cur);
+        setOverrides(merged);
+        if (data.locks && typeof data.locks==='object') mergeLocks(data.locks);
+        return true;
+      }catch(err){
+        console.warn('[anchor-tool] anchor fetch failed', err);
+        return false;
+      }
+    }
+
+    function pushAnchorsSoon(){
+      try{
+        if (__anchorPushTimer) return;
+        __anchorPushTimer = setTimeout(async()=>{
+          __anchorPushTimer = null;
+          try{
+            const anchors = getOverrides();
+            const locks = getLocks();
+            await fetch('/api/anchors', {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ anchors, locks, merge:true })
+            });
+          }catch(err){
+            console.warn('[anchor-tool] anchor push failed', err);
+          }
+        }, 600);
+      }catch{}
+    }
+
+    function fmt(n){ return Number.isFinite(+n) ? (+n).toFixed(3) : '0.000'; }
+
+    function buildAccessoryInstance(){
+      if(!accSourceScene) return null;
+      const inst = accSourceScene.clone(true);
+      // For synthetic armorarm left/right, strip the opposite side: if only one mesh, duplicate for right/left selection; if two meshes, keep the first for left and the second for right
+      try{
+        const id = (accSourceId||'').toLowerCase();
+        const wantLeft  = id.includes('armorarm') && id.includes('left');
+        const wantRight = id.includes('armorarm') && id.includes('right');
+        if (wantLeft || wantRight){
+          const meshes = [];
+          inst.traverse(n=>{ if(n && n.isMesh) meshes.push(n); });
+          if (meshes.length >= 2){
+            const keep = wantLeft ? [meshes[0]] : [meshes[1]];
+            const kill = meshes.filter(m=>!keep.includes(m));
+            kill.forEach(n=>{ try{ n.parent && n.parent.remove(n); }catch{} });
+          } else if (meshes.length === 1){
+            if (wantRight){
+              // For right, clone the lone mesh and remove the original
+              const clone = meshes[0].clone(true);
+              try { meshes[0].parent && meshes[0].parent.remove(meshes[0]); } catch {}
+              inst.add(clone);
+            }
+          }
+        }
+      }catch{}
+      try{
+        const box=new THREE.Box3().setFromObject(inst);
+        const c=box.getCenter(new THREE.Vector3());
+        inst.position.sub(c);
+      }catch{}
+      const infl = currentInflate();
+      if (infl) inflateScene(inst, infl);
+      return inst;
+    }
+
+    function rebuildAccessoryGeometry(){
+      if(!accWrap || !accSourceScene) return;
+      const inst = buildAccessoryInstance();
+      if(!inst) return;
+      try{
+        while(accWrap.children.length){
+          accWrap.remove(accWrap.children[0]);
+        }
+        accWrap.add(inst);
+        applyFields();
+      }catch{}
+    }
+
+    function applyAnchorToInputs(anchor){
+      if(!anchor) return;
+      const worldPos = toWorldPosition(anchor.position||[0,0,0]);
+      posX.value = fmt(worldPos[0]);
+      posY.value = fmt(worldPos[1]);
+      posZ.value = fmt(worldPos[2]);
+      const rot = anchor.rotation||[0,0,0];
+      rotX.value = Math.round(((rot[0]||0)*180)/Math.PI);
+      rotY.value = Math.round(((rot[1]||0)*180)/Math.PI);
+      rotZ.value = Math.round(((rot[2]||0)*180)/Math.PI);
+      const sc = (anchor.scale && anchor.scale[0]) || 1;
+      scaleF.value = sc.toFixed ? sc.toFixed(3) : sc;
+      if(inflateF) inflateF.value = fmt(anchor.inflate ?? 0);
+    }
+
+    function getActiveSlot(){
+      const opt=itemSel?.options?.[itemSel.selectedIndex];
+      return slotSel?.value || opt?.dataset?.slot || 'misc';
+    }
+
+    function getActiveOverrideKey(){
+      const slot = getActiveSlot();
+      const id = getActiveItemId();
+      return (scopeItem && scopeItem.checked && id) ? id : slot;
+    }
+
+    function getActiveItemId(){
+      const opt=itemSel?.options?.[itemSel.selectedIndex];
+      return opt?.dataset?.id || null;
+    }
+
+    function anchorFromInputs(){
+      const worldPos=[+posX.value||0,+posY.value||0,+posZ.value||0];
+      const storedPos = toStoredPosition(worldPos);
+      const rotRad=[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180];
+      const s=(+scaleF.value||1)||1;
+      const infl = clampInflate(inflateF?.value||0);
+      return { position:storedPos, rotation:rotRad, scale:[s,s,s], inflate:infl };
+    }
+
+    function getAnchorForSelection(){
+      const slot = getActiveSlot();
+      const id = getActiveItemId();
+      const ov = getOverrides();
+      return ov[id] || ov[slot] || SLOT_ANCHORS_DEFAULT[slot] || SLOT_ANCHORS_DEFAULT.misc;
+    }
+
+    function refreshAnchorFields(apply=true){
+      const anchor = getAnchorForSelection();
+      if(!anchor) return;
+      applyAnchorToInputs(anchor);
+      rebuildAccessoryGeometry();
+      if(apply) applyFields();
+    }
+
+    function updateParityNote(){
+      if(!parityNote) return;
+      const bs = getBaseScale();
+      parityNote.textContent = `Preview matches Shop coordinates (saved scale ${bs.toFixed(3)}).`;
+    }
+    function updateBaseScaleUI(explicitValue){
+      const scale = (typeof explicitValue==='number' && isFinite(explicitValue)) ? explicitValue : getBaseScale();
+      const fixed = scale.toFixed(3);
+      if(baseScaleRange) baseScaleRange.value = fixed;
+      if(baseScaleInput) baseScaleInput.value = fixed;
+      if(baseScaleLabel) baseScaleLabel.textContent = `Current: ${fixed}`;
+    }
+
+    function applyBaseScale(){
+      const scale = getBaseScale();
+      if(baseGroup && baseGroup.scale){
+        try { baseGroup.scale.set(scale, scale, scale); } catch {}
+      }
+    }
+
+    function handleBaseScaleChange(next){
+      const clamped = clampBaseScale(next);
+      localStorage.setItem(BASE_SCALE_KEY, clamped.toFixed(3));
+      updateBaseScaleUI(clamped);
+      applyBaseScale();
+      updateParityNote();
+      refreshAnchorFields(true);
+      try { window.dispatchEvent(new Event('baseMeshScaleChanged')); } catch {}
+    }
+
+    (function initBaseScaleControls(){
+      updateBaseScaleUI();
+      baseScaleRange?.addEventListener('input', e=>{ handleBaseScaleChange(e.target.value); });
+      baseScaleInput?.addEventListener('change', e=>{ handleBaseScaleChange(e.target.value); });
+      baseScaleReset?.addEventListener('click', ()=>{ handleBaseScaleChange(DEFAULT_BASE_SCALE); });
+    })();
+
+    updateParityNote();
 
     function init(){
       const w = wrap.clientWidth, h = wrap.clientHeight;
       scene = new THREE.Scene();
+      window.__ATScene = scene;
       camera = new THREE.PerspectiveCamera(30, w/h, 0.01, 100);
       camera.position.set(0, 0.25, 1);
       renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'low-power' });
@@ -69,7 +385,8 @@
       const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir);
       orbit = new OrbitControls(camera, renderer.domElement); orbit.enableDamping = true; orbit.target.set(0,0.05,0);
       tctl = new TransformControls(camera, renderer.domElement);
-      tctl.addEventListener('dragging-changed', e=>{ orbit.enabled = !e.value; syncFields(); });
+      tctl.addEventListener('dragging-changed', e=>{ orbit.enabled = !e.value; syncFields(); saveAnchorLive(); });
+      tctl.addEventListener('objectChange', ()=>{ syncFields(); saveAnchorLive(); });
       scene.add(tctl);
       (function tick(){ try{ orbit.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick); })();
     }
@@ -94,45 +411,138 @@
         if(baseGroup){ scene.remove(baseGroup); baseGroup=null; }
         if(accWrap){ scene.remove(accWrap); accWrap=null; }
       }catch{}
-      const sceneObj = await loadGLB(url); if(!sceneObj) return false; baseGroup = sceneObj; scene.add(baseGroup); fitCameraTo(baseGroup); return true;
+      const sceneObj = await loadGLB(url); if(!sceneObj) return false; baseGroup = sceneObj; scene.add(baseGroup); window.__ATBaseRoot = baseGroup; applyBaseScale(); fitCameraTo(baseGroup); return true;
     }
 
     async function loadAccessory(url){
       if(!baseGroup) return false;
       if(accWrap){ try{ if (tctl && tctl.object===accWrap) tctl.detach(); scene.remove(accWrap);}catch{} accWrap=null; }
-      const obj=await loadGLB(url); if(!obj) return false; const wrap = new THREE.Group();
-      try{ const box=new THREE.Box3().setFromObject(obj); const c=box.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{}
-      wrap.add(obj); accWrap = wrap; scene.add(wrap); tctl.attach(wrap); return true;
+      const sceneObj=await loadGLB(url); if(!sceneObj) return false;
+      accSourceScene = sceneObj;
+      const inst = buildAccessoryInstance();
+      if(!inst) return false;
+      const wrap = new THREE.Group();
+      wrap.add(inst); accWrap = wrap; window.__ATActiveWrap = accWrap; scene.add(wrap); tctl.attach(wrap); return true;
     }
 
     function syncFields(){ if(!accWrap) return; try{ posX.value=accWrap.position.x.toFixed(3); posY.value=accWrap.position.y.toFixed(3); posZ.value=accWrap.position.z.toFixed(3); rotX.value=Math.round(accWrap.rotation.x*180/Math.PI); rotY.value=Math.round(accWrap.rotation.y*180/Math.PI); rotZ.value=Math.round(accWrap.rotation.z*180/Math.PI); scaleF.value=accWrap.scale.x.toFixed(3);}catch{} }
 
     function applyFields(){ if(!accWrap) return; const rx=(+rotX.value||0)*Math.PI/180, ry=(+rotY.value||0)*Math.PI/180, rz=(+rotZ.value||0)*Math.PI/180, s=(+scaleF.value||1)||1; try{ accWrap.position.set(+posX.value||0,+posY.value||0,+posZ.value||0); accWrap.rotation.order='XYZ'; accWrap.rotation.set(rx,ry,rz); accWrap.scale.set(s,s,s);}catch{} }
 
-    function saveAnchor(){
-      const slot=slotSel.value||'misc';
-      const itemOpt = itemSel.options[itemSel.selectedIndex];
-      const itemId = itemOpt && itemOpt.dataset && itemOpt.dataset.id;
-      const key = (scopeItem && scopeItem.checked && itemId) ? itemId : slot;
-      const a={ position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1, (+scaleF.value||1)||1,(+scaleF.value||1)||1] };
-      const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })();
-      ov[key]=a; localStorage.setItem('anchorOverrides', JSON.stringify(ov));
+    function saveAnchor(isLive=false){
+      const key = getActiveOverrideKey() || 'misc';
+      const a = anchorFromInputs();
+      const ov = getOverrides();
+      ov[key]=a;
+      setOverrides(ov);
+      pushAnchorsSoon();
     }
 
-    copyBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const itemOpt=itemSel.options[itemSel.selectedIndex]; const itemId=itemOpt?.dataset?.id; const key=(scopeItem&&scopeItem.checked&&itemId)?itemId:slot; const data={ [key]: { position:[+posX.value||0,+posY.value||0,+posZ.value||0], rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180], scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ] } }; const t=JSON.stringify(data, null, 2); navigator.clipboard?.writeText(t).catch(()=>{}); });
-    saveBtn?.addEventListener('click', ()=>{ applyFields(); saveAnchor(); });
-    resetBtn?.addEventListener('click', ()=>{ const slot=slotSel.value||'misc'; const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); });
+    let __liveSaveRaf = null;
+    function saveAnchorLive(){
+      if (__liveSaveRaf) return;
+      __liveSaveRaf = requestAnimationFrame(()=>{ __liveSaveRaf=null; saveAnchor(true); });
+    }
 
-    posX.onchange=posY.onchange=posZ.onchange=rotX.onchange=rotY.onchange=rotZ.onchange=scaleF.onchange=applyFields;
+    copyBtn?.addEventListener('click', ()=>{
+      const slot=slotSel.value||'misc';
+      const itemOpt=itemSel.options[itemSel.selectedIndex];
+      const itemId=itemOpt?.dataset?.id;
+      const key=(scopeItem&&scopeItem.checked&&itemId)?itemId:slot;
+      const worldPos=[+posX.value||0,+posY.value||0,+posZ.value||0];
+      const storedPos=toStoredPosition(worldPos);
+      const data={
+        [key]:{
+          position:storedPos,
+          rotation:[(+rotX.value||0)*Math.PI/180,(+rotY.value||0)*Math.PI/180,(+rotZ.value||0)*Math.PI/180],
+          scale:[(+scaleF.value||1)||1,(+scaleF.value||1)||1,(+scaleF.value||1)||1 ],
+          inflate: clampInflate(inflateF?.value||0)
+        }
+      };
+      const t=JSON.stringify(data, null, 2);
+      navigator.clipboard?.writeText(t).catch(()=>{});
+    });
+    saveBtn?.addEventListener('click', ()=>{ applyFields(); saveAnchor(); });
+    resetBtn?.addEventListener('click', ()=>{
+      const slot=slotSel.value||'misc';
+      const a=SLOT_ANCHORS_DEFAULT[slot]||SLOT_ANCHORS_DEFAULT.misc;
+      applyAnchorToInputs(a);
+      if(inflateF) inflateF.value = '0.000';
+      applyFields();
+      rebuildAccessoryGeometry();
+      const key = getActiveOverrideKey();
+      const ov = getOverrides();
+      delete ov[key];
+      setOverrides(ov);
+      pushAnchorsSoon();
+    });
+
+    const liveApplyAndSave = ()=>{ applyFields(); saveAnchorLive(); };
+    ['input','change'].forEach(evt=>{
+      posX.addEventListener(evt, liveApplyAndSave);
+      posY.addEventListener(evt, liveApplyAndSave);
+      posZ.addEventListener(evt, liveApplyAndSave);
+      rotX.addEventListener(evt, liveApplyAndSave);
+      rotY.addEventListener(evt, liveApplyAndSave);
+      rotZ.addEventListener(evt, liveApplyAndSave);
+      scaleF.addEventListener(evt, liveApplyAndSave);
+    });
+    inflateF?.addEventListener('change', ()=>{ rebuildAccessoryGeometry(); saveAnchorLive(); });
 
     async function populate(){
-      try{ const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[]; const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model'); const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model'); models.forEach(m=>{ const o=document.createElement('option'); o.value=m.model; o.textContent=m.name; modelSel.appendChild(o); }); acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.model; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); }); const uniqSlots=[...new Set(acc.map(a=>a.slot))]; uniqSlots.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; slotSel.appendChild(o); }); if(models[0]){ await loadBase(models[0].model);} if(acc[0]){ slotSel.value=acc[0].slot; await loadAccessory(acc[0].model); const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round(a.rotation[0]*180/Math.PI); rotY.value=Math.round(a.rotation[1]*180/Math.PI); rotZ.value=Math.round(a.rotation[2]*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); } }catch{}
+      try{
+        const r = await fetch('/api/shop/catalog'); const data = await r.json(); const items = data.items||[];
+        const models = items.filter(i=>i.kind==='cosmetic'&&i.slot==='model' && !isHiddenItem(i));
+        const acc = items.filter(i=>i.kind==='cosmetic'&&i.slot!=='model' && !isHiddenItem(i));
+        // Add synthetic left/right entries for armorarm so you can anchor each side separately
+        try {
+          const aa = acc.find(a=>a.id==='cos-amorarm' || a.id==='cos-amorarmx' || (String(a.name||'').toLowerCase().includes('amorarm')));
+          const hasLeft = acc.some(a=>/amorarm[-_ ]?left/i.test(a.id||''));
+          const hasRight = acc.some(a=>/amorarm[-_ ]?right/i.test(a.id||''));
+          if (aa && (!hasLeft || !hasRight)) {
+            const make = (id,label,model)=>({ ...aa, id, name: label, model, __synthetic:true });
+            const baseModel = aa.model||'';
+            const leftModel = baseModel.replace('amorarm.glb','amorarm_L.glb');
+            const rightModel= baseModel.replace('amorarm.glb','amorarm_R.glb');
+            if (!hasLeft) acc.push(make('cos-amorarm-left','Armorarm (Left)', leftModel));
+            if (!hasRight) acc.push(make('cos-amorarm-right','Armorarm (Right)', rightModel));
+          }
+        } catch {}
+        models.forEach(m=>{ const o=document.createElement('option'); o.value=m.model; o.textContent=m.name; modelSel.appendChild(o); });
+        acc.forEach(a=>{ const o=document.createElement('option'); o.value=a.model; o.textContent=`${a.name} (${a.slot})`; o.dataset.slot=a.slot; o.dataset.id=a.id; itemSel.appendChild(o); });
+        const uniqSlots=[...new Set(acc.map(a=>a.slot))];
+        uniqSlots.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; slotSel.appendChild(o); });
+        if(models[0]){ await loadBase(models[0].model);}
+        if(acc[0]){
+          slotSel.value=acc[0].slot;
+          accSourceSlot = acc[0].slot;
+          accSourceId = acc[0].id;
+          await loadAccessory(acc[0].model);
+          const a=SLOT_ANCHORS_DEFAULT[acc[0].slot]||SLOT_ANCHORS_DEFAULT.misc;
+          applyAnchorToInputs(a);
+          applyFields();
+        }
+      }catch{}
     }
 
     modelSel.onchange=async()=>{ await loadBase(modelSel.value); if(accWrap) { applyFields(); } };
-    itemSel.onchange=async()=>{ const opt=itemSel.options[itemSel.selectedIndex]; slotSel.value=opt?.dataset?.slot||'misc'; await loadAccessory(itemSel.value); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch(e){ return {}; } })(); const itemId=opt?.dataset?.id; const a = ov[itemId] || ov[slotSel.value] || SLOT_ANCHORS_DEFAULT[slotSel.value] || SLOT_ANCHORS_DEFAULT.misc; posX.value=a.position[0]; posY.value=a.position[1]; posZ.value=a.position[2]; rotX.value=Math.round((a.rotation[0]||0)*180/Math.PI); rotY.value=Math.round((a.rotation[1]||0)*180/Math.PI); rotZ.value=Math.round((a.rotation[2]||0)*180/Math.PI); scaleF.value=(a.scale&&a.scale[0])||1; applyFields(); };
+    itemSel.onchange=async()=>{
+      const opt=itemSel.options[itemSel.selectedIndex];
+      slotSel.value=opt?.dataset?.slot||'misc';
+      accSourceSlot = slotSel.value;
+      accSourceId = opt?.dataset?.id || null;
+      await loadAccessory(itemSel.value);
+      refreshAnchorFields(true);
+    };
+    slotSel.onchange=()=>{ refreshAnchorFields(true); };
 
-    init(); populate();
+    async function boot(){
+      init();
+      await pullServerAnchors();
+      await populate();
+    }
+
+    boot();
   </script>
 </head>
 <body class="p-4">
@@ -169,8 +579,30 @@
         <label>RotZ° <input id="rotZ" type="number" step="1" class="border px-1 py-0.5 w-full"></label>
         <label>Scale <input id="scaleF" type="number" step="0.01" class="border px-1 py-0.5 w-full"></label>
       </div>
+      <div class="mb-2">
+        <label class="block text-sm font-medium">Inflate (thickness, m)
+          <input id="inflateF" type="number" step="0.001" min="-0.03" max="0.05" class="border px-1 py-0.5 w-full" value="0">
+        </label>
+        <div class="text-xs text-gray-600 mt-1">Positive values push the accessory outward along its surface normals (useful for boots to hide skin).</div>
+      </div>
       <div class="flex gap-2">
-        <button id="saveBtn" class="btn btn-primary">Save (local)</button> <button id="copyBtn" class="btn btn-ghost">Copy JSON</button> <button id="resetBtn" class="btn btn-amber">Reset Defaults</button> <button id="camReset" class="btn btn-ghost">Reset Camera</button>
+        <button id="saveBtn" class="btn btn-primary">Save &amp; Sync</button> <button id="copyBtn" class="btn btn-ghost">Copy JSON</button> <button id="resetBtn" class="btn btn-amber">Reset Defaults</button> <button id="camReset" class="btn btn-ghost">Reset Camera</button>
+      </div>
+      <div class="mt-3 border rounded-lg p-2 bg-amber-50">
+        <div class="text-sm font-semibold">Shop Parity</div>
+        <div id="matchShopNote" class="text-xs text-gray-700 mt-1"></div>
+      </div>
+      <div class="mt-3 border rounded-lg p-3 bg-blue-50">
+        <div class="flex items-center justify-between text-sm font-semibold">
+          <span>Base Mesh Scale</span>
+          <span id="baseScaleLabel" class="text-xs text-gray-700">Current: 0.920</span>
+        </div>
+        <div class="flex items-center gap-2 mt-2">
+          <input id="baseScaleRange" type="range" min="0.6" max="1.3" step="0.01" class="flex-1">
+          <input id="baseScaleInput" type="number" min="0.6" max="1.3" step="0.01" class="w-20 border rounded px-1 py-0.5 text-right" value="0.92">
+          <button id="baseScaleReset" class="btn btn-xs btn-ghost">Reset</button>
+        </div>
+        <div class="text-xs text-gray-600 mt-1">Lower values shrink the character so accessories appear larger. Shop and lessons will read the same value automatically.</div>
       </div>
       <div class="text-xs text-gray-600 mt-2">Saved anchors are written to localStorage under <code>anchorOverrides</code>. Shop uses the same key.</div>
     </div>

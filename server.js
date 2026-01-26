@@ -15,8 +15,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const AUTH_SECRET = process.env.AUTH_SECRET || 'dev-secret-change-me';
-const DB_DIR = path.join(__dirname, 'data');
+const IS_PROD = String(process.env.NODE_ENV || '').toLowerCase() === 'production' || process.env.PROD === '1';
+const DB_DIR = process.env.DB_DIR ? path.resolve(process.env.DB_DIR) : path.join(__dirname, 'data');
 const DB_FILE = path.join(DB_DIR, 'users.json');
+const BACKUP_DIR = path.join(DB_DIR, 'backups');
+const BACKUPS_ENABLED = (process.env.BACKUPS_ENABLED || '1') !== '0';
+const BACKUPS_RETENTION = Math.max(1, Number(process.env.BACKUPS_RETENTION || 30));
+const BACKUPS_INTERVAL_HOURS = Math.max(1, Number(process.env.BACKUPS_INTERVAL_HOURS || 24));
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -36,16 +41,36 @@ app.use((req, res, next) => {
 });
 
 // Serve /assets explicitly with proper content types for glTF
+const ASSETS_DIR = process.env.ASSETS_DIR ? path.resolve(process.env.ASSETS_DIR) : path.join(__dirname, 'assets');
+const HAS_ASSETS = (() => { try { fs.accessSync(ASSETS_DIR, fs.constants.F_OK); return true; } catch { return false; } })();
+function existsRel(relPath){
+  try {
+    let fsPath;
+    if (relPath && relPath.replace(/\\/g,'/').startsWith('assets/')) {
+      fsPath = path.join(ASSETS_DIR, relPath.replace(/\\/g,'/').slice('assets/'.length));
+    } else {
+      fsPath = path.join(__dirname, relPath);
+    }
+    fs.accessSync(fsPath, fs.constants.F_OK);
+    return true;
+  } catch { return false; }
+}
 try {
-  const ASSETS_DIR = path.join(__dirname, 'assets');
   app.use('/assets', express.static(ASSETS_DIR, {
     index: false,
     fallthrough: true,
     setHeaders: (res, p) => {
       const lower = String(p).toLowerCase();
-      if (lower.endsWith('.glb')) res.setHeader('Content-Type', 'model/gltf-binary'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      else if (lower.endsWith('.gltf')) res.setHeader('Content-Type', 'model/gltf+json'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      else if (lower.endsWith('.bin')) res.setHeader('Content-Type', 'application/octet-stream'); res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      if (lower.endsWith('.glb')) {
+        res.setHeader('Content-Type', 'model/gltf-binary');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (lower.endsWith('.gltf')) {
+        res.setHeader('Content-Type', 'model/gltf+json');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (lower.endsWith('.bin')) {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     },
   }));
 } catch {}
@@ -64,6 +89,7 @@ async function ensureDb(){
   try {
     await fsp.access(DB_FILE, fs.constants.F_OK);
   } catch {
+    if (IS_PROD) throw new Error('Database file missing in production. Refusing to create a new empty DB.');
     const empty = { users: {} };
     await fsp.writeFile(DB_FILE, JSON.stringify(empty, null, 2));
   }
@@ -72,10 +98,66 @@ async function readDb(){
   await ensureDb();
   try {
     const buf = await fsp.readFile(DB_FILE); return JSON.parse(buf.toString('utf8'));
-  } catch { return { users: {} }; }
+  } catch (e) {
+    if (IS_PROD) throw e;
+    return { users: {} };
+  }
+}
+async function readDbRaw(){
+  try { const buf = await fsp.readFile(DB_FILE); return JSON.parse(buf.toString('utf8')); } catch { return null; }
+}
+
+let lastBackupAt = 0;
+async function backupDb(label = 'auto'){
+  if (!BACKUPS_ENABLED) return false;
+  try {
+    await fsp.mkdir(BACKUP_DIR, { recursive: true });
+    await fsp.access(DB_FILE, fs.constants.F_OK);
+    const ts = new Date();
+    const pad = (n)=> String(n).padStart(2,'0');
+    const name = `users-${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}-${label}.json`;
+    const dest = path.join(BACKUP_DIR, name);
+    await fsp.copyFile(DB_FILE, dest);
+    lastBackupAt = Date.now();
+    try { await pruneBackups(); } catch {}
+    return true;
+  } catch { return false; }
+}
+async function pruneBackups(){
+  try {
+    const entries = await fsp.readdir(BACKUP_DIR, { withFileTypes: true });
+    const files = entries.filter(e=>e.isFile() && e.name.startsWith('users-') && e.name.endsWith('.json'))
+                         .map(e=>e.name)
+                         .sort();
+    const excess = files.length - BACKUPS_RETENTION;
+    if (excess > 0) {
+      for (let i = 0; i < excess; i++) {
+        const p = path.join(BACKUP_DIR, files[i]);
+        try { await fsp.unlink(p); } catch {}
+      }
+    }
+  } catch {}
+}
+async function backupIfStale(reason='prewrite'){
+  if (!BACKUPS_ENABLED) return;
+  const now = Date.now();
+  if (now - lastBackupAt > 5 * 60 * 1000) { // at most one every 5 minutes
+    try { await backupDb(reason); } catch {}
+  }
 }
 async function writeDb(db){
   await ensureDb();
+  // Safety: prevent accidental wipe of users in production
+  try {
+    const prev = await readDbRaw();
+    if (IS_PROD && prev && prev.users && Object.keys(prev.users).length > 0) {
+      const nextCount = (db && db.users) ? Object.keys(db.users).length : 0;
+      if (nextCount === 0) throw new Error('Refusing to overwrite DB with an empty users set in production.');
+    }
+  } catch (e) {
+    if (IS_PROD) throw e;
+  }
+  try { await backupIfStale('prewrite'); } catch {}
   const tmp = DB_FILE + '.tmp';
   const data = JSON.stringify(db, null, 2);
   await fsp.writeFile(tmp, data);
@@ -162,6 +244,21 @@ async function requireAdminPage(req, res){
   }
 }
 
+// JSON variant for APIs
+async function requireAdmin(req, res){
+  try {
+    const { auth } = parseCookies(req);
+    const username = verifyToken(auth);
+    if (!username) { res.status(401).json({ error: 'Unauthorized' }); return null; }
+    const ok = await isAdminUser(username);
+    if (!ok) { res.status(403).json({ error: 'Forbidden' }); return null; }
+    return username;
+  } catch {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+}
+
 // --- Auth APIs ---
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -172,7 +269,7 @@ app.post('/api/auth/signup', async (req, res) => {
     if (email && !/^\S+@\S+\.\S+$/.test(String(email))) return res.status(400).json({ error: 'Invalid email' });
     const db = await readDb();
     if (db.users[username]) return res.status(409).json({ error: 'Username taken' });
-    db.users[username] = { username, email: email || '', password: hashPassword(password), progress: {}, createdAt: Date.now() };
+    db.users[username] = { username, email: email || '', password: hashPassword(password), progress: {}, wallet: { coins: INITIAL_COINS, owned: {}, equipped: {} }, createdAt: Date.now() };
     await writeDb(db);
     const token = signToken(username);
     setAuthCookie(res, token);
@@ -208,7 +305,9 @@ app.get('/api/me', async (req, res) => {
 // ---- Shop + Wallet ----
 // Catalog is composed of: static upgrades, static 3D models, and 3D clothing items
 // discovered by scanning assets/chibi/items for .glb files.
-const ITEMS_DIR = path.join(__dirname, 'assets', 'chibi', 'items');
+const ITEMS_DIR = path.join(ASSETS_DIR, 'chibi', 'items');
+const INITIAL_COINS = Math.max(0, Number(process.env.INITIAL_COINS || 200));
+const FALLBACK_MODEL_URL = process.env.FALLBACK_MODEL_URL || 'https://modelviewer.dev/shared-assets/models/Astronaut.glb';
 
 const STATIC_UPGRADES = [
   { id:'upgrade-tutor-basic', kind:'upgrade', name:'Tutor (Basic)', price: 200 },
@@ -262,6 +361,11 @@ async function loadClothingItems(){
   const files = await listGlbFilesRecursive(ITEMS_DIR);
   const items = [];
   const seen = new Set();
+  // Exclude problematic items from catalog
+  const EXCLUDE_IDS = new Set([
+    'cos-armorlegs', // misaligned legwear; remove from UI
+    'cos-armorlegsx'
+  ]);
   for (const p of files) {
     const nameBaseRaw = path.basename(p, path.extname(p));
     // Canonicalize to collapse duplicates like foo, foo_001, foo-1, foo (1)
@@ -277,6 +381,7 @@ async function loadClothingItems(){
     seen.add(canon);
     const slot = slotFromFilename(nameBaseRaw);
     const id = `cos-${canon}`;
+    if (EXCLUDE_IDS.has(id)) continue;
     const name = labelize(nameBaseRaw);
     const rel = path.relative(__dirname, p).replace(/\\/g,'/');
     // For now, clothing items are compatible with the Basemesh character only.
@@ -286,8 +391,20 @@ async function loadClothingItems(){
   return items;
 }
 async function getCatalog(){
-  const clothing = await loadClothingItems();
-  return [...STATIC_UPGRADES, ...STATIC_MODELS, ...clothing];
+  const itemsDirExists = (()=>{ try { fs.accessSync(ITEMS_DIR, fs.constants.F_OK); return true; } catch { return false; } })();
+  const clothing = (HAS_ASSETS && itemsDirExists) ? (await loadClothingItems()) : [];
+  let baseModels;
+  if (HAS_ASSETS) {
+    const available = STATIC_MODELS.filter(m => existsRel(m.model));
+    baseModels = available.length ? available : [
+      { id:'model-student', kind:'cosmetic', slot:'model', name:'3D Student', price: 0, model: FALLBACK_MODEL_URL }
+    ];
+  } else {
+    baseModels = [
+      { id:'model-student', kind:'cosmetic', slot:'model', name:'3D Student', price: 0, model: FALLBACK_MODEL_URL }
+    ];
+  }
+  return [...STATIC_UPGRADES, ...baseModels, ...clothing];
 }
 async function findItem(id){
   const all = await getCatalog();
@@ -302,7 +419,8 @@ function isCompatible(item, modelId){
   } catch { return true; }
 }
   function getWallet(rec){
-  if (!rec.wallet) rec.wallet = { coins: 0, owned: {}, equipped: {} };
+  if (!rec.wallet) rec.wallet = { coins: INITIAL_COINS, owned: {}, equipped: {} };
+  if (typeof rec.wallet.coins !== 'number') rec.wallet.coins = INITIAL_COINS;
   if (!rec.wallet.owned) rec.wallet.owned = {};
   if (!rec.wallet.equipped) rec.wallet.equipped = {};
   return rec.wallet;
@@ -319,12 +437,20 @@ function isCompatible(item, modelId){
     try {
       const db = await readDb();
       const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+      const seeded = (!rec.wallet || typeof (rec.wallet && rec.wallet.coins) !== 'number');
       const wallet = getWallet(rec);
+      if (seeded) { try { await writeDb(db); } catch {} }
       const catalog = await getCatalog();
       const validIds = new Set(catalog.map(i => i.id));
+      // Persist default base model ownership/equipped to avoid mismatch
+      let wrote = false;
+      if (!wallet.owned['model-student']) { wallet.owned['model-student'] = true; wrote = true; }
+      if (!wallet.equipped.model) { wallet.equipped.model = 'model-student'; wrote = true; }
+      if (wrote) { try { await writeDb(db); } catch {} }
       // Build a response view without writing to disk (avoids file locking issues)
       const owned = Object.fromEntries(Object.entries(wallet.owned||{}).filter(([id])=>validIds.has(id)));
       const equipped = Object.fromEntries(Object.entries(wallet.equipped||{}).filter(([slot,id])=>validIds.has(id)));
+      // Ensure the response also reflects the default
       owned['model-student'] = true;
       if (!equipped.model) equipped.model = 'model-student';
       let coins = wallet.coins|0;
@@ -377,7 +503,16 @@ app.post('/api/wallet/sync', async (req, res) => {
     const db = await readDb();
     const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
     const wallet = getWallet(rec);
-    if (!wallet.owned[item.id]) return res.status(400).json({ error: 'Item not owned' });
+    // Allow equipping free base models even if not explicitly persisted as owned.
+    // This prevents a mismatch where /api/wallet shows the default model as owned
+    // (for UX) but the DB doesn't have it yet.
+    const isFreeModel = (item.slot === 'model') && ((item.price|0) === 0);
+    if (!wallet.owned[item.id] && !isFreeModel) {
+      return res.status(400).json({ error: 'Item not owned' });
+    }
+    if (isFreeModel && !wallet.owned[item.id]) {
+      wallet.owned[item.id] = true; // persist implied ownership of free base model
+    }
     // If equipping a model, clear non-model slots to avoid incompatible outfits.
     if (item.slot === 'model') {
       wallet.equipped = { model: item.id };
@@ -393,7 +528,7 @@ app.post('/api/wallet/sync', async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Equip failed', details: String(e) }); }
 });
 
-  app.post('/api/shop/unequip', async (req, res) => {
+app.post('/api/shop/unequip', async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   try {
     const { itemId, slot } = req.body || {};
@@ -570,6 +705,80 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
+// ---- Anchor overrides sync (per-user) ----
+app.get('/api/anchors', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    const wallet = rec.wallet || (rec.wallet = { coins:0, owned:{}, equipped:{} });
+    const anchors = wallet.anchors || {};
+    const locks = wallet.anchorLocks || {};
+    res.json({ anchors, locks });
+  } catch (e) { res.status(500).json({ error: 'Anchor load failed', details: String(e) }); }
+});
+
+app.post('/api/anchors', async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  try {
+    const { anchors, locks, merge } = req.body || {};
+    if (!anchors || typeof anchors !== 'object') return res.status(400).json({ error: 'Missing anchors object' });
+    const db = await readDb();
+    const rec = db.users[user]; if (!rec) return res.status(401).json({ error: 'Unauthorized' });
+    rec.wallet = rec.wallet || { coins:0, owned:{}, equipped:{} };
+    if (merge) {
+      rec.wallet.anchors = Object.assign({}, rec.wallet.anchors||{}, anchors);
+      if (locks && typeof locks === 'object') rec.wallet.anchorLocks = Object.assign({}, rec.wallet.anchorLocks||{}, locks);
+    } else {
+      rec.wallet.anchors = anchors;
+      if (locks && typeof locks === 'object') rec.wallet.anchorLocks = locks; else delete rec.wallet.anchorLocks;
+    }
+    await writeDb(db);
+    res.json({ ok:true, anchors: rec.wallet.anchors||{}, locks: rec.wallet.anchorLocks||{} });
+  } catch (e) { res.status(500).json({ error: 'Anchor save failed', details: String(e) }); }
+});
+
+// Asset diagnostics (dev)
+app.get('/api/assets/status', (req, res) => {
+  try {
+    const models = STATIC_MODELS.map(m => ({ id: m.id, path: m.model, exists: existsRel(m.model) }));
+    let itemsDirExists = false;
+    try { fs.accessSync(ITEMS_DIR, fs.constants.F_OK); itemsDirExists = true; } catch {}
+    res.json({ hasAssets: HAS_ASSETS, itemsDirExists, models });
+  } catch (e) { res.status(500).json({ error: 'status failed', details: String(e) }); }
+});
+
+// --- Admin maintenance APIs ---
+const ALLOW_ADMIN_RESTORE = process.env.ALLOW_ADMIN_RESTORE === '1';
+
+app.get('/api/admin/export-users', async (req, res) => {
+  const u = await requireAdmin(req, res); if (!u) return;
+  try {
+    const db = await readDb();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="users-export.json"');
+    return res.send(JSON.stringify(db, null, 2));
+  } catch (e) { return res.status(500).json({ error: 'Export failed', details: String(e) }); }
+});
+
+app.post('/api/admin/backup', async (req, res) => {
+  const u = await requireAdmin(req, res); if (!u) return;
+  try { const ok = await backupDb('manual'); return res.json({ ok }); }
+  catch (e) { return res.status(500).json({ error: 'Backup failed', details: String(e) }); }
+});
+
+app.post('/api/admin/restore-users', async (req, res) => {
+  const u = await requireAdmin(req, res); if (!u) return;
+  if (!ALLOW_ADMIN_RESTORE) return res.status(403).json({ error: 'Restore disabled. Set ALLOW_ADMIN_RESTORE=1 to enable.' });
+  try {
+    const { data } = req.body || {};
+    if (!data || typeof data !== 'object' || !data.users || typeof data.users !== 'object') return res.status(400).json({ error: 'Invalid payload' });
+    await backupDb('pre-restore');
+    await writeDb({ users: data.users });
+    return res.json({ ok: true });
+  } catch (e) { return res.status(500).json({ error: 'Restore failed', details: String(e) }); }
+});
+
 // After APIs: serve static files (prevents any chance of POST being eaten by static)
 app.get(['/admin/anchor-tool','/anchor-tool.html'], async (req, res) => {
   const u = await requireAdminPage(req, res); if (!u) return;
@@ -580,8 +789,47 @@ app.use(express.static(path.join(__dirname), { redirect: false }));
 // Simple health check
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
-app.listen(PORT, () => {
-  console.log(`[server] http://localhost:${PORT}  (OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'})`);
+// Startup safety checks + backup scheduler
+const os = require('os');
+function getLanAddresses(){
+  try {
+    const ifaces = os.networkInterfaces();
+    const addrs = [];
+    Object.values(ifaces||{}).forEach(list=>{
+      (list||[]).forEach(n=>{ if(!n.internal && n.family==='IPv4') addrs.push(n.address); });
+    });
+    return addrs;
+  } catch { return []; }
+}
+
+;(async function startup(){
+  try {
+    // Ensure DB exists (do not auto-create in production)
+    await ensureDb();
+  } catch (e) {
+    console.error('[startup] DB check failed:', e.message || e);
+    if (IS_PROD) { console.error('[startup] Exiting due to production safety.'); process.exit(1); }
+  }
+  if (IS_PROD && AUTH_SECRET === 'dev-secret-change-me') {
+    console.error('[startup] AUTH_SECRET is default in production. Set AUTH_SECRET.');
+    process.exit(1);
+  }
+  try { if (BACKUPS_ENABLED) { await backupDb('startup'); } } catch {}
+  try {
+    if (BACKUPS_ENABLED) {
+      const ms = BACKUPS_INTERVAL_HOURS * 60 * 60 * 1000;
+      setInterval(() => { backupDb('interval').catch(()=>{}); }, ms);
+    }
+  } catch {}
+})();
+
+app.listen(PORT, '0.0.0.0', () => {
+  const lans = getLanAddresses();
+  console.log(`[server] http://localhost:${PORT}`);
+  if (lans.length) {
+    console.log(`[server] LAN: ${lans.map(ip=>`http://${ip}:${PORT}`).join('  ')}`);
+  }
+  console.log(`[server] OPENAI_API_KEY ${OPENAI_API_KEY ? 'present' : 'missing'}`);
 });
 
 

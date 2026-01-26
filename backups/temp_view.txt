@@ -1,0 +1,61 @@
+              <button id="slice-try" class="btn btn-primary">Try Again</button>
+              <button id="slice-finish" class="btn btn-ghost">Finish</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-1.5 grid grid-cols-1 md:grid-cols-3 gap-1 md:gap-2 text-center">
+        <div id="slice-kana" class="text-2xl">こんにちは</div>
+        <div id="slice-romaji" class="text-gray-600">konnichiwa</div>
+        <div id="slice-en" class="text-gray-600">Hello</div>
+      </div>
+    </div>
+  </div>
+  <style>
+    #slice-overlay.hidden{ display:none; }
+  </style>
+  <style>
+    /* Theme tokens */
+    :root{
+      --slice-primary: #f59e0b; /* amber-500 */
+      --slice-accent:  #10b981; /* emerald-500 */
+      --slice-panel-bg: rgba(255,255,255,0.92);
+      --slice-border:  rgba(245,158,11,0.5);
+      --slice-shadow:  0 8px 24px rgba(0,0,0,0.18);
+      --slice-radius:  12px;
+    }
+    /* Unified panel styling */
+    #slice-wrap .ui-panel{
+      background: var(--slice-panel-bg) !important;
+      border: 1px solid var(--slice-border) !important;
+      border-radius: var(--slice-radius) !important;
+      box-shadow: var(--slice-shadow) !important;
+      overflow: visible !important;
+    }
+    /* Allow vertical scroll within overlay */
+    #slice-overlay{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #slice-wrap{ overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    /* Mobile tweaks */
+    @media (max-width: 768px){
+      #slice-wrap .ui-panel{ padding: 8px 10px !important; }
+      #slice-status span.text-[11px]{ font-size: 10px; }
+      #slice-wrap .slice-toolbar{ row-gap: 6px; }
+      #slice-wrap .slice-toolbar label{ margin-right: 6px; }
+    }
+    @media (max-width: 480px){
+      /* Compact bottom kana chips */
+      #slice-wrap .kana-ch{ transform: scale(0.85); margin: 0 1px !important; }
+      #slice-progressbar{ height: 6px !important; }
+      /* Put Close on its own line to avoid clipping */
+      #slice-close{ width: 100% !important; margin-left: 0 !important; margin-top: 6px; text-align: center; }
+      #slice-wrap .slice-toolbar{ padding-right: 10px !important; }
+      /* Make example phrase (kana chips) horizontally scrollable to prevent cut-off */
+      #slice-kana{
+        display: block;
+        white-space: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px 10px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.92);
+        margin: 0 2px;
