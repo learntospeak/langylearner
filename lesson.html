@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <script>
+      // Preview-only thickening to prevent poke-through (boots, tops, bags)
+      function __getInflate(){ try { const v=parseFloat(localStorage.getItem("bootInflate")||"0.009"); return (isFinite(v)&&v>=0)?v:0.0; } catch (e) { return 0.0; } }
+      function __inflateScene(root, amount){
+        // Thickness modifier disabled on lesson accessories (no-op).
+        try { return; } catch (e) {}
+      }
+      function __inflateNeeded(slot,id){ try { return (slot==="boots"||slot==="feet"||slot==="top"||slot==="bag"||/shoe|bottes|bag/i.test(String(id||""))); } catch (e) { return false; } }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#111111">
@@ -14,25 +22,25 @@
     <!-- Shared anime theme -->
     <link rel="stylesheet" href="anime-theme.css" />
     <!-- 3D web component -->
-    <script type="module" src="/vendor/model-viewer.min.js"></script>
+    <script type="module" src="https://unpkg.com/@google/model-viewer@3.4.0/dist/model-viewer.min.js"></script>
     <!-- Three.js (for OutfitPreview transforms on lesson page) -->
     <script type="importmap">
       {
         "imports": {
-          "three": "/vendor/three.module.js"
+          "three": "https://unpkg.com/three@0.159.0/build/three.module.js"
         }
       }
     </script>
     <script type="module">
-      import { GLTFLoader } from '/vendor/GLTFLoader.js';
+      import { GLTFLoader } from 'https://unpkg.com/three@0.159.0/examples/jsm/loaders/GLTFLoader.js';
       window.__GLTFLoader = GLTFLoader;
     </script>
     <script type="module">
-      import { OrbitControls } from '/vendor/OrbitControls.js';
+      import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
       window.__OrbitControls = OrbitControls;
     </script>
     <script type="module">
-      import * as THREE from '/vendor/three.module.js';
+      import * as THREE from 'three';
       window.__THREE = THREE; window.THREE = window.THREE || THREE;
     </script>
     <script>
@@ -44,24 +52,56 @@
     </script>
     <script src="./modules/outfit-preview.js"></script>
     <script>
+      // Remember the current lesson URL so Shop's Back button can return reliably
+      (function(){
+        try {
+          window.addEventListener('DOMContentLoaded', function(){
+            try { localStorage.setItem('lastLessonHref', location.pathname + location.search); } catch (e) {}
+          });
+        } catch (e) {}
+      })();
+    </script>
+    <script>
       // Default slot anchors (shared with Shop) so accessories position correctly on lesson page
+      // Proactively update SW while lessons are open (helps mobile PWAs)
+      (function(){ try{ if('serviceWorker' in navigator){ setTimeout(()=>{ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); }, 2000); document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible'){ navigator.serviceWorker.getRegistration().then(r=>r&&r.update()); } }); } }catch (e) {} })();
       window.SLOT_ANCHORS = window.SLOT_ANCHORS || {
         head:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
         torso:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
         body:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
         legs:{position:[0,-0.06,0],rotation:[0,0,0],scale:[1,1,1]},
-        feet:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+        feet:{position:[0,-0.35,0],rotation:[0,0,0],scale:[1,1,1]},
         hat:{position:[0,0.16,0],rotation:[0,0,0],scale:[1,1,1]},
         hair:{position:[0,0.12,0],rotation:[0,0,0],scale:[1,1,1]},
         mask:{position:[0,0.08,0.06],rotation:[0,0,0],scale:[1,1,1]},
         top:{position:[0,0.02,0],rotation:[0,0,0],scale:[1,1,1]},
         outfit:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]},
-        boots:{position:[0,-0.18,0],rotation:[0,0,0],scale:[1,1,1]},
+        boots:{position:[0,-0.355,0],rotation:[0,0,0],scale:[1,1,1]},
         skirt:{position:[0,-0.02,0],rotation:[0,0,0],scale:[1,1,1]},
         belt:{position:[0,-0.01,0.01],rotation:[0,0,0],scale:[1,1,1]},
         bag:{position:[-0.05,0.02,-0.03],rotation:[0,0,0],scale:[1,1,1]},
         misc:{position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}
       };
+      // Seed default item overrides so lessons match shop preview
+      (function seedDefaultItemAnchors(){
+        try {
+          const key = 'cos-armorshoe';
+          const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
+          const locks = (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch (e) { return {}; } })();
+          let changed = false;
+          if (!locks[key]  && !ov[key])  { ov[key]  = { position:[0, -0.39, 0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          if (!locks.boots && !ov.boots) { ov.boots = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          if (!locks.feet  && !ov.feet)  { ov.feet  = { position:[0,-0.39,0.06], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          // Per-item nudges consistent with shop (larger raise)
+          const targetY = -0.30, targetZ = 0.06;
+          ['cos-bottesgreen','cos-bottes'].forEach(k=>{
+            if (!locks[k] && !ov[k]) { ov[k] = { position:[0, targetY, targetZ], rotation:[0,0,0], scale:[1,1,1] }; changed = true; }
+          });
+          // Ninjashoe higher placement if not locked and missing
+          (function(){ const id='cos-ninjashoe'; const y=-0.26, z=0.06; if (!locks[id] && !ov[id]) { ov[id] = { position:[0,y,z], rotation:[0,0,0], scale:[1,1,1] }; changed = true; } })();
+          if (changed) localStorage.setItem('anchorOverrides', JSON.stringify(ov));
+        } catch (e) {}
+      })();
     </script>
     <link rel="icon" href="images/favicon.ico" type="images/favicon.ico">
     <!-- add anywhere in <head> AFTER the Tailwind CDN script -->
@@ -128,13 +168,68 @@
             color: #6b7280;
             margin-top: 2px;
         }
-    </style>
+</style>
+<style>
+    .prompt {
+        position: relative;
+        padding-bottom: 8px;
+    }
+    .prompt::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: 2px;
+        width: 56px;
+        height: 3px;
+        background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
+        border-radius: 9999px;
+        opacity: 0.85;
+    }
+    .lesson-item.is-active .prompt::after {
+        width: 72px;
+    }
+</style>
+<style>
+    .presence-card {
+        border: 2px solid var(--ink);
+        border-radius: 14px;
+        background: #fff7ed;
+        box-shadow: var(--shadow-soft);
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        display: grid;
+        gap: 6px;
+        max-width: 520px;
+    }
+    .presence-title {
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-size: 12px;
+    }
+    .presence-tip {
+        font-weight: 600;
+        font-size: 13px;
+    }
+    .presence-challenge {
+        font-size: 12px;
+        color: #4b5563;
+    }
+</style>
 
     <style>
         /* If your three containers are wrapped in #lesson-wrap, use that. */
         /* If not, set the parent you want to anchor to as position:relative. */
         #lesson-wrap {
             position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 18px;
+        }
+
+        #jp-text {
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         /* (old 2D mascot rules removed) */
@@ -196,6 +291,88 @@
         }
     </style>
     <style>
+        @media (max-width: 900px) {
+            #lesson-wrap { display: block; }
+            #mascot { width: 200px; height: 270px; margin: 0 0 12px auto; }
+            #mascot[data-drag="1"] { position: fixed !important; margin: 0; }
+        }
+    </style>
+    <style>
+        .mascot-bubble {
+            position: absolute;
+            right: 0;
+            top: -8px;
+            transform: translate(20%, -100%);
+            background: #fff;
+            border: 2px solid #111;
+            border-radius: 18px;
+            padding: 6px 10px;
+            font-size: 12px;
+            line-height: 1.2;
+            color: #111;
+            min-width: 120px;
+            max-width: 200px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            z-index: 60;
+        }
+        .mascot-bubble::after {
+            content: "";
+            position: absolute;
+            right: 18px;
+            bottom: -8px;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-right: 2px solid #111;
+            border-bottom: 2px solid #111;
+            transform: rotate(45deg);
+        }
+        @media (max-width: 900px) {
+            .mascot-bubble {
+                transform: translate(0, -100%);
+                right: 0;
+                top: -6px;
+            }
+        }
+    </style>
+    <style>
+        #mascot.mascot-talk #mvLesson,
+        #mascot.mascot-talk #lvWrap canvas {
+            animation: mascotTalk 0.38s ease-in-out infinite;
+            transform-origin: 50% 70%;
+        }
+
+        #mascot.mascot-celebrate #mvLesson,
+        #mascot.mascot-celebrate #lvWrap canvas {
+            animation: mascotRun 0.35s linear infinite;
+            transform-origin: 50% 70%;
+        }
+
+        #mascot.mascot-confused #mvLesson,
+        #mascot.mascot-confused #lvWrap canvas {
+            animation: mascotConfused 0.4s ease-in-out 2;
+        }
+
+        @keyframes mascotTalk {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-3px) scaleY(1.05); }
+        }
+
+        @keyframes mascotRun {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            25% { transform: translateY(-2px) rotate(-2deg) scale(1.02); }
+            50% { transform: translateY(0) rotate(0deg) scale(1); }
+            75% { transform: translateY(-2px) rotate(2deg) scale(1.02); }
+            100% { transform: translateY(0) rotate(0deg) scale(1); }
+        }
+
+        @keyframes mascotConfused {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(-3px) rotate(-1deg); }
+            75% { transform: translateX(3px) rotate(1deg); }
+        }
+    </style>
+    <style>
         .morxrow {
             display: flex;
             flex-wrap: wrap;
@@ -206,6 +383,45 @@
             width: 2.2rem;
             text-align: center;
         }
+    </style>
+    <style>
+        .kana-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .kana-btn {
+            padding: 4px 10px;
+            border: 2px solid var(--ink);
+            border-radius: 9999px;
+            background: var(--paper);
+            font-size: 14px;
+            line-height: 1;
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+        }
+
+        .kana-btn.kana-action {
+            background: #fef3c7;
+        }
+
+        .kana-picker.hide-extras .kana-btn[data-extra="1"] {
+            display: none;
+        }
+        .kana-btn.is-hint {
+            background: #bbf7d0;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
+            animation: hintPulse 0.7s ease-in-out;
+        }
+        @keyframes hintPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        /* always visible */
     </style>
 
 
@@ -231,8 +447,8 @@
         <nav class="mb-4 flex items-center gap-4">
             <a id="openKanaModal" href="reference.html" class="text-blue-600 hover:underline">Kana Reference</a>
             <button id="openSlice" class="btn btn-ghost text-sm">Play Slice</button>
-            <span id="userBadge" class="ml-auto text-xs text-gray-600">Player: Guest</span>
-            <a href="shop.html" class="btn btn-ghost text-xs">Shop</a>
+            <span id="userBadge" class="ml-auto text-xs text-gray-600">Teacher: Guest</span>
+            <a id="shopNav" href="shop.html" class="btn btn-ghost text-xs hidden">Shop</a>
             <a id="tutorNav" href="tutor.html" class="btn btn-dark text-xs hidden">Tutor</a>
         </nav>
         <script>
@@ -244,10 +460,17 @@
                 .then(r => r.json())
                 .then(j => {
                   const name = (j && j.user && j.user.username) || 'Guest';
-                  el.textContent = 'Player: ' + name;
+                  el.textContent = 'Teacher: ' + name;
+                  try {
+                    const shop = document.getElementById('shopNav');
+                    if (shop) {
+                      if (j && j.user && j.user.username) shop.classList.remove('hidden');
+                      else shop.classList.add('hidden');
+                    }
+                  } catch (e) {}
                 })
-                .catch(() => { try { el.textContent = 'Player: Guest'; } catch {} });
-            } catch {}
+                .catch(() => { try { el.textContent = 'Teacher: Guest'; } catch (e) {} });
+            } catch (e) {}
           })();
           // Removed: old 2D mascot updater
           </script>
@@ -258,66 +481,723 @@
             if (j && j.owned && j.owned['upgrade-tutor-basic']) {
               const a = document.getElementById('tutorNav'); if (a) a.classList.remove('hidden');
             }
-          } catch {} })();
+          } catch (e) {} })();
         </script>
 
 
         <h1 id="pageTitle" class="text-3xl font-bold mb-2">KanaReader - Lesson</h1>
-        <div id="stepHeader" class="text-sm text-gray-500 mb-4"></div>
+        <div id="stepHeader" class="text-sm text-gray-500 mb-3"></div>
+        <div id="presenceCard" class="presence-card" hidden>
+            <div class="presence-title">Presence Mode</div>
+            <div class="presence-tip" id="presenceTip"></div>
+            <div class="presence-challenge" id="presenceChallenge"></div>
+        </div>
+        <div id="en-text" class="text-gray-700 mt-2"></div>
+        <div id="full-romaji" class="text-gray-500 mt-1"></div>
 
         <!-- wrapper that positions the mascot beside the lesson -->
         <div id="lesson-wrap">
             <div id="jp-text" class="space-y-3"></div>
-            <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:10px;right:10px;width:140px;height:160px;z-index:50;display:none;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
-            <div id="lvWrap" style="position:absolute;top:10px;right:10px;width:180px;height:220px;z-index:50;"></div>
+            <div id="mascot" class="mascot-idle" style="position:sticky;top:12px;right:0;width:230px;height:320px;z-index:50;align-self:flex-start;">
+              <model-viewer id="mvLesson" class="float-slow" style="position:absolute;top:0;right:0;width:100%;height:100%;display:none;" camera-controls exposure="1" shadow-intensity="0.6" interaction-prompt="none"></model-viewer>
+              <div id="lvWrap" style="position:absolute;top:0;right:0;width:100%;height:100%;opacity:0;transition:opacity 150ms ease-out;"></div>
+              <div id="mascot-bubble" class="mascot-bubble" hidden>
+                <span id="mascot-bubble-text"></span>
+              </div>
+            </div>
             <script>
-              (async function(){
-                try {
-                  const wrap = document.getElementById('lvWrap'); const mv = document.getElementById('mvLesson');
+              (function(){
+                const AIO_STORAGE_KEY = 'aioStateAllInOne';
+                async function renderLessonAvatar(){
+                  const token = Date.now() + Math.random();
+                  try { window.__lessonAvatarToken = token; } catch (e) {}
+                  try { if (window.__lessonAvatarRaf) cancelAnimationFrame(window.__lessonAvatarRaf); } catch (e) {}
+                  try {
+                    const wrap = document.getElementById('lvWrap'); const mv = document.getElementById('mvLesson');
                   if (!wrap) return; if (mv) mv.style.display='none';
                   // Wait for module scripts to define THREE + GLTFLoader
-                  const waitReady = async(ms=5000)=>{ const t0=Date.now(); await new Promise(r=>{ (function poll(){ if (window.__THREE&&window.__GLTFLoader){ return r(); } if (Date.now()-t0>ms) return r(); try{ requestAnimationFrame(poll); }catch{ setTimeout(poll,16);} })(); }); };
+                  const waitReady = async(ms=5000)=>{ const t0=Date.now(); await new Promise(r=>{ (function poll(){ if (window.__THREE&&window.__GLTFLoader){ return r(); } if (Date.now()-t0>ms) return r(); try{ requestAnimationFrame(poll); }catch (e) { setTimeout(poll,16);} })(); }); };
                   await waitReady();
                   const THREE = window.__THREE||window.THREE; const GLTFLoader = window.__GLTFLoader;
                   if (!THREE || !GLTFLoader) { console.warn('[lesson-lv] missing THREE/GLTFLoader'); return; }
                   console.log('[lesson-lv] ready');
-                  const w = wrap.clientWidth||180, h = wrap.clientHeight||220;
-                  const scene = new THREE.Scene();
+                  const w = wrap.clientWidth||230, h = wrap.clientHeight||320;
+                  const scene = new THREE.Scene(); try { window.__LessonScene = scene; } catch(e){}
                   const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
-                  const amb = new THREE.AmbientLight(0xffffff, 0.6); scene.add(amb);
-                  const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(1,1,1); scene.add(dir);
+                  // Flat lighting: ambient-only for manga-style look
+                  const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
+                  try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch (e) {}
                   const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                   renderer.setSize(w, h, false); renderer.setPixelRatio(1);
+                  const clock = new THREE.Clock();
+                  let mixer = null;
+                  let clipMap = new Map();
+                  let __poseSeqToken = 0;
                   wrap.innerHTML=''; wrap.appendChild(renderer.domElement);
-                  let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch{}
-                  function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                  let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.enableRotate = false; controls.enableZoom = false; controls.enablePan = false; controls.enabled = false; controls.target.set(0,0.02,0); } } catch (e) {}
+                  function tick(){
+                    if (window.__lessonAvatarToken !== token) return;
+                    try{
+                      const dt = clock.getDelta();
+                      if (mixer) mixer.update(dt);
+                      if(controls) controls.update();
+                      renderer.render(scene,camera);
+                    }catch (e) {}
+                    if (window.__lessonAvatarToken !== token) return;
+                    window.__lessonAvatarRaf = requestAnimationFrame(tick);
+                  }
+                  window.__lessonAvatarRaf = requestAnimationFrame(tick);
                   const loader = new GLTFLoader();
+                  function getSavedEyeHex(){ try { const v=String(localStorage.getItem('eyeColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+                  function getSavedHatHex(){ try { const v=String(localStorage.getItem('hatColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+                  function getSavedBootHex(){ try { const v=String(localStorage.getItem('bootColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+                  function getSavedBagHex(){ try { const v=String(localStorage.getItem('bagColorHex')||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(v)?(v.startsWith('#')?v:'#'+v):null; } catch (e) { return null; } }
+                  function applyHatTint(root){
+                    try {
+                      var hex = getSavedHatHex();
+                      if (!hex || !root) return false;
+                      var changed=false;
+                      var traverse = (root.traverse) ? function(fn){ root.traverse(fn); } : function(fn){ function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} } walk(root); };
+                      traverse(function(o){
+                        try {
+                          if (!o || !o.isMesh) return;
+                          var arr = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+                          var on = String((o && o.name) || '').toLowerCase();
+                          for (var i=0;i<arr.length;i++){
+                            var m = arr[i];
+                            try {
+                              var nm = String((m && m.name) || '').toLowerCase();
+                              if (/\bhat_tint\b/.test(nm) || /\bhat_tint\b/.test(on)){
+                                try { if (m.color && m.color.set) m.color.set(hex); } catch(e){}
+                                try { if (m.map) m.map = null; } catch(e){}
+                                try { if (m.needsUpdate!==undefined) m.needsUpdate = true; } catch(e){}
+                                changed = true;
+                              }
+                            } catch(e){}
+                          }
+                        } catch(e){}
+                      });
+                      try { console.log('[lesson] hat tint applied?', changed); } catch(e){}
+                      return changed;
+                    } catch(e) { return false; }
+                  }
+                  function applyIrisTint(root){
+                    try {
+                      var hex = getSavedEyeHex();
+                      if (!hex || !root) return false;
+                      var changed = false;
+                      var traverse = (root.traverse) ? function(fn){ root.traverse(fn); } : function(fn){
+                        function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} }
+                        walk(root);
+                      };
+                      traverse(function(o){
+                        try {
+                          if (!o || !o.isMesh) return;
+                          var arr = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+                          for (var i=0;i<arr.length;i++){
+                            var m = arr[i];
+                            try {
+                              var nm = String((m && m.name) || '').toLowerCase();
+                              if (/\biris_tint\b/.test(nm)){
+                                try { if (m.color && m.color.set) m.color.set(hex); } catch(e){}
+                                try { if (m.map) m.map = null; } catch(e){}
+                                try { if (m.needsUpdate!==undefined) m.needsUpdate = true; } catch(e){}
+                                changed = true;
+                              }
+                            } catch(e){}
+                          }
+                        } catch(e){}
+                      });
+                      try { console.log('[lesson] iris tint applied?', changed); } catch(e){}
+                      return changed;
+                    } catch(e) { return false; }
+                  }
+                  function applyBootTint(root){
+                    try {
+                      var hex = getSavedBootHex();
+                      if (!hex || !root) return false;
+                      var changed=false;
+                      var traverse = (root.traverse) ? function(fn){ root.traverse(fn); } : function(fn){ function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} } walk(root); };
+                      traverse(function(o){
+                        try {
+                          if (!o || !o.isMesh) return;
+                          var arr = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+                          var on = String((o && o.name) || '').toLowerCase();
+                          for (var i=0;i<arr.length;i++){
+                            var m = arr[i];
+                            try {
+                              var nm = String((m && m.name) || '').toLowerCase();
+                              if (/\bboot_tint\b/.test(nm) || /\bboot_tint\b/.test(on)){
+                                try { if (m.color && m.color.set) m.color.set(hex); } catch(e){}
+                                try { if (m.needsUpdate!==undefined) m.needsUpdate = true; } catch(e){}
+                                changed = true;
+                              }
+                            } catch(e){}
+                          }
+                        } catch(e){}
+                      });
+                      try { console.log('[lesson] boot tint applied?', changed); } catch(e){}
+                      return changed;
+                    } catch(e) { return false; }
+                  }
+                  function applyBagTint(root){
+                    try {
+                      var hex = getSavedBagHex();
+                      if (!hex || !root) return false;
+                      var changed=false;
+                      var traverse = (root.traverse) ? function(fn){ root.traverse(fn); } : function(fn){ function walk(o){ try{ fn(o); (o.children||[]).forEach(walk); }catch(e){} } walk(root); };
+                      traverse(function(o){
+                        try {
+                          if (!o || !o.isMesh) return;
+                          var arr = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+                          var on = String((o && o.name) || '').toLowerCase();
+                          for (var i=0;i<arr.length;i++){
+                            var m = arr[i];
+                            try {
+                              var nm = String((m && m.name) || '').toLowerCase();
+                              if (/\bbag_tint\b/.test(nm) || /\bbag_tint\b/.test(on)){
+                                try { if (m.color && m.color.set) m.color.set(hex); } catch(e){}
+                                try { if (m.map) m.map = null; } catch(e){}
+                                try { if (m.needsUpdate!==undefined) m.needsUpdate = true; } catch(e){}
+                                changed = true;
+                              }
+                            } catch(e){}
+                          }
+                        } catch(e){}
+                      });
+                      try { console.log('[lesson] bag tint applied?', changed); } catch(e){}
+                      return changed;
+                    } catch(e) { return false; }
+                  }
+                  const AIO_ITEMS = [
+                    { key:'core_body', label:'Body', nodes:['character_low','tooth'], lockOn:true, defaultOn:true },
+                    { key:'armor_arm', label:'Armor Arm', nodes:['amorarm'] },
+                    { key:'armor_plastron', label:'Armor Plastron', nodes:['amorplastron'] },
+                    { key:'armor_thighs', label:'Armor Thighs', nodes:['armorceinturethighs','armorthigh'] },
+                    { key:'armor_helmet', label:'Armor Helmet', nodes:['armorhelmet'] },
+                    { key:'armor_knees', label:'Armor Knees', nodes:['armorknees'] },
+                    { key:'armor_legs', label:'Armor Legs', nodes:['armorlegs'] },
+                    { key:'armor_shoe', label:'Armor Shoe', nodes:['armorshoe'] },
+                    { key:'armor_skirt', label:'Armor Skirt', nodes:['armorskirt'] },
+                    { key:'bag', label:'Bag', nodes:['bag'] },
+                    { key:'belt', label:'Belt', nodes:['ceinture'] },
+                    { key:'school_shirt', label:'School Shirt', nodes:['shirt'] },
+                    { key:'school_skirt', label:'School Skirt', nodes:['skirt'] },
+                    { key:'school_shoe', label:'School Shoe', nodes:['shoe'] },
+                    { key:'third_pants', label:'Third Suit Pants', nodes:['pants'] },
+                    { key:'third_chemise', label:'Third Suit Chemise', nodes:['chemise'] },
+                    { key:'third_bottes', label:'Third Suit Boots', nodes:['bottes'] },
+                    { key:'third_hat', label:'Hat', nodes:['hat'] },
+                    { key:'green_outfit', label:'Green Outfit', nodes:['greenoutfit','greenoutfitbelt','greenoutfitneckless','bottesgreen'] },
+                    { key:'ninja_suit', label:'Ninja Suit', nodes:['ninjassuit','ninjassuitmask','ninjassuitshoe','ninjassuitthigh','ninjasuitshort'] },
+                    { key:'hair_one', label:'Hair One', nodes:['hairone'], defaultOn:true },
+                    { key:'hair_T', label:'Hair T', nodes:['hairT'] },
+                    { key:'hair_tail', label:'Hair Tail', nodes:['hairtail'] },
+                    { key:'hair_tail_knight', label:'Hair Tail Knight', nodes:['hairtailknight'] },
+                    { key:'hair_variant', label:'Hair Variant', nodes:['hairvariant'] },
+                    { key:'hair_variant_alt', label:'Hair Variant 2', nodes:['hairvariant.001'] },
+                    { key:'face', label:'Face', nodes:['eyes','eyelashes'], defaultOn:true }
+                  ];
+                  const AIO_HAIR_KEYS = AIO_ITEMS.filter(item=>item.key.startsWith('hair_')).map(item=>item.key);
+                  const AIO_NODE_MAP = new Map();
+                  AIO_ITEMS.forEach(item=>{
+                    (item.nodes||[]).forEach(nodeName=>{
+                      AIO_NODE_MAP.set(String(nodeName).toLowerCase(), item);
+                    });
+                  });
+                  const AIO_MATERIAL_HINTS = {
+                    hair_variant_alt: ['hairtvariant']
+                  };
+                  const AIO_NODE_NAMES = Array.from(AIO_NODE_MAP.keys()).sort((a,b)=>b.length-a.length);
+                  function loadAioState(){
+                    try {
+                      const raw = localStorage.getItem(AIO_STORAGE_KEY);
+                      if (!raw) return null;
+                      const parsed = JSON.parse(raw);
+                      return (parsed && typeof parsed === 'object') ? parsed : null;
+                    } catch { return null; }
+                  }
+                  function mergeAioState(state){
+                    const base = buildAioDefaultState();
+                    if (!state || typeof state !== 'object') return base;
+                    const out = Object.assign({}, base, state);
+                    if (state.__lastHairKey) out.__lastHairKey = state.__lastHairKey;
+                    return out;
+                  }
+                  function matchesNodeName(actual, target){
+                    try {
+                      if (!actual || !target) return false;
+                      if (actual === target) return true;
+                      if (!actual.startsWith(target)) return false;
+                      const next = actual.charAt(target.length);
+                      return next === '.' || next === '_' || next === '-';
+                    } catch { return false; }
+                  }
+                  function aioHairOff(state){
+                    try { return AIO_HAIR_KEYS.length > 0 && AIO_HAIR_KEYS.every(k=>!state[k]); } catch { return false; }
+                  }
+                  function collectAioHairMaterials(root){
+                    try {
+                      if (!root) return new Set();
+                      if (root.userData && root.userData.__aioHairMaterials instanceof Set) return root.userData.__aioHairMaterials;
+                      const out = new Set();
+                      root.traverse?.(o=>{
+                        try {
+                          if (!o || !o.material) return;
+                          const item = findAioItemForObject(o);
+                          const isHairNode = !!(item && AIO_HAIR_KEYS.includes(item.key));
+                          const mats = Array.isArray(o.material) ? o.material : [o.material];
+                          mats.forEach(m=>{
+                            if (!m) return;
+                            const nm = String(m.name||'').toLowerCase();
+                            if (isHairNode || (nm && nm.includes('hair'))) out.add(m);
+                          });
+                        } catch {}
+                      });
+                      root.userData = root.userData || {};
+                      root.userData.__aioHairMaterials = out;
+                      return out;
+                    } catch { return new Set(); }
+                  }
+                  function setHairMaterialHidden(mat, hide){
+                    try {
+                      if (!mat) return;
+                      mat.userData = mat.userData || {};
+                      if (hide) {
+                        if (!mat.userData.__aioHairRestore) {
+                          mat.userData.__aioHairRestore = {
+                            opacity: (typeof mat.opacity === 'number') ? mat.opacity : 1,
+                            transparent: !!mat.transparent,
+                            depthWrite: (typeof mat.depthWrite === 'boolean') ? mat.depthWrite : true
+                          };
+                        }
+                        mat.transparent = true;
+                        mat.opacity = 0;
+                        if (typeof mat.depthWrite === 'boolean') mat.depthWrite = false;
+                      } else {
+                        const prev = mat.userData.__aioHairRestore;
+                        if (prev) {
+                          mat.opacity = prev.opacity;
+                          mat.transparent = prev.transparent;
+                          mat.depthWrite = prev.depthWrite;
+                        } else {
+                          mat.opacity = 1;
+                          mat.transparent = false;
+                          if (typeof mat.depthWrite === 'boolean') mat.depthWrite = true;
+                        }
+                      }
+                      mat.needsUpdate = true;
+                    } catch {}
+                  }
+                  function applyAioHairMaterialMask(root, state){
+                    try {
+                      if (!root) return;
+                      const hide = aioHairOff(state);
+                      const mats = collectAioHairMaterials(root);
+                      mats.forEach(m=>setHairMaterialHidden(m, hide));
+                    } catch {}
+                  }
+                  function setNodeVisibility(root, nodeName, visible){
+                    try {
+                      const target = String(nodeName||'').toLowerCase();
+                      if (!root || !target) return;
+                      root.traverse?.(o=>{
+                        try {
+                          const nm = String(o.name||'').toLowerCase();
+                          if (matchesNodeName(nm, target)) o.visible = visible;
+                        } catch {}
+                      });
+                    } catch {}
+                  }
+                  function findAioItemForObject(obj){
+                    let cur = obj;
+                    while (cur) {
+                      const nm = String(cur.name||'').toLowerCase();
+                      if (nm && AIO_NODE_MAP.has(nm)) return AIO_NODE_MAP.get(nm);
+                      if (nm) {
+                        for (const key of AIO_NODE_NAMES){
+                          if (matchesNodeName(nm, key)) return AIO_NODE_MAP.get(key);
+                        }
+                      }
+                      cur = cur.parent || null;
+                    }
+                    return null;
+                  }
+                  function buildAioDefaultState(){
+                    const st = {};
+                    AIO_ITEMS.forEach(item=>{
+                      st[item.key] = !!item.defaultOn || !!item.lockOn;
+                    });
+                    if (AIO_HAIR_KEYS.length) {
+                      const anyHair = AIO_HAIR_KEYS.some(key=>st[key]);
+                      if (!anyHair) st[AIO_HAIR_KEYS[0]] = true;
+                    }
+                    return st;
+                  }
+                  function normalizeAioHairState(state){
+                    try {
+                      if (!state || !AIO_HAIR_KEYS.length) return null;
+                      const active = AIO_HAIR_KEYS.filter(k=>!!state[k]);
+                      if (active.length <= 1) return active[0] || null;
+                      const keep = (state.__lastHairKey && active.includes(state.__lastHairKey)) ? state.__lastHairKey : active[0];
+                      active.forEach(k=>{ if (k !== keep) state[k] = false; });
+                      return keep;
+                    } catch { return null; }
+                  }
+                  function enforceAioHairNodesVisibility(root, state){
+                    try {
+                      if (!root) return;
+                      const activeHairKeys = AIO_HAIR_KEYS.filter(k=>!!state[k]);
+                      const activeNodes = new Set();
+                      AIO_ITEMS.forEach(item=>{
+                        if (AIO_HAIR_KEYS.includes(item.key) && activeHairKeys.includes(item.key)) {
+                          (item.nodes||[]).forEach(nm=>activeNodes.add(String(nm).toLowerCase()));
+                        }
+                      });
+                      root.traverse?.(o=>{
+                        const nm = String(o?.name||'').toLowerCase();
+                        if (!nm || !nm.startsWith('hair')) return;
+                        if (!activeNodes.size) { o.visible = false; return; }
+                        for (const key of activeNodes){
+                          if (matchesNodeName(nm, key)) { o.visible = true; return; }
+                        }
+                        const item = findAioItemForObject(o);
+                        if (item && AIO_HAIR_KEYS.includes(item.key)) {
+                          o.visible = activeHairKeys.includes(item.key);
+                        } else {
+                          o.visible = false;
+                        }
+                      });
+                    } catch {}
+                  }
+                  function applyAioMaterialVisibilityHints(root, state){
+                    try {
+                      if (!root) return;
+                      const hints = AIO_MATERIAL_HINTS || {};
+                      const keys = Object.keys(hints);
+                      if (!keys.length) return;
+                      root.traverse?.(o=>{
+                        try {
+                          if (!o || !o.isMesh || !o.material) return;
+                          const mats = Array.isArray(o.material) ? o.material : [o.material];
+                          for (const key of keys){
+                            const list = hints[key] || [];
+                            if (!list.length) continue;
+                            const on = !!state[key];
+                            const hit = mats.some(m=>{
+                              const nm = String(m?.name||'').toLowerCase();
+                              return list.some(h=>nm.includes(String(h||'').toLowerCase()));
+                            });
+                            if (hit) { o.visible = on; return; }
+                          }
+                        } catch {}
+                      });
+                    } catch {}
+                  }
+                  function applyAllInOneVisibility(root, state){
+                    if (!root) return;
+                    normalizeAioHairState(state);
+                    AIO_ITEMS.forEach(item=>{
+                      const on = item.lockOn ? true : !!state[item.key];
+                      (item.nodes||[]).forEach(nm=>setNodeVisibility(root, nm, on));
+                    });
+                    root.traverse(o=>{
+                      try {
+                        const item = findAioItemForObject(o);
+                        if (!item) return;
+                        if (item.lockOn) { o.visible = true; return; }
+                        o.visible = !!state[item.key];
+                      } catch {}
+                    });
+                    enforceAioHairNodesVisibility(root, state);
+                    applyAioHairMaterialMask(root, state);
+                    applyAioMaterialVisibilityHints(root, state);
+                  }
                   const [wRes, catRes] = await Promise.all([
                     fetch('/api/wallet', { cache:'no-store' }).then(r=>r.json()).catch(()=>({})),
                     fetch('/api/shop/catalog').then(r=>r.json()).catch(()=>({ items:[] }))
                   ]);
-                  let eq = (wRes && wRes.equipped) || {}; try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (Object.keys(snap).length) eq = snap; } } catch {}
+                  let eq = (wRes && wRes.equipped) || {}; try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (Object.keys(snap).length) eq = snap; } } catch (e) {}
                   const items = (catRes && catRes.items) || []; const idToItem = new Map(items.map(i=>[i.id,i]));
                   const modelItem = idToItem.get(eq.model) || items.find(i=>i.id==='model-basemesh'); if (!modelItem) return;
-                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); return; }
-                  const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base);
-                  try { const box = new THREE.Box3().setFromObject(base); const c = box.getCenter(new THREE.Vector3()); base.position.sub(c); const size=new THREE.Vector3(); box.getSize(size); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=2.34; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size.y*0.06,dist); if (controls) { controls.target.set(0, size.y*0.54, 0); controls.update(); } } catch {}
+                  const gltfBase = await new Promise(res=>{ try{ loader.load(modelItem.model, g=>res(g), undefined, ()=>res(null)); } catch (e) { res(null); } }); if (!gltfBase||!gltfBase.scene) { console.warn('[lesson-lv] base load failed'); try{ (document.getElementById('lvWrap')||{}).style.opacity='1'; }catch (e) {} return; }
+                  // Flatten shading: convert non-skinned meshes to unlit materials; soften skinned meshes
+                  try {
+                    const OUTLINE_SCALE = (function(){ try { return Math.max(1.0, parseFloat(localStorage.getItem('outlineScale'))||1.02); } catch (e) { return 1.02; } })();
+                    const OUTLINE_COLOR = (function(){ try { return new (window.__THREE||window.THREE).Color(String(localStorage.getItem('outlineColor')||'#000000')); } catch (e) { return null; } })();
+                    rootG.traverse(o => { try {
+                      if (!(o && o.isMesh && o.material)) return;
+                      const isSkinned = !!o.isSkinnedMesh || !!o.skeleton;
+                      if (!isSkinned && THREE && THREE.MeshBasicMaterial) {
+                        const m = o.material; const opts = {};
+                        try { if (m.map) opts.map = m.map; } catch (e) {}
+                        try { if (m.color) opts.color = m.color; } catch (e) {}
+                        const basic = new THREE.MeshBasicMaterial(opts);
+                        try { if (m.transparent) basic.transparent = true; } catch (e) {}
+                        try { if (typeof m.opacity === 'number') basic.opacity = m.opacity; } catch (e) {}
+                        try { if (typeof m.alphaTest === 'number') basic.alphaTest = m.alphaTest; } catch (e) {}
+                        try { if (typeof m.side !== 'undefined') basic.side = m.side; } catch (e) {}
+                        try { basic.needsUpdate = true; } catch (e) {}
+                        o.material = basic;
+                      } else {
+                        const m = o.material;
+                        try { if ('metalness' in m) m.metalness = 0; } catch (e) {}
+                        try { if ('roughness' in m) m.roughness = 1; } catch (e) {}
+                        try { if ('envMap' in m) m.envMap = null; } catch (e) {}
+                        try { m.needsUpdate = true; } catch (e) {}
+                      }
+                      // Add thin black outline per mesh: sibling for skinned, child for others
+                      if (THREE) {
+                        const srcId = o.uuid;
+                        if (isSkinned && THREE.SkinnedMesh) {
+                          const parent = o.parent;
+                          if (parent) {
+                            const already = parent.children && parent.children.some(ch => ch && ch.userData && ch.userData.__flatOutlineSrc === srcId);
+                            if (!already) {
+                              try {
+                                const basic = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR || 0x000000, side: THREE.BackSide });
+                                basic.skinning = true;
+                                const outline = new THREE.SkinnedMesh(o.geometry, basic);
+                                try { outline.bind(o.skeleton, o.bindMatrix); } catch (e) {}
+                                try { outline.position.copy(o.position); outline.quaternion.copy(o.quaternion); outline.scale.copy(o.scale); } catch (e) {}
+                                try { outline.scale.multiplyScalar(OUTLINE_SCALE); } catch (e) {}
+                                outline.userData = outline.userData || {};
+                                outline.userData.__flatOutline = true;
+                                outline.userData.__flatOutlineSrc = srcId;
+                                try { outline.renderOrder = (o.renderOrder||0) - 1; } catch (e) {}
+                                parent.add(outline);
+                              } catch (e) {}
+                            }
+                          }
+                        } else if (THREE && THREE.MeshBasicMaterial) {
+                          const hasOutline = Array.isArray(o.children) && o.children.some(ch => ch && ch.userData && ch.userData.__flatOutline);
+                          if (!hasOutline) {
+                            try {
+                              const outline = o.clone();
+                              outline.material = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR || 0x000000, side: THREE.BackSide });
+                              outline.scale.multiplyScalar(OUTLINE_SCALE);
+                              outline.userData = outline.userData || {};
+                              outline.userData.__flatOutline = true;
+                              outline.userData.__flatOutlineSrc = srcId;
+                              try { outline.renderOrder = (o.renderOrder||0) - 1; } catch (e) {}
+                              o.add(outline);
+                            } catch (e) {}
+                          }
+                        }
+                      }
+                    } catch (e) {} });
+                  } catch (e) {}
+                  const base = gltfBase.scene; const rootG = new THREE.Group(); scene.add(rootG); rootG.add(base); try { window.__LessonBaseRoot = base; } catch(e){}
+                  // Animation support (run -> jump) using existing clips if available.
+                  try {
+                    if (gltfBase.animations && gltfBase.animations.length) {
+                      mixer = new THREE.AnimationMixer(base);
+                      gltfBase.animations.forEach(clip => {
+                        const key = String(clip.name || '').toLowerCase();
+                        if (key) clipMap.set(key, clip);
+                      });
+                    }
+                  } catch (e) {}
+                  function findClipByHints(hints){
+                    try {
+                      const keys = Array.from(clipMap.keys());
+                      for (const hint of hints){
+                        const h = String(hint || '').toLowerCase();
+                        const hit = keys.find(k => k === h || k.includes(h));
+                        if (hit) return clipMap.get(hit);
+                      }
+                    } catch (e) {}
+                    return null;
+                  }
+                  function playClipOnce(clip){
+                    return new Promise(resolve=>{
+                      try {
+                        if (!mixer || !clip) return resolve(false);
+                        mixer.stopAllAction();
+                        const action = mixer.clipAction(clip);
+                        action.reset();
+                        action.setLoop(THREE.LoopOnce, 1);
+                        action.clampWhenFinished = true;
+                        action.fadeIn(0.05);
+                        action.play();
+                        const onFinish = (e)=>{
+                          if (e && e.action !== action) return;
+                          try { mixer.removeEventListener('finished', onFinish); } catch {}
+                          resolve(true);
+                        };
+                        mixer.addEventListener('finished', onFinish);
+                      } catch (e) { resolve(false); }
+                    });
+                  }
+                  function playPoseSequence(clips){
+                    const seq = Array.isArray(clips) ? clips.filter(Boolean) : [];
+                    if (!seq.length || !mixer) return;
+                    const token = ++__poseSeqToken;
+                    const run = async(idx)=>{
+                      if (token !== __poseSeqToken) return;
+                      const clip = seq[idx];
+                      if (!clip) return;
+                      await playClipOnce(clip);
+                      if (token !== __poseSeqToken) return;
+                      if (idx + 1 < seq.length) run(idx + 1);
+                    };
+                    run(0);
+                  }
+                  function playRunJump(){
+                    const runClip = findClipByHints(['anim_run','run']);
+                    const jumpClip = findClipByHints(['anim_jump','jump']);
+                    if (!runClip && !jumpClip) return;
+                    playPoseSequence([runClip, jumpClip]);
+                  }
+                  function setStaticPose(){
+                    try {
+                      if (!mixer) return;
+                      const idleClip = findClipByHints(['anim_iddle','idle','anim_neutral','neutral']);
+                      if (!idleClip) return;
+                      mixer.stopAllAction();
+                      const action = mixer.clipAction(idleClip);
+                      action.reset();
+                      action.play();
+                      action.paused = true;
+                      action.time = idleClip.duration * 0.25;
+                      mixer.update(0);
+                    } catch (e) {}
+                  }
+                  setStaticPose();
+                  try { window.__lessonMascotPlay = playRunJump; } catch (e) {}
+                  try {
+                    window.__mascotPose = function(state){
+                      if (state === 'mascot-celebrate') playRunJump();
+                    };
+                  } catch (e) {}
+                  try {
+                    window.__lessonAvatarReady = true;
+                    window.dispatchEvent(new Event('mascot-ready'));
+                  } catch (e) {}
+                  const isAllInOne = /allinonepr\.glb$/i.test(String(modelItem.model||''));
+                  if (isAllInOne) {
+                    const aioState = mergeAioState(loadAioState());
+                    applyAllInOneVisibility(base, aioState);
+                  }
+                  try {
+                    window.addEventListener('storage', function(e){
+                      try {
+                        if (!e) return;
+                        var k = String(e.key||'');
+                        if (k==='eyeColorHex') { try { applyIrisTint(rootG); } catch(_){} }
+                        if (k==='hatColorHex') { try { applyHatTint(rootG); } catch(_){} }
+                        if (k==='bootColorHex') { try { applyBootTint(rootG); } catch(_){} }
+                        if (k==='bagColorHex') { try { applyBagTint(rootG); } catch(_){} }
+                      } catch(_){ }
+                    });
+                  } catch(_){}
+                  try { applyIrisTint(rootG); } catch (e) {}
+                  try { applyHatTint(rootG); } catch (e) {}
+                  try { applyBootTint(rootG); } catch (e) {}
+                  try { applyBagTint(rootG); } catch (e) {}
+                  try {
+                    const box = new THREE.Box3().setFromObject(base);
+                    const c = box.getCenter(new THREE.Vector3());
+                    base.position.sub(c);
+                    const size=new THREE.Vector3(); box.getSize(size);
+                    const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+                    const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2);
+                    const baseDist=Math.max(distV,distH);
+                    const VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.8'); return (isFinite(v)&&v>0)?Math.max(v,2.8):2.8; } catch (e) { return 2.8; } })();
+                    const dist=baseDist*VIEW_SCALE;
+                    camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
+                    camera.position.set(0,size.y*0.10,dist);
+                    if (controls) { const TARGET_Y=0.54; controls.target.set(0, size.y*TARGET_Y, 0); controls.update(); }
+                  } catch (e) {}
                   const anchors = window.SLOT_ANCHORS || {};
                   const slots = Object.keys(eq||{}).filter(s=>s!=='model');
                   const wanted = []; slots.forEach(s=>{ const v=eq[s]; if(Array.isArray(v)) v.forEach(id=>wanted.push(id)); else if (v) wanted.push(v); });
-                  const loadAll = await Promise.all(wanted.map(id=> new Promise(res=>{ const it=idToItem.get(id); if(!it||!it.model) return res([id,null]); try{ loader.load(it.model,g=>res([id,g]),undefined,()=>res([id,null])); } catch { res([id,null]); } })));
+                  const loadAll = await Promise.all(wanted.map(id=> new Promise(res=>{ const it=idToItem.get(id); if(!it||!it.model) return res([id,null]); try{ loader.load(it.model,g=>res([id,g]),undefined,()=>res([id,null])); } catch (e) { res([id,null]); } })));
                   const loaded = new Map(loadAll.filter(([id,g])=>g&&g.scene));
                   console.log('[lesson-lv] items loaded', loaded.size);
-                  function getAnchor(slot,id){ try{ const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; return ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } catch { return anchors[slot]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; } }
-                  for (const slot of slots){ const v=eq[slot]; const ids=Array.isArray(v)?v:[v]; for (const id of ids){ const g=loaded.get(id); if(!g) continue; const obj=g.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const a=getAnchor(slot,id); try{ const boxBase=new THREE.Box3().setFromObject(base); const boxObj=new THREE.Box3().setFromObject(obj); const baseH=Math.max(1e-6, boxBase.max.y-boxBase.min.y); const objH=Math.max(1e-6, boxObj.max.y-boxObj.min.y); let target=(slot==='top'||slot==='torso'||slot==='body')?0.35:((slot==='boots'||slot==='feet')?0.12:0.25); let s=(a.scale&&a.scale[0])?a.scale[0]:((target*baseH)/objH); if(!(s>0&&s<10)) s=target; wrapG.scale.set(s,s,s);}catch{} try{ wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG); } }
-                  // Reframe to include accessories (hats etc.)
-                  try { const whole = new THREE.Box3().setFromObject(rootG); const size2 = new THREE.Vector3(); whole.getSize(size2); const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1)); const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH); const VIEW_SCALE=2.34; const dist=baseDist*VIEW_SCALE; camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix(); camera.position.set(0,size2.y*0.06,dist); if (controls) { controls.target.set(0, size2.y*0.54, 0); controls.update(); } } catch {}
+                  function getAnchor(slot,id){
+                    try{
+                      const ov=JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{};
+                      const key = (slot==='bagx') ? 'bag' : slot;
+                      return ov[id] || ov[key] || anchors[key] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+                    } catch (e) {
+                      const key = (slot==='bagx') ? 'bag' : slot;
+                      return anchors[key]||anchors.misc||{ position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+                    }
+                  }
+                  for (const slot of slots){
+                    const v=eq[slot]; const ids=Array.isArray(v)?v:[v];
+                    for (const id of ids){
+                      const g=loaded.get(id); if(!g) continue;
+                      const obj=g.scene.clone(true);
+                      try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch (e) {}
+                      const wrapG=new THREE.Group(); try{ wrapG.userData=wrapG.userData||{}; wrapG.userData.__slot=slot; wrapG.userData.__itemId=id; }catch(e){} wrapG.add(obj);
+                      const a=getAnchor(slot,id);
+                      try{
+                        let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);
+                      }catch (e) {}
+                      try{
+                        const inv=(function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?(1/v):1; } catch (e) { return 1; } })();
+                        wrapG.position.set((a.position?.[0]||0)*inv,(a.position?.[1]||0.05)*inv,(a.position?.[2]||0)*inv);
+                      }catch (e) {}
+                      try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch (e) {}
+                      scene.add(wrapG);
+                      try { applyIrisTint(wrapG); } catch (e) {}
+                      try { applyHatTint(wrapG); } catch (e) {}
+                      try { applyBootTint(wrapG); } catch (e) {}
+                    }
+                  }
+                  // Reframe to include accessories (hats etc.) and keep full model inside canvas
+                  try {
+                    const whole = new THREE.Box3().setFromObject(rootG);
+                    const center2 = whole.getCenter(new (window.__THREE||window.THREE).Vector3());
+                    const size2 = new (window.__THREE||window.THREE).Vector3();
+                    whole.getSize(size2);
+                    const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
+                    const distV=(size2.y*0.5)/Math.tan(vFov/2); const distH=(size2.x*0.5)/Math.tan(hFov/2);
+                    const baseDist=Math.max(distV,distH);
+                    let VIEW_SCALE=(function(){ try { const v=parseFloat(localStorage.getItem('lessonViewScale')||'2.8'); return (isFinite(v)&&v>0)?Math.max(v,2.8):2.8; } catch (e) { return 2.8; } })();
+                    // Extra zoom-out when hats are equipped (very tall headwear)
+                    const hasHat = (function(){ try { const v=(eq||{}).hat; return (Array.isArray(v)?v.length>0:!!v); } catch (e) { return false; } })();
+                    if (hasHat) {
+                      const hatMul = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatZoomOut')||'1.4'); return (isFinite(v)&&v>0)?v:1.4; } catch (e) { return 1.4; } })();
+                      VIEW_SCALE *= hatMul;
+                    }
+                    const dist=baseDist*VIEW_SCALE;
+                    camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
+                    // Keep camera Y at center, nudge target upward to push character lower in frame
+                    camera.position.set(center2.x, center2.y, dist);
+                    if (controls) {
+                      const baseBias = (function(){ try { const v=parseFloat(localStorage.getItem('lessonTargetYOffset')||'0.14'); return (isFinite(v)?Math.max(v,0.14):0.14); } catch (e) { return 0.14; } })();
+                      const hatBias  = (function(){ try { const v=parseFloat(localStorage.getItem('lessonHatYOffset')||'0.3'); return (isFinite(v)?v:0.3); } catch (e) { return 0.3; } })();
+                      const bias = baseBias + (hasHat ? hatBias : 0);
+                      const ty = center2.y + (size2.y * bias);
+                      controls.target.set(center2.x, ty, center2.z||0);
+                      controls.update();
+                    }
+                  } catch (e) {}
+                  try { (document.getElementById('lvWrap')||{}).style.opacity='1'; } catch (e) {}
+                  try { window.__lessonAvatarSnapshot = safeSnapshot(); } catch (e) {}
                 } catch (e) { console.warn('[lesson] LV error', e); }
-              })();
+              }
+              function safeSnapshot(){
+                try { return String(localStorage.getItem('equippedSnapshot') || ''); } catch (e) { return ''; }
+              }
+              function refreshLessonAvatar(force){
+                const snap = safeSnapshot();
+                if (!force && snap === window.__lessonAvatarSnapshot) return;
+                window.__lessonAvatarSnapshot = snap;
+                renderLessonAvatar();
+              }
+              window.__renderLessonAvatar = renderLessonAvatar;
+              renderLessonAvatar();
+              window.addEventListener('pageshow', (e) => { if (e.persisted) refreshLessonAvatar(true); });
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'equippedSnapshot') refreshLessonAvatar(false);
+                if (e.key === AIO_STORAGE_KEY) refreshLessonAvatar(true);
+              });
+            })();
             </script>
-            <div id="en-text" class="text-gray-700 mt-2"></div>
-            <div id="full-romaji" class="text-gray-500 mt-1"></div>
-
             <!-- 3D mascot only -->
         </div>
 
@@ -361,6 +1241,7 @@
 
             <button id="lsToggleRomaji" class="btn btn-ghost flex-1 basis-[120px] max-w-[240px] min-h-10">Romaji</button>
             <button id="lsSpeak" class="btn btn-primary flex-1 basis-[120px] max-w-[240px] min-h-10">Speak</button>
+            <button id="lsToggleMascot" class="btn btn-ghost flex-1 basis-[120px] max-w-[240px] min-h-10">Mascot</button>
 
             <!-- Fallback Slice launcher (always visible on mobile) -->
             <button id="openSliceFooter" class="btn btn-dark flex-1 basis-[120px] max-w-[240px] min-h-10">Slice</button>
@@ -378,225 +1259,15 @@
         <div class="absolute inset-0 bg-black/50"></div>
 
         <!-- Dialog -->
-        <div role="dialog" arixmodal="true" arixlabelledby="kanaTitle"
+        <div role="dialog" aria-modal="true" aria-labelledby="kanaTitle"
             class="relative mx-auto my-8 w-[min(95vw,1000px)] max-h-[85vh] overflow-hidden rounded-xl bg-white shadow-xl">
             <header class="flex items-center justify-between px-4 py-3 border-b">
                 <h2 id="kanaTitle" class="text-lg font-semibold">Kana Reference</h2>
-                <button id="closeKanaModal" class="btn btn-ghost" arixlabel="Close">?</button>
+                <button id="closeKanaModal" class="btn btn-ghost" aria-label="Close">&times;</button>
             </header>
-
-            <!-- Tabs -->
-            <div class="px-4 pt-3">
-                <div class="inline-flex rounded bg-gray-100 p-1">
-                    <button datxtab="hira" class="tab-btn px-3 py-1 rounded bg-white shadow text-sm">Hiragana</button>
-                    <button datxtab="kata" class="tab-btn px-3 py-1 rounded text-sm">Katakana</button>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div class="p-4 overflow-auto max-h-[70vh]">
-                <!-- Hiragana -->
-                <div id="tab-hira">
-                    <table class="w-full table-fixed text-center text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="p-2 border"></th>
-                                <th class="p-2 border">a</th>
-                                <th class="p-2 border">i</th>
-                                <th class="p-2 border">u</th>
-                                <th class="p-2 border">e</th>
-                                <th class="p-2 border">o</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th class="p-2 border">-</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">k</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">s</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">t</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">h</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">m</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">y</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">r</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">w</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td colspan="5" class="p-2 border">?</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Katakana -->
-                <div id="tab-kata" class="hidden">
-                    <table class="w-full table-fixed text-center text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50">
-                                <th class="p-2 border"></th>
-                                <th class="p-2 border">a</th>
-                                <th class="p-2 border">i</th>
-                                <th class="p-2 border">u</th>
-                                <th class="p-2 border">e</th>
-                                <th class="p-2 border">o</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th class="p-2 border">-</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">k</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">s</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">t</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">h</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">m</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">y</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">r</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">w</th>
-                                <td class="p-2 border">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border text-gray-300">?</td>
-                                <td class="p-2 border">?</td>
-                            </tr>
-                            <tr>
-                                <th class="p-2 border">n</th>
-                                <td colspan="5" class="p-2 border">?</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="p-4">
+                <div class="rounded-xl overflow-hidden border-2 border-black bg-white shadow-lg">
+                    <iframe id="kanaReferenceFrame" src="reference.html" title="Japanese Basics" class="w-full h-[70vh] bg-white"></iframe>
                 </div>
             </div>
         </div>
@@ -606,9 +1277,6 @@
             const modal = document.getElementById('kanaModal');
             const open = document.getElementById('openKanaModal');
             const close = document.getElementById('closeKanaModal');
-            const tabs = Array.from(document.querySelectorAll('.tab-btn'));
-            const hira = document.getElementById('tab-hira');
-            const kata = document.getElementById('tab-kata');
 
             function showModal(e) {
                 // allow Cmd/Ctrl-click to open reference.html in a new tab
@@ -621,19 +1289,11 @@
                 modal.classList.add('hidden');
                 document.body.classList.remove('overflow-hidden');
             }
-            function switchTab(which) {
-                tabs.forEach(b => b.classList.toggle('bg-white', b.dataset.tab === which));
-                hira.classList.toggle('hidden', which !== 'hira');
-                kata.classList.toggle('hidden', which !== 'kata');
-            }
 
             open?.addEventListener('click', showModal);
             close?.addEventListener('click', hideModal);
             modal?.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideModal(); });
-            tabs.forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-
-            switchTab('hira'); // default tab
         })();
     </script>
         <script>
@@ -649,10 +1309,31 @@
 <script src="./modules/wanakana.min.js"></script>
 <!-- Fallback shim removed to prevent stale 404s; local wanakana.min.js is present. -->
 
-<script type="module" src="./lesson-shim.js?v=15"></script>
+<script type="module" src="./lesson-shim.js?v=36"></script>
+<script>
+  (function(){
+    const mascot = document.getElementById('mascot');
+    if (!mascot || !('speechSynthesis' in window)) return;
+    const synth = window.speechSynthesis;
+    if (synth.__mascotPatched) return;
+    synth.__mascotPatched = true;
+    const originalSpeak = synth.speak.bind(synth);
+    synth.speak = (utterance) => {
+      try { mascot.classList.add('mascot-talk'); } catch (e) {}
+      const stop = () => { try { mascot.classList.remove('mascot-talk'); } catch (e) {} };
+      if (utterance) {
+        const prevEnd = utterance.onend;
+        const prevError = utterance.onerror;
+        utterance.onend = (e) => { stop(); if (prevEnd) prevEnd.call(utterance, e); };
+        utterance.onerror = (e) => { stop(); if (prevError) prevError.call(utterance, e); };
+      }
+      return originalSpeak(utterance);
+    };
+  })();
+</script>
 
 <!-- Your module that renders/boots the lesson -->
-<script type="module" src="./lesson-loader.js?v=10"></script>
+<script type="module" src="./lesson-loader.js?v=12"></script>
 
 <!-- Optional mascot controller (if you actually use it) -->
 
@@ -713,6 +1394,259 @@
   })();
 </script>
 
+<script>
+  (function mascotHotkey(){
+    const isTypingTarget = (el) => {
+      if (!el) return false;
+      const tag = String(el.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      if (el.isContentEditable) return true;
+      return false;
+    };
+    window.addEventListener('keydown', (e) => {
+      try {
+        if (!e || e.defaultPrevented) return;
+        if (isTypingTarget(document.activeElement)) return;
+        if (String(e.key || '').toLowerCase() !== 'p') return;
+        if (typeof window.__lessonMascotPlay === 'function') window.__lessonMascotPlay();
+        else if (typeof window.__mascotPose === 'function') window.__mascotPose('mascot-celebrate');
+      } catch (err) {}
+    });
+  })();
+</script>
+
+<script>
+  (function mascotDragAndToggle(){
+    const KEY_HIDE = 'lessonMascotHidden';
+    const KEY_POS = 'lessonMascotPos';
+    const mascot = document.getElementById('mascot');
+    const btn = document.getElementById('lsToggleMascot');
+    if (!mascot) return;
+
+    const setHidden = (hidden) => {
+      mascot.style.display = hidden ? 'none' : '';
+      try { localStorage.setItem(KEY_HIDE, hidden ? '1' : '0'); } catch (e) {}
+      if (btn) btn.textContent = hidden ? 'Show Mascot' : 'Hide Mascot';
+    };
+
+    const applyPos = (pos) => {
+      if (!pos) return;
+      mascot.style.position = 'fixed';
+      mascot.style.left = `${pos.x}px`;
+      mascot.style.top = `${pos.y}px`;
+      mascot.style.right = 'auto';
+      mascot.style.bottom = 'auto';
+      mascot.dataset.drag = '1';
+    };
+
+    const loadPrefs = () => {
+      const hidden = (() => { try { return localStorage.getItem(KEY_HIDE) === '1'; } catch (e) { return false; } })();
+      setHidden(hidden);
+      const pos = (() => {
+        try { return JSON.parse(localStorage.getItem(KEY_POS) || 'null'); } catch (e) { return null; }
+      })();
+      if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') applyPos(pos);
+    };
+
+    loadPrefs();
+
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const hidden = mascot.style.display === 'none';
+        setHidden(!hidden);
+      });
+    }
+
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    const onPointerDown = (e) => {
+      if (mascot.style.display === 'none') return;
+      dragging = true;
+      const rect = mascot.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      mascot.dataset.drag = '1';
+      mascot.style.touchAction = 'none';
+      mascot.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    };
+    const onPointerMove = (e) => {
+      if (!dragging) return;
+      const maxX = window.innerWidth - mascot.offsetWidth;
+      const maxY = window.innerHeight - mascot.offsetHeight;
+      const x = clamp(e.clientX - offsetX, 0, Math.max(0, maxX));
+      const y = clamp(e.clientY - offsetY, 0, Math.max(0, maxY));
+      mascot.style.position = 'fixed';
+      mascot.style.left = `${x}px`;
+      mascot.style.top = `${y}px`;
+      mascot.style.right = 'auto';
+      mascot.style.bottom = 'auto';
+    };
+    const onPointerUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      mascot.style.touchAction = '';
+      mascot.releasePointerCapture?.(e.pointerId);
+      const x = parseFloat(mascot.style.left || '0') || 0;
+      const y = parseFloat(mascot.style.top || '0') || 0;
+      try { localStorage.setItem(KEY_POS, JSON.stringify({ x, y })); } catch (err) {}
+    };
+
+    mascot.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('resize', () => {
+      if (mascot.dataset.drag !== '1') return;
+      const rect = mascot.getBoundingClientRect();
+      const x = clamp(rect.left, 0, Math.max(0, window.innerWidth - mascot.offsetWidth));
+      const y = clamp(rect.top, 0, Math.max(0, window.innerHeight - mascot.offsetHeight));
+      mascot.style.left = `${x}px`;
+      mascot.style.top = `${y}px`;
+      try { localStorage.setItem(KEY_POS, JSON.stringify({ x, y })); } catch (err) {}
+    });
+  })();
+</script>
+
+<script>
+  (function mascotBubbleTap(){
+    const mascot = document.getElementById('mascot');
+    if (!mascot) return;
+    let lock = false;
+    const cooldown = 3000;
+    mascot.addEventListener('click', () => {
+      if (lock) return;
+      lock = true;
+      try { if (typeof window.__mascotTip === 'function') window.__mascotTip(3000); } catch (e) {}
+      setTimeout(() => { lock = false; }, cooldown);
+    });
+  })();
+</script>
+
+<script>
+  (function mascotBubble(){
+    const bubble = document.getElementById('mascot-bubble');
+    const text = document.getElementById('mascot-bubble-text');
+    if (!bubble || !text) return;
+    let timer = null;
+    window.__mascotSay = function(msg, ms = 2400){
+      try {
+        if (!msg) { bubble.hidden = true; return; }
+        if (!window.__lessonAvatarReady) {
+          try { window.__mascotPendingTip = { msg, ms }; } catch (e) {}
+          return;
+        }
+        text.textContent = msg;
+        bubble.hidden = false;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => { bubble.hidden = true; }, ms);
+      } catch (e) {}
+    };
+    window.__mascotTip = function(ms = 3000){
+      try {
+        const msg = bubble.dataset.tip || text.textContent || "";
+        if (!msg) return;
+        window.__mascotSay(msg, ms);
+      } catch (e) {}
+    };
+    try {
+      window.addEventListener('mascot-ready', () => {
+        const pending = window.__mascotPendingTip;
+        if (pending && pending.msg) {
+          window.__mascotPendingTip = null;
+          window.__mascotSay(pending.msg, pending.ms || 2400);
+        }
+      });
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  // Disable service worker on localhost to avoid stale lesson assets during dev.
+  (function disableSwOnLocalhost(){
+    try {
+      const host = location.hostname;
+      if (host !== 'localhost' && host !== '127.0.0.1') return;
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  // Fallback kana picker (ensures it appears even if cached shim is stale).
+  (function fallbackKanaPicker(){
+    const SMALL = "ゃゅょぁぃぅぇぉャュョァィゥェォっッー";
+    const toHira = (s) => (window.wanakana ? wanakana.toHiragana(s || "") : (s || ""));
+    const toKata = (s) => (window.wanakana ? wanakana.toKatakana(s || "") : (s || ""));
+    const splitMora = (s = "") => {
+      const a = [...s];
+      const out = [];
+      for (let i = 0; i < a.length; i++) {
+        const c = a[i], n = a[i + 1];
+        if (n && SMALL.includes(n)) { out.push(c + n); i++; continue; }
+        out.push(c);
+      }
+      return out;
+    };
+    const buildPicker = (inp, expectedJP) => {
+      if (!inp || inp.dataset.kanaPicker) return;
+      const host = inp.closest('.lesson-item') || inp.parentElement;
+      if (!host) return;
+      if (host.querySelector('.kana-picker')) return;
+      const exp = expectedJP || inp.dataset.expected || inp.dataset.answer || "";
+      if (!exp) return;
+      const hira = toHira(exp);
+      const useKata = /[\p{sc=Katakana}ー]/u.test(exp);
+      const moras = splitMora(hira).map(m => useKata ? toKata(m) : m);
+      const picker = document.createElement('div');
+      picker.className = 'kana-picker';
+      picker.innerHTML = `
+        ${moras.map(m => `<button type="button" class="kana-btn" data-kana="${m}">${m}</button>`).join('')}
+        <button type="button" class="kana-btn kana-action" data-action="back">⌫</button>
+        <button type="button" class="kana-btn kana-action" data-action="clear">Clear</button>
+      `;
+      picker.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'back') {
+          const cur = toHira(inp.value || '');
+          const moras = splitMora(cur);
+          moras.pop();
+          inp.value = moras.join('');
+        } else if (action === 'clear') {
+          inp.value = '';
+        } else {
+          const kana = btn.dataset.kana || btn.textContent || '';
+          const cur = toHira(inp.value || '');
+          inp.value = cur + (useKata ? toKata(kana) : kana);
+        }
+        try { inp.focus(); } catch {}
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      host.appendChild(picker);
+      inp.dataset.kanaPicker = "1";
+    };
+
+    const scan = () => {
+      try {
+        if (document.body?.dataset?.lessonStep !== 'translate_to_jp') return;
+      } catch {}
+      document.querySelectorAll('#jp-text input:not(.mora)').forEach(inp => buildPicker(inp, inp.dataset.expectedKana || inp.dataset.expected || inp.dataset.answer || ''));
+    };
+    scan();
+    document.addEventListener('lesson:rendered', scan);
+    const mo = new MutationObserver(() => scan());
+    mo.observe(document.getElementById('jp-text') || document.body, { childList: true, subtree: true });
+  })();
+</script>
+
+
 
 <script>
   // Sanitize stray control characters in Kana modal cells (e.g., BEL \u0007)
@@ -729,7 +1663,7 @@
           el.textContent = cleaned || (el.classList.contains('text-gray-300') ? '\u00A0' : '');
         }
       });
-    } catch {}
+    } catch (e) {}
   })();
   </script>
 
@@ -983,7 +1917,7 @@
   try {
     const help = by('#slice-instructions');
     if (help) help.textContent = 'Slice kana. Sumo tiles are bombs - avoid them. Swipe for combos.';
-  } catch {}
+  } catch (e) {}
   function currentPhraseFromPage(){
     try {
       const cached = window.__kanaSliceSource;
@@ -997,7 +1931,7 @@
           return { phrase, romaji, english, stages };
           }
       }
-    } catch {}
+    } catch (e) {}
     try {
       const list = document.querySelector('#jp-text');
       const jpEl = list?.querySelector('.jp');
@@ -1006,7 +1940,7 @@
       const english = (enEl?.textContent || '').trim() || 'Hello';
       const romaji = (window.wanakana && phrase) ? wanakana.toRomaji(phrase) : 'konnichiwa';
       return { phrase, romaji, english, stages: [] };
-    } catch {
+    } catch (e) {
       return { phrase:'?????', romaji:'konnichiwa', english:'Hello' , stages: [] };
     }
   }
@@ -1086,8 +2020,8 @@
   btnOpenFooter?.addEventListener('click', launchSlice);
   btnClose?.addEventListener('click', () => overlay.classList.add('hidden'));
   // Settings dropdown toggle
-  function closeMenu(){ try{ menu?.classList.add('hidden'); btnGear?.setAttribute('aria-expanded','false'); } catch{} }
-  function openMenu(){ try{ menu?.classList.remove('hidden'); btnGear?.setAttribute('aria-expanded','true'); } catch{} }
+  function closeMenu(){ try{ menu?.classList.add('hidden'); btnGear?.setAttribute('aria-expanded','false'); } catch (e) {} }
+  function openMenu(){ try{ menu?.classList.remove('hidden'); btnGear?.setAttribute('aria-expanded','true'); } catch (e) {} }
   btnGear?.addEventListener('click', (e)=>{ e.stopPropagation(); if (!menu) return; if (menu.classList.contains('hidden')) openMenu(); else closeMenu(); });
   btnMenuClose?.addEventListener('click', (e)=>{ e.stopPropagation(); closeMenu(); });
   // Dismiss on outside click or Esc
@@ -1116,20 +2050,31 @@
     ]).then(async ([w, cat]) => {
       let eq = (w && w.equipped) || {};
       const usedWallet = !!(w && w.equipped && Object.keys(w.equipped).length);
-      try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (snap && Object.keys(snap).length) { eq = snap; console.log('[lesson] using snapshot fallback', eq); } } } catch {}
+      try { if (!eq || Object.keys(eq).length===0) { const snap = JSON.parse(localStorage.getItem('equippedSnapshot')||'{}')||{}; if (snap && Object.keys(snap).length) { eq = snap; console.log('[lesson] using snapshot fallback', eq); } } } catch (e) {}
       console.log('[lesson] wallet equipped', (w&&w.equipped)||{});
       console.log('[lesson] effective equipped', eq);
       const items=(cat&&cat.items)||[];
       console.log('[lesson] catalog items', items.length);
+      // Pull anchors from server if available (merge into localStorage)
+      try {
+        const r=await fetch('/api/anchors',{cache:'no-store'});
+        if(r.ok){
+          const d=await r.json();
+          const cur=(function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
+          // Prefer local overrides (e.g. from Anchor Tool) over server defaults
+          localStorage.setItem('anchorOverrides', JSON.stringify(Object.assign({}, d.anchors||{}, cur)));
+          if (d.locks&&typeof d.locks==='object') localStorage.setItem('anchorLocks', JSON.stringify(Object.assign({}, (function(){ try { return JSON.parse(localStorage.getItem('anchorLocks')||'{}')||{}; } catch (e) { return {}; } })(), d.locks)));
+        }
+      } catch (e) {}
       const it = items.find(x=> x.id === eq.model && x.model) || items.find(x=> x.id==='model-basemesh' && x.model);
       const mv = document.getElementById('mvLesson'); if (!mv) return;
       if (it && it.model){
         mv.src = it.model;
-        const setRate=()=>{ try{ mv.animationPlayRate=0.3 }catch{}; try{ mv.animationPlaybackRate=0.3 }catch{}; mv.pause(); };
+        const setRate=()=>{ try{ mv.animationPlayRate=0.3 }catch (e) {}; try{ mv.animationPlaybackRate=0.3 }catch (e) {}; mv.pause(); };
         if(!mv.dataset.rateBound){ mv.addEventListener('load', setRate, {once:true}); mv.dataset.rateBound='1'; }
         const doAttach = async ()=>{
           try {
-            const overrides = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })();
+            const overrides = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
             if (window.OutfitPreview) {
               const ofp = window.OutfitPreview.create({ mv, overrides });
               ofp.update(eq, items);
@@ -1145,32 +2090,52 @@
                     const w = wrap.clientWidth||160, h = wrap.clientHeight||190;
                     const scene = new THREE.Scene();
                     const camera = new THREE.PerspectiveCamera(25, w/h, 0.01, 100);
-                    const amb = new THREE.AmbientLight(0xffffff, 0.6); scene.add(amb);
-                    const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(1,1,1); scene.add(dir);
+                    const amb = new THREE.AmbientLight(0xffffff, 1.0); scene.add(amb);
+                    try { const dir = new (window.__THREE||window.THREE).DirectionalLight(0xffffff, 0.6); dir.position.set(1,1,1); scene.add(dir); } catch (e) {}
                     const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
                     renderer.setSize(w,h,false); renderer.setPixelRatio(1);
                     wrap.innerHTML=''; wrap.style.display='block';
                     const mvEl = document.getElementById('mvLesson'); if (mvEl) mvEl.style.display='none';
                     wrap.appendChild(renderer.domElement);
-                    let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch{}
-                    function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch{} requestAnimationFrame(tick);} requestAnimationFrame(tick);
+                    let controls=null; try { if (window.__OrbitControls) { controls = new window.__OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,0.02,0); } } catch (e) {}
+                    function tick(){ try{ if(controls) controls.update(); renderer.render(scene,camera);}catch (e) {} requestAnimationFrame(tick);} requestAnimationFrame(tick);
                     // Load base
                     const loader = new window.__GLTFLoader();
-                    const gltf = await new Promise(res=>{ try{ loader.load(it.model, g=>res(g), undefined, ()=>res(null)); } catch { res(null); } });
+                    const gltf = await new Promise(res=>{ try{ loader.load(it.model, g=>res(g), undefined, ()=>res(null)); } catch (e) { res(null); } });
                     if (!gltf || !gltf.scene) return;
                     const base = gltf.scene; scene.add(base);
+                    try { (function(){ var hex=String(localStorage.getItem('bootColorHex')||'').trim(); if(/^#?[0-9a-fA-F]{6}$/.test(hex)){ if(hex[0]!=='#') hex='#'+hex; base.traverse?.(function(o){ try { if(!o||!o.isMesh) return; var arr=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]); var on=String(o.name||'').toLowerCase(); for(var i=0;i<arr.length;i++){ var m=arr[i]; var nm=String((m&&m.name)||'').toLowerCase(); if(/\bboot_tint\b/.test(nm) || /\bboot_tint\b/.test(on)){ try{ m.color&&m.color.set&&m.color.set(hex);}catch{} try{ if(m.needsUpdate!==undefined) m.needsUpdate=true; }catch{} } } } catch {} }); } })(); } catch (e) {}
                     try {
                       const box = new THREE.Box3().setFromObject(base); const c = box.getCenter(new THREE.Vector3()); base.position.sub(c); const size=new THREE.Vector3(); box.getSize(size);
                       const vFov=(camera.fov*Math.PI)/180; const hFov=2*Math.atan(Math.tan(vFov/2)*(camera.aspect||1));
                       const distV=(size.y*0.5)/Math.tan(vFov/2); const distH=(size.x*0.5)/Math.tan(hFov/2); const baseDist=Math.max(distV,distH);
-                      const VIEW_SCALE = 2.34; const dist=baseDist*VIEW_SCALE;
+                      const VIEW_SCALE = 1.87; const dist=baseDist*VIEW_SCALE;
                       camera.near=Math.max(0.01,dist*0.05); camera.far=Math.max(camera.near+1,dist*20); camera.updateProjectionMatrix();
-                      camera.position.set(0,size.y*0.06,dist);
-                      if (controls) { controls.target.set(0, size.y*0.54, 0); controls.update(); }
-                    } catch {}
+                      camera.position.set(0,size.y*0.08,dist);
+                      if (controls) { const TARGET_Y=0.48; const TARGET_OFFSET=-0.5; controls.target.set(0, size.y*(TARGET_Y + TARGET_OFFSET), 0); controls.update(); }
+                    } catch (e) {}
                     // Attach items
                     const anchors = window.SLOT_ANCHORS || {};
-                    async function addOne(slot, id){ const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return; const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch{ res(null);} }); if(!gltf2||!gltf2.scene) return; const obj = gltf2.scene.clone(true); try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch{} const wrapG=new THREE.Group(); wrapG.add(obj); const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch { return {}; } })(); let a = ov[id] || ov[slot] || anchors[slot] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] }; try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch{} try{ wrapG.position.set(a.position?.[0]||0, a.position?.[1]||0.05, a.position?.[2]||0);}catch{} try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch{} scene.add(wrapG);} 
+                    async function addOne(slot, id){
+                      const it2 = items.find(x=>x.id===id); if(!it2||!it2.model) return;
+                      const gltf2 = await new Promise(res=>{ try{ loader.load(it2.model,g=>res(g),undefined,()=>res(null)); }catch (e) { res(null);} });
+                      if(!gltf2||!gltf2.scene) return;
+                      const obj = gltf2.scene.clone(true);
+                      try{ const b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.sub(c);}catch (e) {}
+                      const wrapG=new THREE.Group(); try{ wrapG.userData=wrapG.userData||{}; wrapG.userData.__slot=slot; wrapG.userData.__itemId=id; }catch(e){} wrapG.add(obj);
+                      const ov = (function(){ try { return JSON.parse(localStorage.getItem('anchorOverrides')||'{}')||{}; } catch (e) { return {}; } })();
+                      const key = (slot==='bagx') ? 'bag' : slot;
+                      let a = ov[id] || ov[key] || anchors[key] || anchors.misc || { position:[0,0.05,0], rotation:[0,0,0], scale:[1,1,1] };
+                      try{ const infl=(typeof a.inflate==='number')?a.inflate:0; if(infl) __inflateScene(obj, infl); }catch(e){}
+                      try{ let s=(a.scale&&a.scale[0])?a.scale[0]:1.0; wrapG.scale.set(s,s,s);}catch (e) {}
+                      try{
+                        const inv=(function(){ try { const v=parseFloat(localStorage.getItem('baseMeshScale')||'0.92'); return (isFinite(v)&&v>0)?(1/v):1; } catch (e) { return 1; } })();
+                        wrapG.position.set((a.position?.[0]||0)*inv,(a.position?.[1]||0.05)*inv,(a.position?.[2]||0)*inv);
+                      }catch (e) {}
+                      try{ wrapG.rotation.order='XYZ'; wrapG.rotation.set(a.rotation?.[0]||0, a.rotation?.[1]||0, a.rotation?.[2]||0);}catch (e) {}
+                      scene.add(wrapG);
+                      try { (function(){ var hex=String(localStorage.getItem('bootColorHex')||'').trim(); if(/^#?[0-9a-fA-F]{6}$/.test(hex)){ if(hex[0]!=='#') hex='#'+hex; wrapG.traverse?.(function(o){ try { if(!o||!o.isMesh) return; var arr=Array.isArray(o.material)?o.material:(o.material?[o.material]:[]); var on=String(o.name||'').toLowerCase(); for(var i=0;i<arr.length;i++){ var m=arr[i]; var nm=String((m&&m.name)||'').toLowerCase(); if(/\bboot_tint\b/.test(nm) || /\bboot_tint\b/.test(on)){ try{ m.color&&m.color.set&&m.color.set(hex);}catch{} try{ if(m.needsUpdate!==undefined) m.needsUpdate=true; }catch{} } } } catch {} }); } })(); } catch(e){}
+                    }
                     const slots = Object.keys(eq||{}).filter(s=>s!=='model');
                     for (const slot of slots){ const raw = eq[slot]; const ids = Array.isArray(raw) ? raw : [raw]; for (const id of ids){ await addOne(slot, id); } }
                   })();
@@ -1185,9 +2150,17 @@
         else { mv.addEventListener('load', ()=>{ doAttach(); }, { once:true }); }
       }
     }).catch(()=>{});
-  } catch {}
+  } catch (e) {}
 })();
 </script>
+
+
+
+
+
+
+
+
 
 
 

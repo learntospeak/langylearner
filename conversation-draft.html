@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>KanaReader - Conversation Draft</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="anime-theme.css" />
+  <style>
+    .page {
+      max-width: 980px;
+      margin: 24px auto 120px;
+      padding: 0 18px;
+    }
+    .card {
+      background: var(--paper);
+      border: var(--outline) solid var(--ink);
+      border-radius: 18px;
+      box-shadow: var(--shadow-strong);
+      padding: 18px;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .sub {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .context {
+      padding: 10px 12px;
+      border: 2px dashed #f59e0b;
+      border-radius: 12px;
+      background: #fff7ed;
+      font-size: 14px;
+    }
+    .conversation {
+      display: grid;
+      gap: 10px;
+      margin: 16px 0 12px;
+    }
+    .bubble {
+      max-width: 78%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 2px solid var(--ink);
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+    .bubble.npc { justify-self: start; }
+    .bubble.user { justify-self: end; background: #fff7fb; }
+    .bubble .jp {
+      font-weight: 700;
+      font-family: "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", "Meiryo", "MS PGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    }
+    .bubble .romaji { font-size: 12px; color: #6b7280; }
+    .bubble .en { font-size: 12px; color: #374151; }
+    .choices {
+      display: grid;
+      gap: 8px;
+    }
+    .choice {
+      display: grid;
+      gap: 2px;
+      align-items: start;
+      text-align: left;
+    }
+    .choice .jp {
+      font-weight: 700;
+      font-family: "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", "Meiryo", "MS PGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    }
+    .choice .romaji { font-size: 12px; color: #6b7280; }
+    .choice .en { font-size: 12px; color: #374151; }
+    .choice:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      filter: grayscale(0.2);
+    }
+    .feedback {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 2px solid #111;
+      background: #f0fdf4;
+      font-size: 13px;
+      display: none;
+    }
+    .feedback.bad {
+      background: #fff1f2;
+      border-color: #ef4444;
+    }
+    .why {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 2px dashed #8b5cf6;
+      background: #f5f3ff;
+      font-size: 13px;
+    }
+    .footer {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    @media (max-width: 700px) {
+      .bubble { max-width: 100%; }
+    }
+  </style>
+</head>
+<body class="anime-bg">
+  <div class="page">
+    <div class="card">
+      <div class="title site-title">KanaReader - First Greetings (Conversation Draft)</div>
+      <div class="sub">Short, natural exchanges. Tap a response to reply, then see the follow-up.</div>
+
+      <div class="controls">
+        <button id="btnPrev" class="btn btn-ghost">Prev</button>
+        <button id="btnNext" class="btn btn-dark">Next</button>
+        <button id="btnReplay" class="btn btn-ghost">Replay</button>
+        <button id="btnListen" class="btn btn-amber">Listen</button>
+        <button id="btnRomaji" class="btn btn-ghost">Romaji: On</button>
+      </div>
+
+      <div id="context" class="context"></div>
+
+      <div id="conversation" class="conversation"></div>
+
+      <div class="prompt">Choose your response</div>
+      <div id="choices" class="choices"></div>
+
+      <div id="feedback" class="feedback"></div>
+      <div id="why" class="why" hidden></div>
+
+      <div class="footer">
+        <button id="btnRetry" class="btn btn-ghost">Try again</button>
+        <button id="btnContinue" class="btn btn-dark" hidden>Continue</button>
+        <button id="btnAuto" class="btn btn-primary">Auto-next (3s)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function disableSwOnLocalhost(){
+      try {
+        const host = location.hostname;
+        if (host !== 'localhost' && host !== '127.0.0.1') return;
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+      } catch (e) {}
+    })();
+
+    const JP = {
+      hajime: "\u306f\u3058\u3081\u307e\u3057\u3066\u3002",
+      yoroshiku: "\u3088\u308d\u3057\u304f\u304a\u9858\u3044\u3057\u307e\u3059\u3002",
+      kochira: "\u3053\u3061\u3089\u3053\u305d\u3002",
+      onamae: "\u304a\u306a\u307e\u3048\u306f\uff1f",
+      mina: "\u307f\u306a\u3067\u3059\u3002",
+      ohayou: "\u304a\u306f\u3088\u3046\u3002",
+      moshi: "\u3082\u3057\u3082\u3057\u3002",
+      konnichiwa: "\u3053\u3093\u306b\u3061\u306f\u3002",
+      otsukare: "\u304a\u75b2\u308c\u69d8\u3067\u3059\u3002",
+      dochira: "\u3069\u3061\u3089\u3055\u307e\u3067\u3059\u304b\u3002",
+      konbanwa: "\u3053\u3093\u3070\u3093\u306f\u3002",
+      doumo: "\u3069\u3046\u3082\u3002",
+      watashi: "\u308f\u305f\u3057\u3067\u3059\u3002"
+    };
+
+    const DEFAULT_CAST = {
+      npc: { name: 'Aiko', gender: 'female' },
+      user: { name: 'Mina', gender: 'female' }
+    };
+
+    // Lightweight name hints so voice intent can follow name choice.
+    const NAME_GENDER_HINTS = {
+      mina: 'female', aiko: 'female', yuki: 'female', hana: 'female', emi: 'female', sakura: 'female',
+      ken: 'male', taro: 'male', daichi: 'male', sota: 'male', haru: 'male', riku: 'male'
+    };
+
+    const scenarios = [
+      {
+        id: 'first_meet',
+        speakers: { npc: { name: 'Aiko', gender: 'female' }, user: { name: 'Mina', gender: 'female' } },
+        context: 'Context: First time meeting someone politely.',
+        turns: [
+          {
+            npc: { jp: JP.hajime, romaji: 'hajimemashite', en: 'Nice to meet you.' },
+            choices: [
+              { jp: JP.yoroshiku, romaji: 'yoroshiku onegaishimasu', en: 'Please treat me well.', correct: true, why: 'This is the standard polite reply when meeting for the first time.' },
+              { jp: JP.ohayou, romaji: 'ohayou', en: 'Morning (casual).', correct: false, why: 'Too casual and not the usual reply to hajimemashite.' },
+              { jp: JP.moshi, romaji: 'moshimoshi', en: 'Hello (phone).', correct: false, why: 'Phone-only greeting.' }
+            ],
+            follow: { jp: JP.kochira, romaji: 'kochira koso', en: 'Likewise.' }
+          },
+          {
+            npc: { jp: JP.onamae, romaji: 'onamae wa?', en: 'What is your name?' },
+            choices: [
+              { jp: JP.mina, romaji: 'mina desu', en: 'Mina (name) + desu.', correct: true, why: 'A simple name answer for beginners.' },
+              { jp: JP.konbanwa, romaji: 'konbanwa', en: 'Good evening.', correct: false, why: 'That is a time greeting, not a name.' },
+              { jp: JP.doumo, romaji: 'doumo', en: 'Thanks / hey (casual).', correct: false, why: 'Not an answer to “what is your name?”.' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'phone',
+        speakers: { npc: { name: 'Aiko', gender: 'female' }, user: { name: 'Mina', gender: 'female' } },
+        context: 'Context: You answer a phone call.',
+        turns: [
+          {
+            npc: { jp: JP.moshi, romaji: 'moshimoshi', en: 'Hello? (phone)' },
+            choices: [
+              { jp: JP.moshi, romaji: 'moshimoshi', en: 'Hello? (phone)', correct: true, why: 'On the phone, moshimoshi is the standard greeting.' },
+              { jp: JP.konnichiwa, romaji: 'konnichiwa', en: 'Hello (in person).', correct: false, why: 'Typically in person, not on the phone.' },
+              { jp: JP.otsukare, romaji: 'otsukaresama desu', en: 'Thanks for your work (workplace).', correct: false, why: 'Workplace-specific greeting.' }
+            ]
+          },
+          {
+            npc: { jp: JP.dochira, romaji: 'dochirasama desu ka', en: 'May I ask who is calling?' },
+            choices: [
+              { jp: JP.watashi, romaji: 'watashi desu', en: 'It is me.', correct: true, why: 'A simple, polite reply for a beginner level.' },
+              { jp: JP.doumo, romaji: 'doumo', en: 'Thanks / hey (casual).', correct: false, why: 'Not an answer to “who is calling?”.' },
+              { jp: JP.konnichiwa, romaji: 'konnichiwa', en: 'Hello (in person).', correct: false, why: 'A greeting, not an identification.' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'work',
+        speakers: { npc: { name: 'Aiko', gender: 'female' }, user: { name: 'Mina', gender: 'female' } },
+        context: 'Context: A coworker passes by at work.',
+        turns: [
+          {
+            npc: { jp: JP.otsukare, romaji: 'otsukaresama desu', en: 'Thanks for your work.' },
+            choices: [
+              { jp: JP.otsukare, romaji: 'otsukaresama desu', en: 'Thanks for your work.', correct: true, why: 'Matching workplace greeting is most natural.' },
+              { jp: JP.konbanwa, romaji: 'konbanwa', en: 'Good evening.', correct: false, why: 'Time-based greeting, but less natural here.' },
+              { jp: JP.doumo, romaji: 'doumo', en: 'Hey / thanks (very casual).', correct: false, why: 'Too casual for most workplace settings.' }
+            ]
+          }
+        ]
+      }
+    ];
+
+    let index = 0;
+    let turnIndex = 0;
+    let completed = [];
+    let romajiOn = true;
+    let autoNext = false;
+    let hasChosen = false;
+    let lastChoice = null;
+    const voiceState = {
+      list: [],
+      ja: [],
+      npc: null,
+      user: null,
+      npcCandidates: [],
+      userCandidates: [],
+      userCandidatesFemale: [],
+      userCandidatesMale: []
+    };
+    let currentCast = { npc: { ...DEFAULT_CAST.npc }, user: { ...DEFAULT_CAST.user } };
+    let voicesReady = false;
+    const TTS = {
+      remote: false,
+      url: '/api/tts',
+      voiceA: 'alloy',
+      voiceB: 'onyx'
+    };
+    const ttsCache = new Map();
+    let ttsAudio = null;
+    let ttsToken = 0;
+
+    const elContext = document.getElementById('context');
+    const elConversation = document.getElementById('conversation');
+    const elChoices = document.getElementById('choices');
+    const elFeedback = document.getElementById('feedback');
+    const elWhy = document.getElementById('why');
+    const btnRomaji = document.getElementById('btnRomaji');
+    const btnContinue = document.getElementById('btnContinue');
+
+    function sameVoice(a, b) {
+      if (!a || !b) return false;
+      if (a.voiceURI && b.voiceURI) return a.voiceURI === b.voiceURI;
+      return a.name === b.name && a.lang === b.lang;
+    }
+
+    function voiceId(v) {
+      if (!v) return '';
+      return `${v.voiceURI || ''}|${v.name || ''}|${v.lang || ''}`;
+    }
+
+    function dedupeVoices(list = []) {
+      const seen = new Set();
+      const out = [];
+      for (const v of list) {
+        const id = voiceId(v);
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        out.push(v);
+      }
+      return out;
+    }
+
+    function findVoiceByName(all, preferredNames = []) {
+      for (const name of preferredNames) {
+        const v = all.find(x => (x.name || '').trim() === name);
+        if (v) return v;
+      }
+      return null;
+    }
+
+    function findVoicesByNames(all, preferredNames = []) {
+      const out = [];
+      for (const name of preferredNames) {
+        const v = all.find(x => (x.name || '').trim() === name);
+        if (v) out.push(v);
+      }
+      return dedupeVoices(out);
+    }
+
+    function inferGenderByName(name, fallback = 'female') {
+      const key = String(name || '').trim().toLowerCase();
+      return NAME_GENDER_HINTS[key] || fallback;
+    }
+
+    function normalizeGender(gender, name, fallback = 'female') {
+      const g = String(gender || '').trim().toLowerCase();
+      if (g === 'male' || g === 'female') return g;
+      return inferGenderByName(name, fallback);
+    }
+
+    function resolveCast(scenario) {
+      const src = scenario?.speakers || {};
+      const npcName = src?.npc?.name || DEFAULT_CAST.npc.name;
+      const userName = src?.user?.name || DEFAULT_CAST.user.name;
+      return {
+        npc: {
+          name: npcName,
+          gender: normalizeGender(src?.npc?.gender, npcName, DEFAULT_CAST.npc.gender)
+        },
+        user: {
+          name: userName,
+          gender: normalizeGender(src?.user?.gender, userName, DEFAULT_CAST.user.gender)
+        }
+      };
+    }
+
+    function rankVoices(list) {
+      return [...(list || [])].sort((a, b) => {
+        const aScore = (a.default ? 4 : 0) + (a.localService ? 2 : 0);
+        const bScore = (b.default ? 4 : 0) + (b.localService ? 2 : 0);
+        return bScore - aScore;
+      });
+    }
+
+    function refreshVoices() {
+      try {
+        if (!('speechSynthesis' in window)) return;
+        const all = speechSynthesis.getVoices() || [];
+        if (!all.length) return;
+        voiceState.list = all;
+        const ja = all.filter(v => (v.lang || '').toLowerCase().startsWith('ja'));
+        voiceState.ja = ja;
+        const npcPreferred = findVoiceByName(all, ['Google 日本語']);
+        const npcPool = rankVoices(ja.length ? ja : all);
+        const npc = npcPreferred || npcPool[0] || all[0] || null;
+
+        const userPreferred = findVoiceByName(
+          all.filter(v => !sameVoice(v, npc)),
+          [
+            'Google UK English Female',
+            'Google UK English Male',
+            'Microsoft Catherine - English (Australia)',
+            'Microsoft Zira - English (United States)',
+            'Microsoft James - English (Australia)',
+            'Microsoft David - English (United States)'
+          ]
+        );
+        const userPool = rankVoices(all.filter(v => !sameVoice(v, npc)));
+        const femalePreferred = findVoicesByNames(
+          all.filter(v => !sameVoice(v, npc)),
+          [
+            'Google UK English Female',
+            'Microsoft Catherine - English (Australia)',
+            'Microsoft Zira - English (United States)'
+          ]
+        );
+        const malePreferred = findVoicesByNames(
+          all.filter(v => !sameVoice(v, npc)),
+          [
+            'Google UK English Male',
+            'Microsoft James - English (Australia)',
+            'Microsoft David - English (United States)',
+            'Microsoft Mark - English (United States)'
+          ]
+        );
+        const userFemaleCandidates = dedupeVoices([...femalePreferred, ...userPool]);
+        const userMaleCandidates = dedupeVoices([...malePreferred, ...userPool]);
+        const user = userPreferred || userFemaleCandidates[0] || userPool[0] || npc;
+
+        voiceState.npc = npc;
+        voiceState.user = user;
+        voiceState.npcCandidates = npc ? [npc, ...rankVoices(all.filter(v => !sameVoice(v, npc)))] : rankVoices(all);
+        voiceState.userCandidates = user ? [user, ...rankVoices(all.filter(v => !sameVoice(v, user)))] : rankVoices(all);
+        voiceState.userCandidatesFemale = userFemaleCandidates;
+        voiceState.userCandidatesMale = userMaleCandidates;
+        voicesReady = true;
+        try {
+          console.log('[conversation] voices', {
+            npc: voiceState.npc ? `${voiceState.npc.name} (${voiceState.npc.lang})` : 'none',
+            user: voiceState.user ? `${voiceState.user.name} (${voiceState.user.lang})` : 'none',
+            cast: currentCast
+          });
+        } catch (e) {}
+      } catch (e) {}
+    }
+
+
+    if ('speechSynthesis' in window) {
+      speechSynthesis.onvoiceschanged = refreshVoices;
+      setTimeout(refreshVoices, 50);
+    }
+
+    function ensureVoices() {
+      if (!voicesReady) refreshVoices();
+    }
+
+    function isJapaneseText(text) {
+      return /[\u3040-\u30ff\u3400-\u9faf]/.test(text || '');
+    }
+
+    function pickVoice(role = 'npc', gender = '') {
+      if (role === 'user') {
+        const g = String(gender || '').toLowerCase();
+        if (g === 'male' && voiceState.userCandidatesMale.length) return voiceState.userCandidatesMale[0];
+        if (g === 'female' && voiceState.userCandidatesFemale.length) return voiceState.userCandidatesFemale[0];
+      }
+      return role === 'user' ? (voiceState.user || voiceState.npc) : (voiceState.npc || voiceState.user);
+    }
+
+    function voiceCandidates(role = 'npc', gender = '') {
+      if (role === 'user') {
+        const g = String(gender || '').toLowerCase();
+        if (g === 'male' && voiceState.userCandidatesMale.length) return voiceState.userCandidatesMale;
+        if (g === 'female' && voiceState.userCandidatesFemale.length) return voiceState.userCandidatesFemale;
+      }
+      const base = role === 'user' ? voiceState.userCandidates : voiceState.npcCandidates;
+      if (base && base.length) return base;
+      const p = pickVoice(role, gender);
+      return p ? [p] : [];
+    }
+
+    function speakLocalWithFallback(text, role = 'npc', gender = '') {
+      return new Promise((resolve) => {
+        try {
+          if (!('speechSynthesis' in window)) return resolve(false);
+          ensureVoices();
+          const candidates = voiceCandidates(role, gender);
+          let idx = 0;
+          const trySpeak = () => {
+            if (idx >= candidates.length) return resolve(false);
+            const v = candidates[idx++];
+            const u = new SpeechSynthesisUtterance(text);
+            if (v) u.voice = v;
+            if (v && v.lang) {
+              u.lang = v.lang;
+            } else {
+              u.lang = isJapaneseText(text) ? 'ja-JP' : 'en-US';
+            }
+            u.pitch = 1;
+            u.rate = 1;
+            u.onend = () => resolve(true);
+            u.onerror = () => trySpeak();
+            try {
+              speechSynthesis.speak(u);
+            } catch (e) {
+              trySpeak();
+            }
+          };
+          speechSynthesis.cancel();
+          trySpeak();
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    }
+
+    function speakLocal(text, role = 'npc', gender = '') {
+      speakLocalWithFallback(text, role, gender);
+    }
+
+    function speakSequenceLocal(lines) {
+      try {
+        if (!('speechSynthesis' in window)) return;
+        ensureVoices();
+        const list = (lines || []).filter(l => l && l.text);
+        if (!list.length) return;
+        (async () => {
+          for (const item of list) {
+            await speakLocalWithFallback(item.text, item.role || 'npc', item.gender || '');
+          }
+        })();
+      } catch (e) {}
+    }
+
+    function remoteEnabled() {
+      if (window.__TTS_REMOTE__ === true) return true;
+      if (window.__TTS_REMOTE__ === false) return false;
+      return !!TTS.remote;
+    }
+
+    function pickRemoteVoice(role = 'npc', gender = '') {
+      if (role === 'user') {
+        if (String(gender || '').toLowerCase() === 'male') return 'onyx';
+        if (String(gender || '').toLowerCase() === 'female') return 'shimmer';
+        return TTS.voiceB || 'shimmer';
+      }
+      return TTS.voiceA || 'alloy';
+    }
+
+    async function fetchRemoteBlob(text, role = 'npc', gender = '') {
+      const lang = isJapaneseText(text) ? 'ja' : 'en';
+      const voice = pickRemoteVoice(role, gender);
+      const key = `${voice}|${lang}|${text}`;
+      if (ttsCache.has(key)) return ttsCache.get(key);
+      const p = fetch(TTS.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang, voice })
+      }).then(async (r) => {
+        if (!r.ok) {
+          const details = await r.text().catch(() => '');
+          throw new Error(details || 'TTS error');
+        }
+        return r.blob();
+      });
+      ttsCache.set(key, p);
+      p.catch(() => ttsCache.delete(key));
+      return p;
+    }
+
+    function stopRemoteAudio() {
+      if (ttsAudio) {
+        try { ttsAudio.pause(); } catch {}
+        try { ttsAudio.src = ''; } catch {}
+        ttsAudio = null;
+      }
+    }
+
+    async function playRemoteOne(text, role, token, gender = '') {
+      const blob = await fetchRemoteBlob(text, role, gender);
+      if (token !== ttsToken) return;
+      stopRemoteAudio();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      ttsAudio = audio;
+      await new Promise((resolve, reject) => {
+        audio.onended = () => {
+          if (ttsAudio === audio) ttsAudio = null;
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        audio.onerror = (e) => {
+          if (ttsAudio === audio) ttsAudio = null;
+          URL.revokeObjectURL(url);
+          reject(e);
+        };
+        audio.play().catch(reject);
+      });
+    }
+
+    function speak(text, role = 'npc', gender = '') {
+      if (!text) return;
+      if (!remoteEnabled()) return speakLocal(text, role, gender);
+      const token = ++ttsToken;
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      playRemoteOne(text, role, token, gender).catch(() => speakLocal(text, role, gender));
+    }
+
+    function speakSequence(lines) {
+      const list = (lines || []).filter(l => l && l.text);
+      if (!list.length) return;
+      if (!remoteEnabled()) return speakSequenceLocal(list);
+      const token = ++ttsToken;
+      if ('speechSynthesis' in window) speechSynthesis.cancel();
+      (async () => {
+        try {
+          for (const item of list) {
+            if (token !== ttsToken) break;
+            await playRemoteOne(item.text, item.role, token, item.gender || '');
+          }
+        } catch (e) {
+          if (token === ttsToken) speakSequenceLocal(list);
+        }
+      })();
+    }
+
+    function bubble({ jp, romaji, en }, who = 'npc') {
+      const div = document.createElement('div');
+      div.className = `bubble ${who}`;
+      div.dataset.jp = jp || '';
+      div.dataset.romaji = romaji || '';
+      div.dataset.role = who === 'user' ? 'user' : 'npc';
+      const speaker = currentCast[div.dataset.role] || {};
+      div.dataset.speakerGender = speaker.gender || '';
+      div.dataset.speakerName = speaker.name || '';
+      div.addEventListener('click', () => {
+        if (div.dataset.jp) speak(div.dataset.jp, div.dataset.role, div.dataset.speakerGender || '');
+      });
+      div.innerHTML = `
+        <div class="jp" lang="ja">${jp}</div>
+        ${romajiOn ? `<div class="romaji">${romaji}</div>` : ''}
+        <div class="en">${en}</div>
+      `;
+      return div;
+    }
+
+    function getTurns(sc) {
+      if (Array.isArray(sc.turns) && sc.turns.length) return sc.turns;
+      return [{ npc: sc.npc, choices: sc.choices, follow: sc.follow }];
+    }
+
+    function buildHistory(turnLimit, turns) {
+      const hist = [];
+      for (let i = 0; i < turnLimit; i++) {
+        const chosenIdx = completed[i];
+        if (chosenIdx == null) break;
+        const step = turns[i];
+        const chosen = step.choices[chosenIdx];
+        if (!step || !chosen) break;
+        hist.push({ who: 'npc', data: step.npc });
+        hist.push({ who: 'user', data: chosen });
+        if (step.follow) hist.push({ who: 'npc', data: step.follow });
+      }
+      return hist;
+    }
+
+    function renderTurn() {
+      const sc = scenarios[index];
+      currentCast = resolveCast(sc);
+      const turns = getTurns(sc);
+      const step = turns[turnIndex];
+      if (!step) return;
+      elContext.textContent = sc.context;
+      elConversation.innerHTML = '';
+      const history = buildHistory(turnIndex, turns);
+      history.forEach((entry) => {
+        elConversation.appendChild(bubble(entry.data, entry.who));
+      });
+      elConversation.appendChild(bubble(step.npc, 'npc'));
+      elChoices.innerHTML = '';
+      elFeedback.style.display = 'none';
+      elWhy.hidden = true;
+      btnContinue.hidden = true;
+      lastChoice = null;
+
+      hasChosen = false;
+      step.choices.forEach((c, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-ghost choice';
+        btn.innerHTML = `
+          <div class="jp" lang="ja">${c.jp}</div>
+          ${romajiOn ? `<div class="romaji">${c.romaji}</div>` : ''}
+          <div class="en">${c.en}</div>
+        `;
+        btn.addEventListener('click', () => onChoose(c, idx, turns));
+        btn.addEventListener('dblclick', () => speak(c.jp, 'user', currentCast.user.gender));
+        elChoices.appendChild(btn);
+      });
+    }
+
+    function onChoose(choice, choiceIdx, turns) {
+      if (hasChosen) return;
+      hasChosen = true;
+      elChoices.querySelectorAll('button').forEach((btn) => {
+        btn.disabled = true;
+      });
+      elConversation.appendChild(bubble(choice, 'user'));
+      const ok = !!choice.correct;
+      lastChoice = choice;
+      elFeedback.style.display = 'block';
+      elFeedback.classList.toggle('bad', !ok);
+      elFeedback.textContent = ok ? 'Good choice.' : 'Not quite — try a different register.';
+      elWhy.hidden = false;
+      elWhy.textContent = choice.why || '';
+
+      if (ok) {
+        completed = completed.slice(0, turnIndex + 1);
+        completed[turnIndex] = choiceIdx;
+        const step = turns[turnIndex];
+        if (step && step.follow) {
+          elConversation.appendChild(bubble(step.follow, 'npc'));
+        }
+        btnContinue.hidden = false;
+        const hasMore = turnIndex < turns.length - 1;
+        btnContinue.textContent = hasMore ? 'Continue' : 'Next scene';
+        if (autoNext) {
+          setTimeout(() => advanceTurn(), 2200);
+        }
+      }
+    }
+
+    function advanceTurn() {
+      const sc = scenarios[index];
+      const turns = getTurns(sc);
+      if (completed[turnIndex] == null) {
+        elFeedback.style.display = 'block';
+        elFeedback.classList.add('bad');
+        elFeedback.textContent = hasChosen ? 'Try again to pick a different response.' : 'Choose a response first.';
+        return;
+      }
+      if (turnIndex < turns.length - 1) {
+        turnIndex += 1;
+        renderTurn();
+        return;
+      }
+      index = (index + 1) % scenarios.length;
+      turnIndex = 0;
+      completed = [];
+      renderTurn();
+    }
+
+    function prev() {
+      if (turnIndex > 0) {
+        turnIndex -= 1;
+        completed = completed.slice(0, turnIndex + 1);
+        renderTurn();
+        return;
+      }
+      index = (index - 1 + scenarios.length) % scenarios.length;
+      turnIndex = 0;
+      completed = [];
+      renderTurn();
+    }
+
+    document.getElementById('btnNext').addEventListener('click', advanceTurn);
+    document.getElementById('btnPrev').addEventListener('click', prev);
+    document.getElementById('btnReplay').addEventListener('click', renderTurn);
+    document.getElementById('btnListen').addEventListener('click', () => {
+      const bubbles = Array.from(elConversation.querySelectorAll('.bubble'));
+      const seq = bubbles.map((b) => ({
+        text: b.dataset.jp || '',
+        romaji: b.dataset.romaji || '',
+        role: (b.dataset.role === 'user') ? 'user' : 'npc',
+        gender: b.dataset.speakerGender || ''
+      })).filter((x) => x.text);
+      if (seq.length) {
+        speakSequence(seq);
+        return;
+      }
+      const sc = scenarios[index];
+      const turns = getTurns(sc);
+      const step = turns[turnIndex];
+      if (!step) return;
+      const fallback = [{ text: step.npc?.jp, role: 'npc', gender: currentCast.npc.gender }];
+      speakSequence(fallback);
+    });
+    document.getElementById('btnRomaji').addEventListener('click', () => {
+      romajiOn = !romajiOn;
+      btnRomaji.textContent = `Romaji: ${romajiOn ? 'On' : 'Off'}`;
+      renderTurn();
+    });
+    document.getElementById('btnRetry').addEventListener('click', () => {
+      completed[turnIndex] = null;
+      renderTurn();
+    });
+    document.getElementById('btnContinue').addEventListener('click', advanceTurn);
+    document.getElementById('btnAuto').addEventListener('click', (e) => {
+      autoNext = !autoNext;
+      e.target.textContent = autoNext ? 'Auto-next: On' : 'Auto-next (3s)';
+    });
+    renderTurn();
+  </script>
+</body>
+</html>

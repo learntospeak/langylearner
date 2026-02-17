@@ -12,7 +12,7 @@ const map = {
   // add to your existing map
   // Turn off bubble-style attention cues; we'll use mascot nudges instead
   flags: { showRomaji:false, showEnglish:true, allowRomaji:false, syllableMode: true, attentionCues: false, nudgeMs: 12000 },
-  speech:{ rate:1, pitch:1, volume:1 },
+  speech:{ rate:1, pitch:1, volume:1, remote:true, voiceA:"alloy", voiceB:"onyx" },
   mascot:"#mascot", // â† NEW
   classes: {
     item:"lesson-item", jp:"jp", romaji:"romaji", en:"en",
@@ -58,6 +58,30 @@ function updateTitle(lesson){
   if (h1) h1.textContent = t;
 }
 
+function updatePresence(lesson){
+  const card = document.getElementById("presenceCard");
+  const tip = document.getElementById("presenceTip");
+  const challenge = document.getElementById("presenceChallenge");
+  if (!card || !tip || !challenge) return;
+  const p = lesson?.presence || null;
+  if (!p || (!p.tip && !p.challenge)) {
+    card.hidden = true;
+    return;
+  }
+  tip.textContent = p.tip || "";
+  challenge.textContent = p.challenge ? `Speaking challenge: ${p.challenge}` : "";
+  card.hidden = false;
+}
+
+function configureFlagsForLesson(lesson){
+  const id = (lesson?.id || "").toLowerCase();
+  if (id.startsWith("s1")) {
+    map.flags.allowRomaji = true;
+    map.flags.showRomaji = true;
+    map.flags.showEnglish = true;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   try {
     show("Initializing...");
@@ -67,8 +91,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     if(!lessons.length) throw new Error("No lessons found in stories.json.");
     const lesson = pickLesson(lessons);
     updateTitle(lesson);
+    updatePresence(lesson);
+    configureFlagsForLesson(lesson);
     LessonShim.start(lesson, map);
-    show("Lesson ready.");
+    show("");
   } catch(e){
     show(e.message);
     console.error(e);

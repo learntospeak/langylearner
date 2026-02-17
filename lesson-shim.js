@@ -6,6 +6,7 @@ window.LessonShim = (() => {
     .normalize('NFKC')
     .replace(/[^\p{L}\p{N}]+/gu, "")
     .toLowerCase();
+  const cleanKana = (s) => toHira(s || "").replace(/[^\p{sc=Hiragana}\p{sc=Katakana}ー]+/gu, "");
   const q = (sel) => (sel ? document.querySelector(sel) : null);
   const qa = (sel) => (sel ? Array.from(document.querySelectorAll(sel)) : []);
 
@@ -66,13 +67,20 @@ window.LessonShim = (() => {
 
     let row = host.querySelector('.guide-row');
     let foot = host.querySelector('.guide-foot');
+    let picker = host.querySelector('.kana-picker');
+    const allowPicker = (document.body && document.body.dataset && document.body.dataset.lessonStep === 'translate_to_jp');
     if (!row) {
       row = document.createElement('div'); row.className = 'guide-row'; host.appendChild(row);
       foot = document.createElement('div'); foot.className = 'guide-foot'; host.appendChild(foot);
     }
+    if (allowPicker && !picker) {
+      picker = document.createElement('div');
+      picker.className = 'kana-picker';
+      host.appendChild(picker);
+    }
 
     // persist state on the element
-    inp._guideTarget = toHira(readingOverride || targetJP || "");
+    inp._guideTarget = cleanKana(readingOverride || targetJP || "");
     inp._guideProgress = inp._guideProgress || 0;
     inp._guideComp = !!inp._guideComp;
 
@@ -107,6 +115,40 @@ window.LessonShim = (() => {
       inp.addEventListener('input', raf);
     }
     render();
+
+    if (!allowPicker || !picker) return;
+    // Kana picker (tap to insert) for mobile users.
+    const useKatakana = /[\p{sc=Katakana}ー]/u.test(targetJP || "");
+    const displayMoras = splitMora(inp._guideTarget).map(m => {
+      try { return useKatakana && window.wanakana ? wanakana.toKatakana(m) : m; } catch { return m; }
+    });
+    picker.innerHTML = `
+      ${displayMoras.map(m => `<button type="button" class="kana-btn" data-kana="${m}">${m}</button>`).join('')}
+      <button type="button" class="kana-btn kana-action" data-action="back">⌫</button>
+      <button type="button" class="kana-btn kana-action" data-action="clear">Clear</button>
+    `;
+    if (!picker.dataset.bound) {
+      picker.dataset.bound = "1";
+      picker.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn || !picker.contains(btn)) return;
+        const action = btn.dataset.action;
+        if (action === 'back') {
+          const cur = toHira(inp.value || '');
+          const moras = splitMora(cur);
+          moras.pop();
+          inp.value = moras.join('');
+        } else if (action === 'clear') {
+          inp.value = '';
+        } else {
+          const kana = btn.dataset.kana || btn.textContent || '';
+          const cur = toHira(inp.value || '');
+          inp.value = cur + (useKatakana && window.wanakana ? wanakana.toKatakana(kana) : kana);
+        }
+        try { inp.focus(); } catch {}
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
   }
 
 
@@ -343,6 +385,9 @@ window.LessonShim = (() => {
     if (!root) return;
     root.classList.remove("mascot-idle", "mascot-talk", "mascot-celebrate", "mascot-confused");
     if (state) root.classList.add(state);
+    try {
+      if (typeof window.__mascotPose === "function") window.__mascotPose(state);
+    } catch (e) {}
   }
   function mascotPulse(state, ms = 900) {
     mascotSet(state);
@@ -360,48 +405,31 @@ window.LessonShim = (() => {
     el.classList.toggle(badCls, ok === false);
   }
 
-  // ---------- speech (Web Speech API) ----------
+  // ---------- speech (Web Speech + OpenAI TTS) ----------
   const Speech = (() => {
-    function pickVoice() {
+    const REMOTE_URL = "/api/tts";
+    const CACHE = new Map();
+    let activeAudio = null;
+    let activeToken = 0;
+
+    const isJapanese = (text = "") => /[\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Han}]/u.test(text);
+
+    function pickLocalVoice() {
       if (!("speechSynthesis" in window)) return null;
       const voices = speechSynthesis.getVoices();
       return voices.find(v => v.lang?.toLowerCase().startsWith("ja")) || voices.find(v => /japan|ja/i.test(v.name)) || voices[0] || null;
     }
     function makeUtterance(text, opts = {}) {
       const u = new SpeechSynthesisUtterance(text);
-      const v = pickVoice();
+      const v = pickLocalVoice();
       if (v) u.voice = v;
-      u.lang = v?.lang || "ja-JP";
+      u.lang = v?.lang || (isJapanese(text) ? "ja-JP" : "en-US");
       u.rate = opts.rate ?? 1;
       u.pitch = opts.pitch ?? 1;
       u.volume = opts.volume ?? 1;
       return u;
     }
-    function speak(text, opts = {}) {
-      if (!("speechSynthesis" in window)) return false;
-      const u = makeUtterance(text, opts);
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-      return true;
-    }
-    function speakList(texts = [], opts = {}) {
-      if (!("speechSynthesis" in window) || !texts.length) return false;
-      speechSynthesis.cancel();
-      let i = 0;
-      const next = () => {
-        if (i >= texts.length) return;
-        const u = makeUtterance(texts[i++], opts);
-        u.onend = next;
-        speechSynthesis.speak(u);
-      };
-      next();
-      return true;
-    }
-    // preload voices on some browsers
-    if ("speechSynthesis" in window) speechSynthesis.getVoices();
-    return { speak, speakList };
-
-    function speak(text, opts = {}) {
+    function speakLocal(text, opts = {}) {
       if (!("speechSynthesis" in window)) return false;
       const u = makeUtterance(text, opts);
       u.onstart = () => mascotSet("mascot-talk");
@@ -410,7 +438,18 @@ window.LessonShim = (() => {
       speechSynthesis.speak(u);
       return true;
     }
-    function speakList(texts = [], opts = {}) {
+    function speakLocalAsync(text, opts = {}) {
+      return new Promise((resolve) => {
+        if (!("speechSynthesis" in window)) return resolve(false);
+        const u = makeUtterance(text, opts);
+        u.onstart = () => mascotSet("mascot-talk");
+        u.onend = () => { mascotSet("mascot-idle"); resolve(true); };
+        u.onerror = () => { mascotSet("mascot-idle"); resolve(false); };
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+      });
+    }
+    function speakListLocal(texts = [], opts = {}) {
       if (!("speechSynthesis" in window) || !texts.length) return false;
       speechSynthesis.cancel();
       let i = 0;
@@ -425,6 +464,129 @@ window.LessonShim = (() => {
       return true;
     }
 
+    function remoteEnabled(opts = {}) {
+      if (opts.remote === true) return true;
+      if (window.__TTS_REMOTE__ === true) return true;
+      return false;
+    }
+    function pickRemoteVoice(opts = {}) {
+      if (opts.voice) return opts.voice;
+      const role = opts.role || "npc";
+      if (role === "user") return opts.voiceB || window.__TTS_VOICE_B || "shimmer";
+      return opts.voiceA || window.__TTS_VOICE_A || "alloy";
+    }
+    async function fetchRemoteBlob(text, opts = {}) {
+      const lang = opts.lang || (isJapanese(text) ? "ja" : "en");
+      const voice = pickRemoteVoice(opts);
+      const key = `${voice}|${lang}|${text}`;
+      if (CACHE.has(key)) return CACHE.get(key);
+      const p = fetch(REMOTE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, lang, voice })
+      }).then(async (r) => {
+        if (!r.ok) {
+          const details = await r.text().catch(() => "");
+          throw new Error(details || "TTS error");
+        }
+        return r.blob();
+      });
+      CACHE.set(key, p);
+      p.catch(() => CACHE.delete(key));
+      return p;
+    }
+    function stopAudio() {
+      if (activeAudio) {
+        try { activeAudio.pause(); } catch {}
+        try { activeAudio.src = ""; } catch {}
+        activeAudio = null;
+      }
+    }
+    async function playRemoteOne(text, opts = {}, token = activeToken) {
+      if (!text) return;
+      const blob = await fetchRemoteBlob(text, opts);
+      if (token !== activeToken) return;
+      stopAudio();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      activeAudio = audio;
+      mascotSet("mascot-talk");
+      await new Promise((resolve, reject) => {
+        audio.onended = () => {
+          if (activeAudio === audio) activeAudio = null;
+          mascotSet("mascot-idle");
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        audio.onerror = (e) => {
+          if (activeAudio === audio) activeAudio = null;
+          mascotSet("mascot-idle");
+          URL.revokeObjectURL(url);
+          reject(e);
+        };
+        audio.play().catch(reject);
+      });
+    }
+    async function speakRemote(text, opts = {}) {
+      const token = ++activeToken;
+      try {
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        await playRemoteOne(text, opts, token);
+      } catch (e) {
+        if (token === activeToken) speakLocal(text, opts);
+      }
+    }
+    async function speakRemoteAsync(text, opts = {}) {
+      const token = ++activeToken;
+      try {
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        await playRemoteOne(text, opts, token);
+        return true;
+      } catch (e) {
+        if (token === activeToken) {
+          return await speakLocalAsync(text, opts);
+        }
+        return false;
+      }
+    }
+    async function speakListRemote(texts = [], opts = {}) {
+      if (!texts.length) return;
+      const token = ++activeToken;
+      try {
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        for (const t of texts) {
+          if (token !== activeToken) break;
+          await playRemoteOne(t, opts, token);
+        }
+      } catch (e) {
+        if (token === activeToken) speakListLocal(texts, opts);
+      }
+    }
+
+    function stop() {
+      activeToken += 1;
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
+      stopAudio();
+      try { mascotSet("mascot-idle"); } catch {}
+    }
+    function speak(text, opts = {}) {
+      if (!text) return false;
+      if (remoteEnabled(opts)) { speakRemote(text, opts); return true; }
+      return speakLocal(text, opts);
+    }
+    function speakList(texts = [], opts = {}) {
+      if (!texts || !texts.length) return false;
+      if (remoteEnabled(opts)) { speakListRemote(texts, opts); return true; }
+      return speakListLocal(texts, opts);
+    }
+    function speakAsync(text, opts = {}) {
+      if (!text) return Promise.resolve(false);
+      if (remoteEnabled(opts)) return speakRemoteAsync(text, opts);
+      return speakLocalAsync(text, opts);
+    }
+
+    if ("speechSynthesis" in window) speechSynthesis.getVoices();
+    return { speak, speakList, speakAsync, stop };
   })();
 
   // ---------- renderers ----------
@@ -525,10 +687,10 @@ window.LessonShim = (() => {
         card.setAttribute("data-sid", s.sid);
         card.innerHTML = `
         <div class="${map?.classes?.prompt || "prompt"}">${s.en || ""}</div>
+        ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${s.romaji_full || ""}</div>` : ""}
         <input class="${map?.classes?.input || "jp-input"}"
                data-expected="${s.jp || ""}"
                placeholder="Type in Japanese" />
-        ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${s.romaji_full || ""}</div>` : ""}
         <div class="${map?.classes?.hint || "hint"} text-sm text-amber-700 mt-1"></div>
       `;
         listEl.appendChild(card);
@@ -567,15 +729,16 @@ window.LessonShim = (() => {
       .filter(Boolean)
       .forEach(s => {
         // Use the sentence reading so kanji like ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Â¹Ãƒâ€¦Ã¢â‚¬Å“ become ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦
-        const reading = sentenceReadingHira(s);
+        const reading = cleanKana(sentenceReadingHira(s));
         const moras = splitMora(reading);
 
         const card = document.createElement("div");
         card.className = map?.classes?.item || "lesson-item";
+        card.setAttribute("data-sid", s.sid || "");
         card.innerHTML = `
         <div class="${map?.classes?.prompt || "prompt"}">${s.en || ""}</div>
-        <div class="mora-row"></div>
         ${map?.flags?.showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${s.romaji_full || ""}</div>` : ""}
+        <div class="mora-row"></div>
         <div class="${map?.classes?.hint || "hint"} text-sm text-amber-700 mt-1"></div>
       `;
         const row = card.querySelector(".mora-row");
@@ -587,6 +750,30 @@ window.LessonShim = (() => {
           inp.disabled = idx !== 0;
           row.appendChild(inp);
         });
+        const picker = document.createElement("div");
+        picker.className = "kana-picker mora-picker";
+        const useKatakana = /[\p{sc=Katakana}ー]/u.test(s.jp || "");
+        const toDisplay = (m) => {
+          try { return (useKatakana && window.wanakana) ? wanakana.toKatakana(m) : m; } catch { return m; }
+        };
+        const displayMoras = moras.map(m => toDisplay(m));
+        const EXTRA_POOL = ['あ','い','う','え','お','か','き','く','け','こ','さ','し','す','せ','そ','た','ち','つ','て','と','な','に','ぬ','ね','の','は','ひ','ふ','へ','ほ','ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を','ん'];
+        const extras = EXTRA_POOL.filter(x => !moras.includes(x)).slice(0, 4).map(m => toDisplay(m));
+        const shuffle = (arr) => arr.map(v => [Math.random(), v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+        const options = shuffle([...displayMoras, ...extras]);
+        picker.innerHTML = `
+          ${options.map(m => {
+            const hira = (window.wanakana ? wanakana.toHiragana(m) : m);
+            const romaji = (window.wanakana ? wanakana.toRomaji(hira) : "");
+            return `<button type="button" class="kana-btn" data-kana="${m}" data-extra="${displayMoras.includes(m) ? '0' : '1'}" title="${romaji}">${m}</button>`;
+          }).join('')}
+          <button type="button" class="kana-btn kana-action" data-action="back">⌫</button>
+          <button type="button" class="kana-btn kana-action" data-action="clear">Clear</button>
+          <button type="button" class="kana-btn kana-action" data-action="hint">Hint</button>
+          <button type="button" class="kana-btn kana-action" data-action="toggle-extras">Hide extras</button>
+          <button type="button" class="kana-btn kana-action" data-action="listen-sentence">Listen</button>
+        `;
+        card.appendChild(picker);
         listEl.appendChild(card);
 
         const inputs = [...row.querySelectorAll("input.mora")];
@@ -597,8 +784,8 @@ window.LessonShim = (() => {
 
           inp.addEventListener("input", () => {
             const exp = inp.dataset.expected || "";
-            const kana = toHira(inp.value);
-            if (kana === exp) {
+        const kana = cleanKana(inp.value);
+        if (kana === exp) {
               inp.value = exp;
               inp.disabled = true;
               inp.classList.add(map?.classes?.ok || "ok");
@@ -627,6 +814,62 @@ window.LessonShim = (() => {
               }
             }
           });
+        });
+
+        picker.addEventListener("click", (e) => {
+          const btn = e.target.closest("button");
+          if (!btn) return;
+          const action = btn.dataset.action;
+          if (action === "listen-sentence") {
+            try { Speech.speak(s.jp || "", map?.speech || {}); } catch (e) {}
+            return;
+          }
+          if (action === "hint") {
+            const active = inputs.find(i => !i.disabled) || inputs[inputs.length - 1];
+            if (!active) return;
+            const exp = active.dataset.expected || "";
+            let expectedDisplay = exp;
+            try {
+              expectedDisplay = useKatakana && window.wanakana ? wanakana.toKatakana(exp) : exp;
+            } catch {}
+            const btns = Array.from(picker.querySelectorAll('button[data-kana]'));
+            const hit = btns.find(b => (b.dataset.kana || b.textContent || "") === expectedDisplay);
+            if (hit) {
+              hit.classList.add('is-hint');
+              setTimeout(() => hit.classList.remove('is-hint'), 700);
+            }
+            return;
+          }
+          if (action === "toggle-extras") {
+            const hide = picker.classList.toggle("hide-extras");
+            btn.textContent = hide ? "Show extras" : "Hide extras";
+            return;
+          }
+          if (action === "clear") {
+            inputs.forEach((inp, i) => {
+              inp.value = "";
+              inp.classList.remove(map?.classes?.ok || "ok", map?.classes?.bad || "bad");
+              inp.disabled = i !== 0;
+            });
+            inputs[0]?.focus();
+            return;
+          }
+          if (action === "back") {
+            const idx = Math.max(0, inputs.findIndex(i => !i.disabled) - 1);
+            const target = inputs[idx] || inputs[0];
+            if (target) {
+              target.disabled = false;
+              target.value = "";
+              target.classList.remove(map?.classes?.ok || "ok");
+              target.focus();
+            }
+            return;
+          }
+          const active = inputs.find(i => !i.disabled) || inputs[inputs.length - 1];
+          if (!active) return;
+          active.value = btn.dataset.kana || btn.textContent || "";
+          try { Speech.speak(btn.dataset.kana || btn.textContent || "", map?.speech || {}); } catch (e) {}
+          active.dispatchEvent(new Event("input", { bubbles: true }));
         });
       });
 
@@ -688,6 +931,7 @@ window.LessonShim = (() => {
     setStatus(map, 'Roleplay: listen and speak the line.');
     feedback(map, '', true);
   }
+
 
   // ---------- phrase drill (type + alternates) ----------
   function renderPhraseDrill(lesson, step, map) {
@@ -892,7 +1136,7 @@ window.LessonShim = (() => {
         const line = document.createElement('div');
         line.className = "p-3 rounded border border-gray-200";
         line.innerHTML = `
-        <div class="text-xs text-gray-500">${(v.tags || []).join(' ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ') || 'general'}</div>
+        <div class="text-xs text-gray-500">${(v.tags || []).join(' • ') || 'general'}</div>
         <div class="font-medium">${v.jp}</div>
         <div class="text-gray-500">${v.romaji || ''}</div>
         <div class="text-gray-600">${v.en || ''}</div>
@@ -974,6 +1218,273 @@ window.LessonShim = (() => {
     renderList(pick(items, Math.min(pageSize, items.length)));
     setStatus(map, 'Browse variations; try the quiz.');
     feedback(map, '', true);
+  }
+
+  function renderConversationDraft(lesson, step, map) {
+    const root = q(map?.containers?.list);
+    if (!root) return;
+    root.innerHTML = "";
+
+    const scenes = Array.isArray(step?.scenes) ? step.scenes : [];
+    if (!scenes.length) {
+      setStatus(map, "Conversation data missing.");
+      feedback(map, "This conversation step has no scenes.", false);
+      return;
+    }
+
+    const showRomaji = !!map?.flags?.showRomaji;
+    if (!step.__convState) step.__convState = { sceneIndex: 0, turnIndex: 0, picked: {}, chosen: null };
+    const state = step.__convState;
+    state.sceneIndex = Math.max(0, Math.min(state.sceneIndex || 0, scenes.length - 1));
+    if (!state.picked || typeof state.picked !== "object") state.picked = {};
+
+    const box = document.createElement("div");
+    box.className = map?.classes?.item || "lesson-item";
+    box.innerHTML = `
+      <div class="mb-2 text-sm text-gray-600">Short conversation. Choose the most natural reply.</div>
+      <div class="flex items-center gap-2 mb-3">
+        <button class="btn btn-ghost" data-act="prev-scene">Prev scene</button>
+        <button class="btn btn-dark" data-act="next-scene">Next scene</button>
+        <button class="btn btn-ghost" data-act="replay">Replay</button>
+        <button class="btn btn-amber" data-act="listen">Listen</button>
+      </div>
+      <div data-el="context" class="mb-3 p-2 border-2 border-dashed border-amber-400 rounded text-sm"></div>
+      <div data-el="conversation" class="space-y-2 mb-3"></div>
+      <div class="${map?.classes?.prompt || "prompt"}">Choose your response</div>
+      <div data-el="choices" class="grid gap-2 mt-2"></div>
+      <div data-el="feedback" class="${map?.classes?.hint || "hint"} mt-2"></div>
+      <div data-el="why" class="text-sm text-gray-600 mt-1"></div>
+      <div class="flex items-center gap-2 mt-3">
+        <button class="btn btn-ghost" data-act="retry">Try again</button>
+        <button class="btn btn-dark" data-act="continue">Continue</button>
+      </div>
+    `;
+    root.appendChild(box);
+
+    const elContext = box.querySelector('[data-el="context"]');
+    const elConversation = box.querySelector('[data-el="conversation"]');
+    const elChoices = box.querySelector('[data-el="choices"]');
+    const elLocalFeedback = box.querySelector('[data-el="feedback"]');
+    const elWhy = box.querySelector('[data-el="why"]');
+    const btnContinue = box.querySelector('[data-act="continue"]');
+
+    const getScene = () => scenes[state.sceneIndex] || {};
+    const getTurns = (scene) => Array.isArray(scene?.turns) ? scene.turns : [];
+    const sceneKey = () => String(state.sceneIndex);
+    const getPicked = () => {
+      const key = sceneKey();
+      if (!Array.isArray(state.picked[key])) state.picked[key] = [];
+      return state.picked[key];
+    };
+
+    const castFor = () => {
+      const scene = getScene();
+      const base = step?.speakers || {};
+      const scoped = scene?.speakers || {};
+      return {
+        npc: Object.assign({ name: "NPC", gender: "female" }, base.npc || {}, scoped.npc || {}),
+        user: Object.assign({ name: "User", gender: "female" }, base.user || {}, scoped.user || {})
+      };
+    };
+    const genderForRole = (role) => {
+      const cast = castFor();
+      return role === "user" ? (cast.user.gender || "") : (cast.npc.gender || "");
+    };
+
+    const say = (text, role) => {
+      if (!text) return;
+      const opts = Object.assign({}, map?.speech || {}, { role, gender: genderForRole(role) });
+      try { Speech.speak(text, opts); } catch {}
+    };
+    const saySequence = async (lines) => {
+      const seq = (lines || []).filter(x => x && x.text);
+      if (!seq.length) return;
+      if (typeof Speech.speakAsync === "function") {
+        for (const line of seq) {
+          const opts = Object.assign({}, map?.speech || {}, { role: line.role || "npc", gender: genderForRole(line.role || "npc") });
+          await Speech.speakAsync(line.text, opts);
+        }
+      } else {
+        for (const line of seq) say(line.text, line.role || "npc");
+      }
+    };
+
+    const bubble = (data, role) => {
+      const b = document.createElement("div");
+      b.className = `p-3 rounded border-2 border-slate-300 ${role === "user" ? "bg-rose-50 ml-8" : "bg-white mr-8"}`;
+      b.dataset.jp = data?.jp || "";
+      b.dataset.role = role;
+      b.innerHTML = `
+        <div class="${map?.classes?.jp || "jp"}">${data?.jp || ""}</div>
+        ${showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${data?.romaji || ""}</div>` : ""}
+        <div class="${map?.classes?.en || "en"} text-gray-600">${data?.en || ""}</div>
+      `;
+      b.addEventListener("click", () => say(data?.jp || "", role));
+      return b;
+    };
+
+    const buildHistory = (turnLimit) => {
+      const scene = getScene();
+      const turns = getTurns(scene);
+      const picked = getPicked();
+      const out = [];
+      for (let i = 0; i < turnLimit; i++) {
+        const selectedIdx = picked[i];
+        if (selectedIdx == null) break;
+        const t = turns[i];
+        const c = (t?.choices || [])[selectedIdx];
+        if (!t || !c) break;
+        out.push({ role: "npc", data: t.npc });
+        out.push({ role: "user", data: c });
+        if (t.follow) out.push({ role: "npc", data: t.follow });
+      }
+      return out;
+    };
+
+    const sceneComplete = () => {
+      const turns = getTurns(getScene());
+      const picked = getPicked();
+      return turns.length > 0 && turns.every((t, idx) => {
+        const sIdx = picked[idx];
+        if (sIdx == null) return false;
+        const choice = (t?.choices || [])[sIdx];
+        return !!choice?.correct;
+      });
+    };
+
+    const renderCurrent = () => {
+      const scene = getScene();
+      const turns = getTurns(scene);
+      if (!turns.length) {
+        elContext.textContent = "Scene has no turns.";
+        elConversation.innerHTML = "";
+        elChoices.innerHTML = "";
+        btnContinue.style.display = "none";
+        return;
+      }
+
+      state.turnIndex = Math.max(0, Math.min(state.turnIndex || 0, turns.length - 1));
+      const turn = turns[state.turnIndex];
+      const picked = getPicked();
+
+      elContext.textContent = scene?.context || "Conversation scene";
+      elConversation.innerHTML = "";
+      buildHistory(state.turnIndex).forEach(entry => {
+        elConversation.appendChild(bubble(entry.data, entry.role));
+      });
+      elConversation.appendChild(bubble(turn.npc || {}, "npc"));
+
+      elChoices.innerHTML = "";
+      const selected = state.chosen;
+      (turn?.choices || []).forEach((choice, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-ghost text-left";
+        btn.innerHTML = `
+          <div class="${map?.classes?.jp || "jp"}">${choice?.jp || ""}</div>
+          ${showRomaji ? `<div class="${map?.classes?.romaji || "romaji"}">${choice?.romaji || ""}</div>` : ""}
+          <div class="${map?.classes?.en || "en"} text-gray-600">${choice?.en || ""}</div>
+        `;
+        btn.addEventListener("click", () => {
+          if (state.chosen != null) return;
+          state.chosen = idx;
+          const ok = !!choice?.correct;
+          elConversation.appendChild(bubble(choice || {}, "user"));
+          elLocalFeedback.textContent = ok ? "Good response." : "Not quite. Try a different reply.";
+          elLocalFeedback.classList.toggle(map?.classes?.ok || "ok", ok);
+          elLocalFeedback.classList.toggle(map?.classes?.bad || "bad", !ok);
+          elWhy.textContent = choice?.why || "";
+          if (ok) {
+            picked[state.turnIndex] = idx;
+            if (turn?.follow) elConversation.appendChild(bubble(turn.follow, "npc"));
+            btnContinue.style.display = "";
+            btnContinue.textContent = (state.turnIndex < turns.length - 1) ? "Continue" : "Next scene";
+            mascotPulse && mascotPulse("mascot-celebrate", 900);
+          } else {
+            btnContinue.style.display = "none";
+            mascotPulse && mascotPulse("mascot-confused", 800);
+          }
+          Array.from(elChoices.querySelectorAll("button")).forEach(x => x.disabled = true);
+        });
+        btn.addEventListener("dblclick", () => say(choice?.jp || "", "user"));
+        elChoices.appendChild(btn);
+      });
+
+      elLocalFeedback.textContent = "";
+      elWhy.textContent = "";
+      btnContinue.style.display = "none";
+      if (selected != null) {
+        const choice = (turn?.choices || [])[selected];
+        if (choice?.correct) {
+          btnContinue.style.display = "";
+          btnContinue.textContent = (state.turnIndex < turns.length - 1) ? "Continue" : "Next scene";
+        }
+      }
+
+      const sceneNum = state.sceneIndex + 1;
+      setStatus(map, `Conversation scene ${sceneNum}/${scenes.length}. Pick the best reply.`);
+      feedback(map, sceneComplete() ? "Scene complete." : "", sceneComplete());
+    };
+
+    box.querySelector('[data-act="prev-scene"]').addEventListener("click", () => {
+      state.sceneIndex = Math.max(0, state.sceneIndex - 1);
+      state.turnIndex = 0;
+      state.chosen = null;
+      renderCurrent();
+    });
+    box.querySelector('[data-act="next-scene"]').addEventListener("click", () => {
+      state.sceneIndex = Math.min(scenes.length - 1, state.sceneIndex + 1);
+      state.turnIndex = 0;
+      state.chosen = null;
+      renderCurrent();
+    });
+    box.querySelector('[data-act="replay"]').addEventListener("click", () => {
+      state.chosen = null;
+      renderCurrent();
+    });
+    box.querySelector('[data-act="retry"]').addEventListener("click", () => {
+      state.chosen = null;
+      renderCurrent();
+    });
+    box.querySelector('[data-act="listen"]').addEventListener("click", async () => {
+      const lines = Array.from(elConversation.querySelectorAll('[data-jp]')).map(el => ({
+        text: el.dataset.jp || "",
+        role: el.dataset.role || "npc"
+      })).filter(x => x.text);
+      if (!lines.length) {
+        const scene = getScene();
+        const turns = getTurns(scene);
+        const t = turns[state.turnIndex];
+        if (t?.npc?.jp) lines.push({ text: t.npc.jp, role: "npc" });
+      }
+      await saySequence(lines);
+    });
+    box.querySelector('[data-act="continue"]').addEventListener("click", () => {
+      const scene = getScene();
+      const turns = getTurns(scene);
+      const picked = getPicked();
+      if (picked[state.turnIndex] == null) {
+        elLocalFeedback.textContent = "Choose the best response first.";
+        elLocalFeedback.classList.add(map?.classes?.bad || "bad");
+        return;
+      }
+      if (state.turnIndex < turns.length - 1) {
+        state.turnIndex += 1;
+        state.chosen = null;
+        renderCurrent();
+        return;
+      }
+      if (state.sceneIndex < scenes.length - 1) {
+        state.sceneIndex += 1;
+        state.turnIndex = 0;
+        state.chosen = null;
+        renderCurrent();
+        return;
+      }
+      setStatus(map, "Conversation complete. Press Next to continue the lesson.");
+      feedback(map, "Conversation complete.", true);
+    });
+
+    renderCurrent();
   }
 
 
@@ -1078,6 +1589,10 @@ window.LessonShim = (() => {
         }
     `;
       list.appendChild(line);
+      line.addEventListener('click', () => {
+        if (playing) return;
+        speakIndex(i);
+      });
     });
 
     // Highlight helper
@@ -1093,27 +1608,27 @@ window.LessonShim = (() => {
       if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
-    // Speech sequence
-    let i = 0, playing = false, currentUtt = null;
+    // Speech sequence (OpenAI TTS + fallback)
+    let i = 0, playing = false;
+    const speakerOrder = [];
+    segs.forEach(seg => {
+      if (!speakerOrder.includes(seg.speaker)) speakerOrder.push(seg.speaker);
+    });
+    const speakerRole = new Map();
+    speakerOrder.forEach((name, idx) => speakerRole.set(name, idx % 2 === 0 ? 'npc' : 'user'));
+    const roleFor = (seg, idx) => speakerRole.get(seg.speaker) || (idx % 2 === 0 ? 'npc' : 'user');
 
-    function speakIndex(k) {
-      if (!('speechSynthesis' in window)) { feedback(map, 'TTS not supported in this browser.', false); return; }
+    async function speakIndex(k) {
       if (k < 0 || k >= segs.length) return;
       i = k;
       const seg = segs[i];
-      const u = new SpeechSynthesisUtterance(seg.text);
-      const lang = seg.lang === 'ja' ? 'ja-JP' : 'en-US';
-      u.lang = lang;
-      const v = pickVoiceByLang(seg.lang);
-      if (v) u.voice = v;
-      u.rate = seg.lang === 'ja' ? (map?.speech?.rate ?? 1) : 1.0; // keep EN natural
-      u.onstart = () => { playing = true; currentUtt = u; mascotSet && mascotSet('mascot-talk'); highlight(i); };
-      u.onend = () => {
-        playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
-        if (auto.checked && i < segs.length - 1) speakIndex(i + 1);
-      };
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
+      highlight(i);
+      playing = true;
+      try {
+        await Speech.speakAsync(seg.text, { ...(map?.speech || {}), role: roleFor(seg, i), lang: seg.lang });
+      } catch {}
+      playing = false;
+      if (auto.checked && i < segs.length - 1) speakIndex(i + 1);
     }
 
     // Controls
@@ -1122,8 +1637,8 @@ window.LessonShim = (() => {
       speakIndex(i);
     });
     box.querySelector('[data-act="pause"]').addEventListener('click', () => {
-      if ('speechSynthesis' in window) speechSynthesis.cancel();
-      playing = false; currentUtt = null; mascotSet && mascotSet('mascot-idle');
+      if (Speech?.stop) Speech.stop();
+      playing = false;
     });
     box.querySelector('[data-act="prev"]').addEventListener('click', () => {
       if (i > 0) i--;
@@ -1219,14 +1734,44 @@ window.LessonShim = (() => {
     if (!listEl) return;
     listEl.innerHTML = "";
 
-    // Pool of possible tiles (for decoys)
-    const poolBlanks = Array.from(new Set((step.items || []).flatMap(x => x.blanks || [])));
-
-    (step.items || []).forEach((it) => {
+    const kanaOnly = !!(step.kana_only || lesson.kana_only);
+    const isKanji = (s) => /[\u4E00-\u9FFF]/.test(s || "");
+    const prepared = (step.items || []).map((it) => {
       const s = (lesson.sentences || []).find((x) => x.sid === it.ref);
-      if (!s) return;
-      let jp = s.jp || "";
-      (it.blanks || []).forEach((b) => {
+      if (!s) return null;
+      const rawJP = s.jp || "";
+      const readingSentence = kanaOnly ? sentenceReadingHira(s) : rawJP;
+      const convertBlank = (b) => {
+        if (!kanaOnly) return b;
+        if (!isKanji(b)) return toHira(b);
+        // Try to extract from sentence reading by matching prefix/suffix.
+        try {
+          const idx = rawJP.indexOf(b);
+          if (idx >= 0) {
+            const prefix = rawJP.slice(0, idx);
+            const suffix = rawJP.slice(idx + b.length);
+            const preRead = sentenceReadingHira({ jp: prefix });
+            const sufRead = sentenceReadingHira({ jp: suffix });
+            const start = preRead.length;
+            const end = readingSentence.length - sufRead.length;
+            const sub = readingSentence.slice(start, end);
+            if (sub && !isKanji(sub)) return sub;
+          }
+        } catch {}
+        // Fallback: known readings map, then strip anything non-kana
+        const rb = kanjiToReading(b);
+        const hira = toHira(rb || b);
+        return hira.replace(/[^\u3040-\u30FFー]/g, "");
+      };
+      const blanks = (it.blanks || []).map(convertBlank);
+      return { it, s, rawJP, jp: readingSentence, blanks };
+    }).filter(Boolean);
+
+    // Pool of possible tiles (for decoys)
+    const poolBlanks = Array.from(new Set(prepared.flatMap(x => x.blanks || [])));
+
+    prepared.forEach(({ it, s, jp, blanks }) => {
+      blanks.forEach((b) => {
         const hole = `<span class="drop inline-flex items-center min-w-[4rem] px-2 py-1 border-2 border-dashed rounded align-middle mr-1" data-answer="${b}">
   <input type="hidden" data-answer="${b}" />
   <span class="placeholder opacity-50">____</span>
@@ -1605,6 +2150,17 @@ window.LessonShim = (() => {
         data = fromVariant(step.pairs[0]);
       } else if (Array.isArray(step.variations) && step.variations.length) {
         data = fromVariant(step.variations[0]);
+      } else if (Array.isArray(step.scenes) && step.scenes.length) {
+        const firstScene = step.scenes[0] || {};
+        const firstTurn = Array.isArray(firstScene.turns) ? firstScene.turns[0] : null;
+        const seed = firstTurn && firstTurn.npc ? firstTurn.npc : null;
+        if (seed && seed.jp) {
+          data = {
+            phrase: seed.jp,
+            romaji: seed.romaji || toRomajiSafe(seed.jp),
+            english: seed.en || firstScene.context || ''
+          };
+        }
       } else if (step.seed) {
         data = {
           phrase: step.seed,
@@ -1650,8 +2206,9 @@ window.LessonShim = (() => {
         if (header) {
           const names = {
             read_listen: 'Read & Listen',
-            cloze: 'Cloze',
+            cloze: 'Fill the blanks',
             translate_to_jp: 'Translate to Japanese',
+            conversation_draft: 'Conversation',
             variations: 'Variations',
             variations_disabled: 'Variations',
             phrase_drill: 'Phrase Drill',
@@ -1666,6 +2223,7 @@ window.LessonShim = (() => {
           header.textContent = `Page ${i}/${steps.length} — ${title}`;
         }
       } catch {}
+      try { document.body.dataset.lessonStep = step.type || ""; } catch {}
       switch (step.type) {
         case "read_listen": renderReadListen(lesson, step, map); break;
         case "cloze": renderClozeTiles(lesson, step, map); break;
@@ -1673,21 +2231,53 @@ window.LessonShim = (() => {
           : renderTranslate(lesson, step, map); break;
         case "roleplay": renderRoleplay(lesson, step, map); break;
         case "dialogue": renderBilingualScene(lesson, step, map); break;
-        case "variations": renderVariations(lesson, step, map); break;
+        case "conversation_draft": renderConversationDraft(lesson, step, map); break;
+        case "variations":
+          renderVariations(lesson, step, map);
+          break;
+        case "variations_disabled":
+          renderVariations(lesson, step, map);
+          setStatus(map, "Variations preview. Full practice unlocked later.");
+          break;
         case "guided_convo": renderGuidedConvo(lesson, step, map); break;
         case "phrase_drill": renderPhraseDrill(lesson, step, map); break;
-        case "reflect":
+        case "reflect": {
           const listEl = q(map?.containers?.list);
           if (listEl) listEl.replaceChildren();
           setStatus(map, "Great work! Review will be scheduled.");
           feedback(map, "", true);
           break;
+        }
         default:
+          {
+            const listEl = q(map?.containers?.list);
+            if (listEl) listEl.replaceChildren();
+          }
           setStatus(map, "Unknown step.");
           feedback(map, "This step type is not supported.", false);
           break;
       }
       updateSliceContext();
+      try {
+        const bubble = typeof window.__mascotSay === 'function' ? window.__mascotSay : null;
+        if (bubble) {
+          const tips = {
+            read_listen: "Listen once, then read it slowly.",
+            cloze: "Drag the tiles into the blanks.",
+            translate_to_jp: "Say it in Japanese, one clear beat at a time.",
+            conversation_draft: "Pick the best reply and keep the exchange flowing.",
+            phrase_drill: "Say it once. Then match the same speed.",
+            guided_convo: "Follow the prompt, then answer calmly.",
+            reflect: "Nice work. Quick recap, then you're done."
+          };
+          const msg = tips[step.type] || "Take it one line at a time.";
+          bubble(msg);
+          try {
+            const b = document.getElementById('mascot-bubble');
+            if (b) b.dataset.tip = msg;
+          } catch {}
+        }
+      } catch {}
 
     };
 
@@ -1742,10 +2332,50 @@ window.LessonShim = (() => {
         feedback(map, "Answers revealed.", true);
       }
     };
+    const captureInputs = () => {
+      const out = [];
+      qa(`${map?.containers?.list} .${map?.classes?.item || "lesson-item"}`).forEach((card, idx) => {
+        const sid = card.getAttribute("data-sid") || "";
+        const inputs = Array.from(card.querySelectorAll("input"));
+        if (!inputs.length) return;
+        out.push({
+          sid,
+          idx,
+          values: inputs.map(i => i.value || ""),
+          count: inputs.length
+        });
+      });
+      return out;
+    };
+    const restoreInputs = (snap = []) => {
+      snap.forEach(entry => {
+        const cards = qa(`${map?.containers?.list} .${map?.classes?.item || "lesson-item"}`);
+        const card = entry.sid
+          ? cards.find(c => (c.getAttribute("data-sid") || "") === entry.sid)
+          : cards[entry.idx];
+        if (!card) return;
+        const inputs = Array.from(card.querySelectorAll("input"));
+        if (!inputs.length) return;
+        if (inputs.length > 1) {
+          // mora boxes: replay sequentially to re-disable/enable
+          inputs.forEach((inp, i) => {
+            const v = entry.values[i] || "";
+            if (!v) return;
+            inp.disabled = false;
+            inp.value = v;
+            inp.dispatchEvent(new Event("input", { bubbles: true }));
+          });
+        } else {
+          inputs[0].value = entry.values[0] || "";
+        }
+      });
+    };
     const onToggleRomaji = () => {
+      const snap = captureInputs();
       map.flags = map.flags || {};
       map.flags.showRomaji = !map.flags.showRomaji;
       render();
+      restoreInputs(snap);
     };
     const onSpeak = () => {
       const step = steps[state.stepIndex] || {};
