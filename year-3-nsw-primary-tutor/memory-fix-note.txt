@@ -1,0 +1,1 @@
+Memory button bug identified: inline nested onclick markup breaks the handler. Replace memoryGame with a version that stores the sequence in a global currentMemory variable and calls showMemoryInput(), then checkMemory().
