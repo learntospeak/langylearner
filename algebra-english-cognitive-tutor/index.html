@@ -1,157 +1,86 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Algebra + English Cognitive Tutor</title>
-  <style>
-    :root{
-      --bg:#0f172a;--panel:#111827;--card:#1f2937;--soft:#334155;--text:#f8fafc;--muted:#cbd5e1;--accent:#38bdf8;--good:#22c55e;--bad:#ef4444;--warn:#f59e0b;
-    }
-    *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,#020617,#0f172a 45%,#172554);color:var(--text);min-height:100vh}.app{max-width:1100px;margin:0 auto;padding:16px}.hero{padding:22px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.82);border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.35);position:sticky;top:0;z-index:2;backdrop-filter:blur(12px)}h1{font-size:clamp(1.8rem,6vw,3.6rem);line-height:.95;margin:0 0 8px}.sub{color:var(--muted);margin:0;font-size:1rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}.card{background:rgba(31,41,55,.88);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:16px;box-shadow:0 10px 25px rgba(0,0,0,.25)}button,input,textarea,select{font:inherit}button{border:0;border-radius:14px;padding:12px 14px;background:var(--accent);color:#062033;font-weight:800;cursor:pointer}button.secondary{background:#475569;color:#fff}button.ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff}button.good{background:var(--good);color:#052e16}button.bad{background:var(--bad);color:#fff}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.stat{font-size:1.6rem;font-weight:900}.label{color:var(--muted);font-size:.9rem}.lesson-title{font-size:1.35rem;font-weight:900;margin-bottom:6px}.pill{display:inline-flex;gap:6px;align-items:center;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:.85rem;margin:4px 4px 0 0}.question{font-size:1.4rem;font-weight:900;margin:12px 0;background:#020617;border-radius:16px;padding:14px}.explain{line-height:1.65;color:#e2e8f0}.answerBox{width:100%;padding:14px;border-radius:14px;border:1px solid #64748b;background:#020617;color:#fff;margin:8px 0}.feedback{padding:12px;border-radius:14px;margin-top:10px;line-height:1.55}.feedback.good{background:rgba(34,197,94,.16);border:1px solid rgba(34,197,94,.4)}.feedback.bad{background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.35)}.hidden{display:none}.progress{height:14px;border-radius:999px;background:#020617;overflow:hidden;border:1px solid rgba(255,255,255,.14)}.bar{height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#22c55e)}.small{font-size:.92rem;color:var(--muted)}.module-list{display:grid;gap:10px}.module{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#020617;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px}.module strong{display:block}.badge{background:#0ea5e9;color:#001827;border-radius:999px;padding:4px 8px;font-weight:900;font-size:.8rem}textarea{min-height:110px;resize:vertical}.footer{color:#94a3b8;text-align:center;padding:30px 0}.flash{animation:flash .35s}@keyframes flash{50%{transform:scale(1.02)}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Algebra + English Cognitive Tutor</title>
+<style>
+:root{--bg:#020617;--panel:#0f172a;--card:#111827;--text:#f8fafc;--muted:#cbd5e1;--accent:#38bdf8;--good:#22c55e;--bad:#ef4444;--warn:#f59e0b;--purple:#a78bfa}*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top,#1e3a8a,#020617 45%);color:var(--text);min-height:100vh}.app{max-width:1150px;margin:auto;padding:14px}.hero,.card{background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.13);border-radius:24px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.32)}.hero{position:sticky;top:0;z-index:5;backdrop-filter:blur(12px)}h1{font-size:clamp(1.8rem,6vw,3.6rem);line-height:.95;margin:0 0 8px}.sub,.small{color:var(--muted)}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}button,input,textarea,select{font:inherit}button{border:0;border-radius:14px;padding:12px 14px;background:var(--accent);color:#031926;font-weight:900;cursor:pointer}button.secondary{background:#475569;color:white}button.ghost{background:transparent;color:white;border:1px solid rgba(255,255,255,.22)}button.danger{background:var(--bad);color:white}.stat{font-size:1.7rem;font-weight:950}.lesson-title{font-size:1.35rem;font-weight:950;margin-bottom:6px}.module-list{display:grid;gap:10px}.module{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#020617;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px}.pill{display:inline-flex;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 9px;margin:3px;color:var(--muted);font-size:.84rem}.question{font-size:1.35rem;font-weight:950;background:#020617;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:14px;margin:12px 0}.answerBox{width:100%;padding:14px;border-radius:14px;border:1px solid #64748b;background:#020617;color:white;margin:8px 0}.feedback{padding:12px;border-radius:14px;margin-top:10px;line-height:1.55}.feedback.good{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.45)}.feedback.bad{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4)}.progress{height:14px;border-radius:999px;background:#020617;overflow:hidden;border:1px solid rgba(255,255,255,.12)}.bar{height:100%;background:linear-gradient(90deg,#38bdf8,#22c55e,#a78bfa);width:0}.hidden{display:none}textarea{min-height:110px}.footer{text-align:center;color:#94a3b8;padding:28px 0}.toggle{background:#020617;border:1px solid rgba(255,255,255,.18);padding:8px 10px;border-radius:999px}.hot{color:#fbbf24;font-weight:950}
+</style>
 </head>
 <body>
-  <main class="app">
-    <section class="hero">
-      <h1>Algebra + English Cognitive Tutor</h1>
-      <p class="sub">A mobile-friendly learning app that combines algebra, vocabulary, written explanation, memory, reasoning, and attention training.</p>
-      <div class="row" style="margin-top:12px">
-        <button onclick="startDailySession()">Start daily session</button>
-        <button class="secondary" onclick="showSection('modules')">Choose topic</button>
-        <button class="ghost" onclick="showSection('dashboard')">Dashboard</button>
-        <button class="ghost" onclick="resetProgress()">Reset</button>
-      </div>
-    </section>
-
-    <section id="dashboard" class="grid">
-      <div class="card"><div class="label">XP</div><div id="xp" class="stat">0</div></div>
-      <div class="card"><div class="label">Streak</div><div id="streak" class="stat">0 days</div></div>
-      <div class="card"><div class="label">Correct answers</div><div id="correct" class="stat">0</div></div>
-      <div class="card"><div class="label">English writing score</div><div id="writingScore" class="stat">0</div></div>
-    </section>
-
-    <section id="modules" class="card">
-      <div class="lesson-title">Learning path: Year 8 to advanced</div>
-      <p class="small">Each topic trains algebra plus English clarity: vocabulary, sentence structure, explanation, and comprehension.</p>
-      <div id="moduleList" class="module-list"></div>
-    </section>
-
-    <section id="lesson" class="card hidden">
-      <div class="row" style="justify-content:space-between">
-        <div>
-          <div id="lessonTitle" class="lesson-title"></div>
-          <div id="lessonMeta"></div>
-        </div>
-        <button class="secondary" onclick="showSection('modules')">Back</button>
-      </div>
-      <div class="progress" style="margin:12px 0"><div id="lessonBar" class="bar"></div></div>
-      <p id="lessonExplanation" class="explain"></p>
-      <div id="vocab" class="card" style="background:#020617"></div>
-      <div id="question" class="question"></div>
-      <input id="answer" class="answerBox" placeholder="Type your algebra answer here" onkeydown="if(event.key==='Enter') checkAnswer()" />
-      <div class="row">
-        <button onclick="checkAnswer()">Check answer</button>
-        <button class="ghost" onclick="showHint()">Hint</button>
-        <button class="ghost" onclick="nextQuestion()">Skip / Next</button>
-      </div>
-      <div id="feedback"></div>
-      <div id="writingArea" class="hidden">
-        <h3>English competence task</h3>
-        <p id="writingPrompt" class="small"></p>
-        <textarea id="writing" class="answerBox" placeholder="Write your explanation here..."></textarea>
-        <button onclick="checkWriting()">Check my writing</button>
-        <div id="writingFeedback"></div>
-      </div>
-    </section>
-
-    <section id="cognitive" class="card">
-      <div class="lesson-title">Cognitive mini-training</div>
-      <p class="small">Use this before or after algebra. It trains working memory, mental flexibility, pattern recognition, and attention.</p>
-      <div class="row">
-        <button onclick="startMemoryGame()">Memory sequence</button>
-        <button onclick="startPatternGame()">Pattern reasoning</button>
-        <button onclick="startVocabularyGame()">Vocabulary recall</button>
-      </div>
-      <div id="cogGame" style="margin-top:12px"></div>
-    </section>
-
-    <div class="footer">Built for self-paced practice. Your progress is saved on this device.</div>
-  </main>
-
+<main class="app">
+<section class="hero">
+<h1>Algebra + English Cognitive Tutor</h1>
+<p class="sub">Fast-ramping algebra, cognitive training, vocabulary, explanation writing, and proof-style English.</p>
+<div class="row">
+<button onclick="startDailySession()">Start smart session</button>
+<button class="secondary" onclick="showAll()">Choose topic</button>
+<button class="ghost" onclick="toggleCreep()">Difficulty creep: <span id="creepLabel">Normal</span></button>
+<button class="ghost" onclick="toggleExam()">Exam mode: <span id="examLabel">Off</span></button>
+<button class="danger" onclick="resetProgress()">Reset</button>
+</div>
+</section>
+<section class="grid">
+<div class="card"><div class="small">XP</div><div id="xp" class="stat">0</div></div>
+<div class="card"><div class="small">Correct</div><div id="correct" class="stat">0</div></div>
+<div class="card"><div class="small">Cognitive load</div><div id="load" class="stat">1</div></div>
+<div class="card"><div class="small">Writing score</div><div id="writingScore" class="stat">0</div></div>
+</section>
+<section id="modules" class="card"><div class="lesson-title">Learning path</div><p class="small">Accelerated mode skips the slow grind and pushes you into harder algebra quickly.</p><div id="moduleList" class="module-list"></div></section>
+<section id="lesson" class="card hidden">
+<div class="row" style="justify-content:space-between"><div><div id="lessonTitle" class="lesson-title"></div><div id="lessonMeta"></div></div><button class="secondary" onclick="showAll()">Back</button></div>
+<div class="progress"><div id="lessonBar" class="bar"></div></div>
+<p id="lessonExplanation" class="small" style="line-height:1.6"></p>
+<div id="vocab" class="card" style="background:#020617"></div>
+<div id="question" class="question"></div>
+<input id="answer" class="answerBox" placeholder="Type answer. Examples: 7, 3x+12, (x+2)(x+3), x=4" onkeydown="if(event.key==='Enter')checkAnswer()" />
+<div class="row"><button onclick="checkAnswer()">Check</button><button class="ghost" onclick="showHint()">Hint</button><button class="ghost" onclick="nextQuestion()">Next</button></div>
+<div id="feedback"></div>
+<div id="writingArea" class="hidden"><h3>English + reasoning task</h3><p id="writingPrompt" class="small"></p><textarea id="writing" class="answerBox" placeholder="Explain your reasoning clearly..."></textarea><button onclick="checkWriting()">Score writing</button><div id="writingFeedback"></div></div>
+</section>
+<section class="card"><div class="lesson-title">Cognitive boosters</div><p class="small">These now scale with your cognitive load.</p><div class="row"><button onclick="startMemoryGame()">Working memory</button><button onclick="startPatternGame()">Pattern logic</button><button onclick="startVocabularyGame()">Vocabulary recall</button><button onclick="startMentalAlgebra()">Mental algebra</button></div><div id="cogGame"></div></section>
+<div class="footer">Progress saves on this device.</div>
+</main>
 <script>
 const modules=[
- {id:'y8-variables',level:'Year 8',title:'Variables and unknowns',skill:'Meaning, substitution, simple algebra language',vocab:['variable: a letter that represents a number','unknown: a value you need to find','substitute: replace a letter with a number'],explain:'Algebra uses letters to represent numbers. This helps you describe patterns, solve problems, and explain thinking clearly.',qs:[
-  ['If x = 5, what is x + 7?','12','Replace x with 5, then add 7.','Explain what a variable is in one clear sentence.'],
-  ['If a = 3, what is 4a?','12','4a means 4 times a.','Use the word substitute in a sentence.'],
-  ['If n = 10, what is n - 6?','4','Replace n with 10, then subtract 6.','Explain the difference between a number and a variable.'],
-  ['If y = 8, what is 2y + 1?','17','2 times 8 is 16, plus 1 is 17.','Write a sentence beginning with: The unknown value is...']]
- },
- {id:'y8-equations',level:'Year 8',title:'One-step equations',skill:'Inverse operations and clear explanation',vocab:['equation: a statement that two expressions are equal','inverse: opposite operation','solve: find the value that makes the equation true'],explain:'To solve an equation, undo what has happened to the unknown. Addition is undone by subtraction. Multiplication is undone by division.',qs:[
-  ['Solve: x + 9 = 15','6','Subtract 9 from both sides.','Explain why subtracting 9 helps solve the equation.'],
-  ['Solve: x - 4 = 11','15','Add 4 to both sides.','Use inverse operation in a sentence.'],
-  ['Solve: 5x = 30','6','Divide both sides by 5.','Explain the solution using the word because.'],
-  ['Solve: x / 3 = 7','21','Multiply both sides by 3.','Write a full sentence answer, not just a number.']]
- },
- {id:'y8-two-step',level:'Year 8/9',title:'Two-step equations',skill:'Sequencing instructions',vocab:['isolate: get something by itself','term: a part of an expression','coefficient: the number multiplying a variable'],explain:'Two-step equations need two inverse operations. Usually remove addition or subtraction first, then undo multiplication or division.',qs:[
-  ['Solve: 2x + 3 = 11','4','Subtract 3, then divide by 2.','Write the two steps in order using first and then.'],
-  ['Solve: 3x - 5 = 16','7','Add 5, then divide by 3.','Explain what isolate means in algebra.'],
-  ['Solve: x/4 + 2 = 8','24','Subtract 2, then multiply by 4.','Write a clear explanation with a capital letter and full stop.'],
-  ['Solve: 5x + 10 = 35','5','Subtract 10, then divide by 5.','Use coefficient in a sentence.']]
- },
- {id:'linear-graphs',level:'Intermediate',title:'Linear patterns and graphs',skill:'Interpreting slope, intercept, and relationships',vocab:['linear: forming a straight-line relationship','gradient: steepness of a line','intercept: where a line crosses an axis'],explain:'Linear equations describe steady change. In y = mx + b, m is the gradient and b is the y-intercept.',qs:[
-  ['In y = 2x + 3, what is the gradient?','2','The number before x is the gradient.','Explain what gradient means in everyday language.'],
-  ['In y = 4x - 1, what is the y-intercept?','-1','The constant term is the y-intercept.','Use intercept in a sentence.'],
-  ['If y = 3x + 2 and x = 5, what is y?','17','3 times 5 plus 2 is 17.','Explain how substitution works here.'],
-  ['Which is steeper: y = 2x + 1 or y = 5x + 1?','y=5x+1','The larger gradient is steeper.','Compare the two equations in one sentence.']]
- },
- {id:'expanding',level:'Intermediate',title:'Expanding brackets',skill:'Distribution and precise wording',vocab:['expand: remove brackets by multiplying','distribute: multiply across each part','expression: a maths phrase without necessarily having an equals sign'],explain:'Expanding brackets means multiplying the outside term by every term inside the bracket.',qs:[
-  ['Expand: 3(x + 4)','3x+12','Multiply 3 by x and by 4.','Explain expand in algebra.'],
-  ['Expand: 2(a + 7)','2a+14','Distribute 2 across the bracket.','Use distribute in a sentence.'],
-  ['Expand: 5(x - 2)','5x-10','5 times x, then 5 times -2.','Explain why the answer has -10.'],
-  ['Expand: -2(x + 6)','-2x-12','A negative times a positive is negative.','Write a sentence explaining the sign change.']]
- },
- {id:'factorising',level:'Intermediate',title:'Factorising',skill:'Reverse reasoning',vocab:['factorise: rewrite as multiplication','common factor: a factor shared by terms','reverse: go in the opposite direction'],explain:'Factorising is the reverse of expanding. You find the largest common factor and place it outside brackets.',qs:[
-  ['Factorise: 6x + 12','6(x+2)','6 is common to both terms.','Explain why 6 is a common factor.'],
-  ['Factorise: 4a + 8','4(a+2)','Take out 4.','Compare factorising and expanding.'],
-  ['Factorise: 10x - 15','5(2x-3)','The common factor is 5.','Use reverse in a mathematical sentence.'],
-  ['Factorise: 9y + 3','3(3y+1)','The common factor is 3.','Explain your answer step by step.']]
- },
- {id:'quadratics',level:'Advanced',title:'Quadratic factorising',skill:'Abstract reasoning and explanation',vocab:['quadratic: involving x squared','product: result of multiplication','sum: result of addition'],explain:'For x² + bx + c, find two numbers that multiply to c and add to b.',qs:[
-  ['Factorise: x² + 5x + 6','(x+2)(x+3)','2 and 3 multiply to 6 and add to 5.','Explain product and sum in this example.'],
-  ['Factorise: x² + 7x + 10','(x+5)(x+2)','5 and 2 multiply to 10 and add to 7.','Write a clear explanation using because.'],
-  ['Factorise: x² + 9x + 20','(x+4)(x+5)','4 and 5 multiply to 20 and add to 9.','Explain why this is quadratic.'],
-  ['Factorise: x² - 5x + 6','(x-2)(x-3)','-2 and -3 multiply to 6 and add to -5.','Explain how negative signs change the answer.']]
- },
- {id:'simultaneous',level:'Advanced',title:'Simultaneous equations',skill:'Multi-step reasoning and written logic',vocab:['simultaneous: happening at the same time','eliminate: remove one variable','system: a group of equations considered together'],explain:'Simultaneous equations are solved together. You use one equation to help find values that satisfy both equations.',qs:[
-  ['Solve: x + y = 10, x = 6. What is y?','4','Substitute x = 6 into x + y = 10.','Use simultaneous in a sentence.'],
-  ['Solve: a + b = 12, a = 5. What is b?','7','Substitute a = 5, then subtract.','Explain why both equations matter.'],
-  ['Solve: x + y = 9, y = 2. What is x?','7','Replace y with 2, then solve.','Write your reasoning in two sentences.'],
-  ['Solve: p + q = 20, q = 8. What is p?','12','Replace q with 8.','Use the word system in a maths sentence.']]
- }
+{id:'linear-fast',level:'Foundation+',title:'Linear equations sprint',skill:'rapid inverse operations',vocab:['isolate: get the variable alone','inverse: opposite operation','coefficient: number multiplying a variable'],explain:'This module moves quickly from one-step to multi-step linear equations. Focus on clean sequencing.',qs:[['Solve: 3x + 7 = 22','x=5','Subtract 7, then divide by 3.','Explain the two inverse operations in order.'],['Solve: 5(x-2)=30','x=8','Divide by 5, then add 2.','Use the words inverse and isolate.'],['Solve: 4x - 9 = 2x + 11','x=10','Move x terms together and constants together.','Explain why collecting like terms helps.'],['Solve: 7 - 2x = 19','x=-6','Subtract 7, then divide by -2.','Explain why the answer is negative.']]},
+{id:'fractions-indices',level:'Year 9/10',title:'Fractions, powers, and algebra control',skill:'symbol fluency',vocab:['exponent: power/index','reciprocal: flipped fraction','simplify: write in a cleaner equivalent form'],explain:'This builds algebra fluency with fractions and powers, which is needed before advanced equations.',qs:[['Simplify: x² × x³','x^5','Add powers when multiplying same bases.','Explain the exponent rule.'],['Simplify: 12x/3','4x','Divide the coefficient 12 by 3.','Use coefficient in a sentence.'],['Solve: x/5 + 3 = 9','x=30','Subtract 3, then multiply by 5.','Explain reciprocal or inverse multiplication.'],['Simplify: (2x)²','4x^2','Square both 2 and x.','Explain why the 2 also gets squared.']]},
+{id:'exp-factor-fast',level:'Intermediate',title:'Expand, factorise, rearrange',skill:'reverse reasoning',vocab:['expand: multiply out brackets','factorise: rewrite as multiplication','equivalent: same value, different form'],explain:'You now switch forms quickly. This improves flexibility and working memory.',qs:[['Expand: 4(x + 3) - 2x','2x+12','Expand first, then collect like terms.','Explain why the expression is equivalent.'],['Factorise: 8x + 20','4(2x+5)','The highest common factor is 4.','Explain how you chose the common factor.'],['Expand: (x+3)(x+4)','x^2+7x+12','Multiply every part: x², 4x, 3x, 12.','Explain using first, next, then, finally.'],['Factorise: x² + 8x + 15','(x+3)(x+5)','3 and 5 multiply to 15 and add to 8.','Explain product and sum.']]},
+{id:'quadratic-rapid',level:'Advanced school',title:'Quadratics rapid ramp',skill:'abstract pattern recognition',vocab:['quadratic: expression with x squared','vertex: turning point','discriminant: part that predicts roots'],explain:'Quadratics train pattern recognition, symbolic memory, and multi-step reasoning.',qs:[['Factorise: x² + 10x + 24','(x+4)(x+6)','4 and 6 multiply to 24 and add to 10.','Explain how product and sum guided you.'],['Solve: x² - 9 = 0','x=3 or x=-3','Difference of squares: (x-3)(x+3).','Explain why there are two solutions.'],['Find the vertex x-value of y=x²-6x+8','x=3','For ax²+bx+c, x=-b/(2a).','Explain what the vertex represents.'],['Discriminant of x²+4x+4=0','0','b²-4ac = 16-16.','Explain what a zero discriminant means.']]},
+{id:'simultaneous-plus',level:'Advanced school',title:'Simultaneous and inequalities',skill:'systems thinking',vocab:['system: equations considered together','eliminate: remove a variable','constraint: a rule or limit'],explain:'Systems make you hold multiple conditions in your head at once.',qs:[['Solve: x+y=11 and x-y=3. Give x.','x=7','Add equations to get 2x=14.','Explain elimination.'],['Solve: 2x+y=13 and y=3. Give x.','x=5','Substitute y=3, then solve.','Explain substitution clearly.'],['Solve inequality: 3x+2 > 11','x>3','Subtract 2, divide by 3.','Explain the meaning of the > symbol.'],['If x≥2, is x=1 allowed?','no','1 is below the minimum allowed value.','Use constraint in a sentence.']]},
+{id:'functions',level:'Pre-advanced',title:'Functions and transformations',skill:'input-output reasoning',vocab:['function: rule mapping input to output','domain: allowed inputs','range: possible outputs','transform: change position or shape'],explain:'Functions are central to advanced maths. You learn to read notation and explain relationships.',qs:[['If f(x)=2x+1, find f(6)','13','Replace x with 6.','Explain function notation.'],['If f(x)=x², find f(-3)','9','Square -3.','Explain why the result is positive.'],['For f(x)=x+4, solve f(x)=10','x=6','x+4=10.','Explain the input-output relationship.'],['What does f(x)+3 do to a graph?','shifts up 3','Adding outside the function shifts vertically.','Use transform in a sentence.']]},
+{id:'exponential-log',level:'Advanced',title:'Exponentials and logarithms',skill:'inverse abstract reasoning',vocab:['exponential: variable in the power','logarithm: inverse of exponentiation','growth rate: speed of increase'],explain:'Logs are the inverse of powers. This is a big jump in abstraction.',qs:[['Solve: 2^x = 8','x=3','2 cubed equals 8.','Explain exponentiation in words.'],['Solve: 10^x = 1000','x=3','10³ = 1000.','Explain why logs reverse powers.'],['log10(100)=?','2','10² = 100.','Write the logarithm as an exponent statement.'],['If a value doubles 3 times from 5, result?','40','5→10→20→40.','Explain exponential growth.']]},
+{id:'calculus-ready',level:'Early calculus',title:'Calculus readiness',skill:'rate of change language',vocab:['rate of change: how fast one quantity changes','derivative: instantaneous rate of change','limit: value approached'],explain:'This is not full calculus yet. It prepares the language and thinking needed for derivatives.',qs:[['For y=3x+2, what is the rate of change?','3','The gradient is 3.','Explain rate of change in plain English.'],['If distance increases by 20m in 4s, speed?','5','20 divided by 4 is 5 m/s.','Write a sentence interpreting the result.'],['Derivative idea: y=x² has slope about what at x=3?','6','For x², derivative is 2x.','Explain slope as local steepness.'],['What does a limit describe?','approached value','A limit is the value something gets close to.','Use limit in a mathematical sentence.']]},
+{id:'proof-writing',level:'Advanced English',title:'Proof-style English',skill:'precision, causality, justification',vocab:['therefore: for that reason','implies: logically leads to','contradiction: conflict with an assumption','sufficient: enough to prove'],explain:'Advanced maths requires advanced English: precise claims, reasons, and conclusions.',qs:[['Best connector: x=5, ____ 2x=10','therefore','Therefore shows a logical result.','Write a two-sentence proof-style explanation.'],['If all squares are rectangles, and A is a square, A is a?','rectangle','The category relationship implies it.','Use implies in a sentence.'],['Which is stronger: maybe or therefore?','therefore','Therefore signals a conclusion.','Explain why precise words matter.'],['Complete: If a=b and b=c, then a=?','c','Equality is transitive.','Explain transitive reasoning.']]}
 ];
-let state=JSON.parse(localStorage.getItem('aect-state')||'{"xp":0,"correct":0,"writingScore":0,"streak":0,"lastDay":"","moduleProgress":{}}');
+let state=JSON.parse(localStorage.getItem('aect-state')||'{"xp":0,"correct":0,"writingScore":0,"creep":"normal","exam":false,"moduleProgress":{}}');
 let current=null,qIndex=0;
-function save(){localStorage.setItem('aect-state',JSON.stringify(state));renderStats()}
-function normalise(s){return String(s).toLowerCase().replace(/\s/g,'').replace(/\*/g,'').replace(/−/g,'-')}
-function renderStats(){xp.textContent=state.xp;correct.textContent=state.correct;writingScore.textContent=state.writingScore;streak.textContent=state.streak+' days'}
-function renderModules(){moduleList.innerHTML=modules.map(m=>{const p=state.moduleProgress[m.id]||0;return `<div class="module"><div><strong>${m.title}</strong><span class="small">${m.level} • ${m.skill}</span><br><span class="pill">Progress: ${p}/${m.qs.length}</span></div><button onclick="openModule('${m.id}')">Open</button></div>`}).join('')}
-function showSection(id){['dashboard','modules','lesson','cognitive'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id&&x==='lesson')); if(id!=='lesson'){document.getElementById('modules').classList.remove('hidden');document.getElementById('cognitive').classList.remove('hidden');document.getElementById('dashboard').classList.remove('hidden')} }
-function openModule(id){current=modules.find(m=>m.id===id);qIndex=state.moduleProgress[id]||0;if(qIndex>=current.qs.length)qIndex=0;document.getElementById('lesson').classList.remove('hidden');document.getElementById('lesson').scrollIntoView({behavior:'smooth'});renderQuestion()}
-function renderQuestion(){const q=current.qs[qIndex];lessonTitle.textContent=current.title;lessonMeta.innerHTML=`<span class="pill">${current.level}</span><span class="pill">Question ${qIndex+1}/${current.qs.length}</span>`;lessonExplanation.textContent=current.explain;vocab.innerHTML='<strong>Vocabulary:</strong><br>'+current.vocab.map(v=>`<span class="pill">${v}</span>`).join('');question.textContent=q[0];answer.value='';feedback.innerHTML='';writingArea.classList.add('hidden');writing.value='';writingFeedback.innerHTML='';lessonBar.style.width=((qIndex)/current.qs.length*100)+'%'}
-function checkAnswer(){const q=current.qs[qIndex];const ok=normalise(answer.value)===normalise(q[1]);feedback.className='feedback '+(ok?'good':'bad');if(ok){feedback.innerHTML=`Correct. ${q[2]}`;state.xp+=10;state.correct+=1;state.moduleProgress[current.id]=Math.max((state.moduleProgress[current.id]||0),qIndex+1);writingPrompt.textContent=q[3];writingArea.classList.remove('hidden')}else{feedback.innerHTML=`Not quite. Correct answer: <strong>${q[1]}</strong><br>${q[2]}`;state.xp+=2}save();renderModules()}
-function showHint(){const q=current.qs[qIndex];feedback.className='feedback';feedback.innerHTML='Hint: '+q[2]}
+function save(){localStorage.setItem('aect-state',JSON.stringify(state));renderStats();renderModules()}
+function normalise(s){return String(s).toLowerCase().replace(/\s/g,'').replace(/\*/g,'').replace(/−/g,'-').replace(/²/g,'^2').replace(/³/g,'^3')}
+function loadLevel(){return Math.max(1,Math.floor(state.correct/(state.creep==='accelerated'?2:6))+1)}
+function renderStats(){xp.textContent=state.xp||0;correct.textContent=state.correct||0;writingScore.textContent=state.writingScore||0;load.textContent=loadLevel();creepLabel.textContent=state.creep==='accelerated'?'Accelerated':'Normal';examLabel.textContent=state.exam?'On':'Off'}
+function renderModules(){moduleList.innerHTML=modules.map((m,i)=>{const p=state.moduleProgress[m.id]||0;const unlocked=state.creep==='accelerated'||i<=Math.floor(state.correct/4)+1;return `<div class="module"><div><strong>${unlocked?'':'🔒 '}${m.title}</strong><div class="small">${m.level} • ${m.skill}</div><span class="pill">${p}/${m.qs.length}</span>${state.creep==='accelerated'?'<span class="pill hot">fast ramp</span>':''}</div><button ${unlocked?'':'disabled'} onclick="openModule('${m.id}')">${unlocked?'Open':'Locked'}</button></div>`}).join('')}
+function showAll(){lesson.classList.add('hidden');modulesEl().classList.remove('hidden')}function modulesEl(){return document.getElementById('modules')}
+function toggleCreep(){state.creep=state.creep==='accelerated'?'normal':'accelerated';save()}
+function toggleExam(){state.exam=!state.exam;save()}
+function openModule(id){current=modules.find(m=>m.id===id);qIndex=state.moduleProgress[id]||0;if(qIndex>=current.qs.length)qIndex=0;lesson.classList.remove('hidden');lesson.scrollIntoView({behavior:'smooth'});renderQuestion()}
+function renderQuestion(){const q=current.qs[qIndex];lessonTitle.textContent=current.title;lessonMeta.innerHTML=`<span class="pill">${current.level}</span><span class="pill">Question ${qIndex+1}/${current.qs.length}</span><span class="pill">Load ${loadLevel()}</span>`;lessonExplanation.textContent=current.explain;vocab.innerHTML='<strong>Vocabulary:</strong><br>'+current.vocab.map(v=>`<span class="pill">${v}</span>`).join('');question.textContent=state.exam?q[0]+'  (No hint recommended)':q[0];answer.value='';feedback.innerHTML='';writingArea.classList.add('hidden');writing.value='';writingFeedback.innerHTML='';lessonBar.style.width=(qIndex/current.qs.length*100)+'%'}
+function checkAnswer(){const q=current.qs[qIndex];const ok=normalise(answer.value)===normalise(q[1]);feedback.className='feedback '+(ok?'good':'bad');if(ok){const bonus=state.creep==='accelerated'?16:10;feedback.innerHTML=`Correct. ${state.exam?'No explanation shown in exam mode.':q[2]}`;state.xp+=bonus;state.correct+=1;state.moduleProgress[current.id]=Math.max((state.moduleProgress[current.id]||0),qIndex+1);writingPrompt.textContent=q[3]+' Use at least one reasoning word: because, therefore, implies, first, then, however.';writingArea.classList.remove('hidden')}else{feedback.innerHTML=`Not quite. Correct answer: <strong>${q[1]}</strong><br>${state.exam?'Review this after exam mode.':q[2]}`;state.xp+=1}save()}
+function showHint(){if(state.exam){feedback.className='feedback bad';feedback.innerHTML='Exam mode is on. Try without a hint first.';return}const q=current.qs[qIndex];feedback.className='feedback';feedback.innerHTML='Hint: '+q[2]}
 function nextQuestion(){if(!current)return;qIndex=(qIndex+1)%current.qs.length;renderQuestion()}
-function checkWriting(){const text=writing.value.trim();let score=0;if(text.length>30)score+=2;if(/[A-Z]/.test(text[0]||''))score+=1;if(/[.!?]$/.test(text))score+=1;if(/because|therefore|first|then|so|means|value|equation|variable/i.test(text))score+=2;state.writingScore+=score;state.xp+=score*3;writingFeedback.className='feedback good';writingFeedback.innerHTML=`Writing score: ${score}/6. Aim for: capital letter, full stop, maths vocabulary, and a reason word such as because or therefore.`;save();setTimeout(nextQuestion,700)}
-function startDailySession(){const today=new Date().toDateString();if(state.lastDay!==today){state.streak+=1;state.lastDay=today;save()}openModule(modules[Math.min(Math.floor(state.correct/8),modules.length-1)].id)}
-function resetProgress(){if(confirm('Reset all saved progress on this device?')){state={xp:0,correct:0,writingScore:0,streak:0,lastDay:'',moduleProgress:{}};save();renderModules()}}
-function startMemoryGame(){let seq=Array.from({length:4+Math.min(5,Math.floor(state.correct/6))},()=>Math.floor(Math.random()*9)+1);cogGame.innerHTML=`<div class="question">Memorise: ${seq.join(' - ')}</div><button onclick="askMemory('${seq.join(',')}')">I memorised it</button>`}
-function askMemory(s){cogGame.innerHTML=`<input id="memAns" class="answerBox" placeholder="Type the sequence, e.g. 1-2-3"><button onclick="checkMemory('${s}')">Check</button>`}
-function checkMemory(s){const target=s.replace(/,/g,'');const got=memAns.value.replace(/\D/g,'');const ok=got===target;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}">${ok?'Correct memory sequence. +12 XP':'Close. Target was '+s.replace(/,/g,'-')}</div>`;if(ok)state.xp+=12;save()}
-function startPatternGame(){const start=Math.floor(Math.random()*5)+2;const step=Math.floor(Math.random()*6)+2;const seq=[start,start+step,start+2*step,start+3*step];cogGame.innerHTML=`<div class="question">Pattern: ${seq.join(', ')}, ?</div><input id="patAns" class="answerBox"><button onclick="checkPattern(${start+4*step})">Check</button>`}
-function checkPattern(ans){const ok=Number(patAns.value)==ans;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}">${ok?'Correct. You found the pattern. +10 XP':'Answer: '+ans+'. Look for the constant increase.'}</div>`;if(ok)state.xp+=10;save()}
-function startVocabularyGame(){const all=modules.flatMap(m=>m.vocab);const item=all[Math.floor(Math.random()*all.length)];const word=item.split(':')[0],def=item.split(':')[1];cogGame.innerHTML=`<div class="question">Define: ${word}</div><textarea id="vocAns" class="answerBox"></textarea><button onclick="checkVocab('${word.replace(/'/g,"\\'")}','${def.replace(/'/g,"\\'")}')">Check</button>`}
-function checkVocab(w,d){const words=d.toLowerCase().split(/\W+/).filter(x=>x.length>3);const hits=words.filter(x=>vocAns.value.toLowerCase().includes(x)).length;const ok=hits>0;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}"><strong>${w}</strong>: ${d}<br>${ok?'Good recall. +8 XP':'Rewrite the definition in your own words.'}</div>`;if(ok)state.xp+=8;save()}
+function checkWriting(){const text=writing.value.trim();let score=0;if(text.length>45)score+=2;if(/[A-Z]/.test(text[0]||''))score+=1;if(/[.!?]$/.test(text))score+=1;if(/because|therefore|first|then|so|means|value|equation|variable|implies|however|although/i.test(text))score+=2;if(/I|we|the|this|that/i.test(text)&&/,|;|:/i.test(text))score+=1;state.writingScore+=score;state.xp+=score*4;writingFeedback.className='feedback good';writingFeedback.innerHTML=`Writing score: ${score}/7. Strong explanations use: claim → reason → conclusion.`;save();setTimeout(nextQuestion,650)}
+function startDailySession(){let step=state.creep==='accelerated'?Math.floor(state.correct/2):Math.floor(state.correct/8);openModule(modules[Math.min(step,modules.length-1)].id)}
+function resetProgress(){if(confirm('Reset saved progress?')){state={xp:0,correct:0,writingScore:0,creep:'normal',exam:false,moduleProgress:{}};save();lesson.classList.add('hidden')}}
+function startMemoryGame(){let n=4+Math.min(8,loadLevel());let seq=Array.from({length:n},()=>Math.floor(Math.random()*9)+1);cogGame.innerHTML=`<div class="question">Memorise: ${seq.join(' - ')}</div><button onclick="askMemory('${seq.join(',')}')">Hide sequence</button>`}
+function askMemory(s){cogGame.innerHTML=`<input id="memAns" class="answerBox" placeholder="Type sequence"><button onclick="checkMemory('${s}')">Check</button>`}
+function checkMemory(s){let target=s.replace(/,/g,''),got=memAns.value.replace(/\D/g,''),ok=got===target;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}">${ok?'Correct. +15 XP':'Target was '+s.replace(/,/g,'-')}</div>`;if(ok)state.xp+=15;save()}
+function startPatternGame(){let a=Math.floor(Math.random()*5)+2,d=Math.floor(Math.random()*6)+2,seq=[a,a+d,a+2*d,a+3*d];cogGame.innerHTML=`<div class="question">Pattern: ${seq.join(', ')}, ?</div><input id="patAns" class="answerBox"><button onclick="checkPattern(${a+4*d})">Check</button>`}
+function checkPattern(ans){let ok=Number(patAns.value)==ans;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}">${ok?'Correct. +10 XP':'Answer: '+ans}</div>`;if(ok)state.xp+=10;save()}
+function startVocabularyGame(){const all=modules.flatMap(m=>m.vocab),item=all[Math.floor(Math.random()*all.length)],word=item.split(':')[0],def=item.split(':')[1];cogGame.innerHTML=`<div class="question">Define: ${word}</div><textarea id="vocAns" class="answerBox"></textarea><button onclick="checkVocab('${word.replace(/'/g,"\\'")}','${def.replace(/'/g,"\\'")}')">Check</button>`}
+function checkVocab(w,d){let hits=d.toLowerCase().split(/\W+/).filter(x=>x.length>3&&vocAns.value.toLowerCase().includes(x)).length,ok=hits>0;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}"><strong>${w}</strong>: ${d}<br>${ok?'+8 XP':'Try rewriting it in your own words.'}</div>`;if(ok)state.xp+=8;save()}
+function startMentalAlgebra(){let a=2+loadLevel(),b=Math.floor(Math.random()*12)+3,x=Math.floor(Math.random()*8)+2,c=a*x+b;cogGame.innerHTML=`<div class="question">Mental algebra: ${a}x + ${b} = ${c}</div><input id="mentAns" class="answerBox" placeholder="x = ?"><button onclick="checkMental(${x})">Check</button>`}
+function checkMental(x){let ok=normalise(mentAns.value)===normalise('x='+x)||Number(mentAns.value)==x;cogGame.innerHTML=`<div class="feedback ${ok?'good':'bad'}">${ok?'Correct. +12 XP':'Answer: x='+x}</div>`;if(ok)state.xp+=12;save()}
 renderStats();renderModules();
 </script>
 </body>
